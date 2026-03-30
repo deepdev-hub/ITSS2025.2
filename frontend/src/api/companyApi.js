@@ -1,0 +1,27 @@
+import { apiClient, unwrap } from './client';
+
+export const companyApi = {
+  getMyCompany: () => unwrap(apiClient.get('/api/companies/me')),
+  updateMyCompany: (payload) => unwrap(apiClient.put('/api/companies/me', payload)),
+  getRequests: () => unwrap(apiClient.get('/api/companies/requests')),
+  createAssignment: (requestId, payload) => unwrap(apiClient.post(`/api/companies/requests/${requestId}/assignments`, payload)),
+  createQuote: (requestId, payload) => unwrap(apiClient.post(`/api/companies/requests/${requestId}/quotes`, payload)),
+  sendQuote: (quoteId) => unwrap(apiClient.put(`/api/companies/quotes/${quoteId}/send`)),
+  getBranches: () => unwrap(apiClient.get('/api/companies/branches')),
+  getBranch: (id) => unwrap(apiClient.get(`/api/companies/branches/${id}`)),
+  createBranch: (payload) => unwrap(apiClient.post('/api/companies/branches', payload)),
+  updateBranch: (id, payload) => unwrap(apiClient.put(`/api/companies/branches/${id}`, payload)),
+  deleteBranch: (id) => unwrap(apiClient.delete(`/api/companies/branches/${id}`)),
+  getStaff: () => unwrap(apiClient.get('/api/companies/staff')),
+  createStaff: (payload) => unwrap(apiClient.post('/api/companies/staff', payload)),
+  updateStaff: (id, payload) => unwrap(apiClient.put(`/api/companies/staff/${id}`, payload)),
+  deleteStaff: (id) => unwrap(apiClient.delete(`/api/companies/staff/${id}`)),
+  getVehicles: () => unwrap(apiClient.get('/api/companies/vehicles')),
+  createVehicle: (payload) => unwrap(apiClient.post('/api/companies/vehicles', payload)),
+  updateVehicle: (id, payload) => unwrap(apiClient.put(`/api/companies/vehicles/${id}`, payload)),
+  deleteVehicle: (id) => unwrap(apiClient.delete(`/api/companies/vehicles/${id}`)),
+  getReviews: () => unwrap(apiClient.get('/api/companies/reviews')),
+  getDashboard: () => unwrap(apiClient.get('/api/companies/dashboard')),
+  getStaffDashboard: () => unwrap(apiClient.get('/api/companies/staff/me/dashboard')),
+  getMyAssignments: () => unwrap(apiClient.get('/api/companies/staff/me/assignments')),
+};
