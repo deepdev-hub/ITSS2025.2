@@ -1,0 +1,162 @@
+package com.itss.vbas.controller;
+
+import java.util.List;
+
+import com.itss.vbas.dto.common.CommonDto;
+import com.itss.vbas.dto.request.RequestDto;
+import com.itss.vbas.enums.RoleName;
+import com.itss.vbas.security.RequireAuth;
+import com.itss.vbas.security.RequiredRoles;
+import com.itss.vbas.service.MessageService;
+import com.itss.vbas.service.PaymentService;
+import com.itss.vbas.service.QuoteService;
+import com.itss.vbas.service.RescueRequestService;
+import com.itss.vbas.service.ReviewService;
+import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/api/requests")
+public class RequestController {
+
+    private final RescueRequestService rescueRequestService;
+    private final MessageService messageService;
+    private final QuoteService quoteService;
+    private final PaymentService paymentService;
+    private final ReviewService reviewService;
+
+    public RequestController(
+            RescueRequestService rescueRequestService,
+            MessageService messageService,
+            QuoteService quoteService,
+            PaymentService paymentService,
+            ReviewService reviewService
+    ) {
+        this.rescueRequestService = rescueRequestService;
+        this.messageService = messageService;
+        this.quoteService = quoteService;
+        this.paymentService = paymentService;
+        this.reviewService = reviewService;
+    }
+
+    @RequiredRoles(RoleName.CUSTOMER)
+    @PostMapping
+    public ResponseEntity<CommonDto.ApiResponse<RequestDto.RequestDetailResponse>> createRequest(@Valid @RequestBody RequestDto.CreateRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(CommonDto.ApiResponse.success("Rescue request created successfully", rescueRequestService.createRequest(request)));
+    }
+
+    @RequiredRoles(RoleName.CUSTOMER)
+    @GetMapping("/my")
+    public ResponseEntity<CommonDto.ApiResponse<List<RequestDto.RequestSummaryResponse>>> getMyRequests() {
+        return ResponseEntity.ok(CommonDto.ApiResponse.success("My requests fetched successfully", rescueRequestService.getMyRequests()));
+    }
+
+    @RequireAuth
+    @GetMapping("/{id}")
+    public ResponseEntity<CommonDto.ApiResponse<RequestDto.RequestDetailResponse>> getRequestDetail(@PathVariable Long id) {
+        return ResponseEntity.ok(CommonDto.ApiResponse.success("Request detail fetched successfully", rescueRequestService.getRequestDetail(id)));
+    }
+
+    @RequiredRoles(RoleName.CUSTOMER)
+    @PutMapping("/{id}/cancel")
+    public ResponseEntity<CommonDto.ApiResponse<Void>> cancelRequest(
+            @PathVariable Long id,
+            @RequestBody(required = false) CommonDto.SimpleNoteRequest request
+    ) {
+        rescueRequestService.cancelRequest(id, request == null ? null : request.note());
+        return ResponseEntity.ok(CommonDto.ApiResponse.success("Request canceled successfully"));
+    }
+
+    @RequiredRoles({RoleName.ADMIN, RoleName.RESCUE_COMPANY, RoleName.RESCUE_STAFF})
+    @PutMapping("/{id}/status")
+    public ResponseEntity<CommonDto.ApiResponse<RequestDto.RequestDetailResponse>> updateStatus(
+            @PathVariable Long id,
+            @Valid @RequestBody CommonDto.StatusUpdateRequest request
+    ) {
+        return ResponseEntity.ok(CommonDto.ApiResponse.success("Request status updated successfully", rescueRequestService.updateRequestStatus(id, request)));
+    }
+
+    @RequireAuth
+    @GetMapping("/{id}/history")
+    public ResponseEntity<CommonDto.ApiResponse<List<RequestDto.StatusHistoryResponse>>> getHistory(@PathVariable Long id) {
+        return ResponseEntity.ok(CommonDto.ApiResponse.success("Request history fetched successfully", rescueRequestService.getStatusHistory(id)));
+    }
+
+    @RequireAuth
+    @GetMapping("/{id}/messages")
+    public ResponseEntity<CommonDto.ApiResponse<List<RequestDto.MessageResponse>>> getMessages(@PathVariable Long id) {
+        return ResponseEntity.ok(CommonDto.ApiResponse.success("Messages fetched successfully", messageService.getMessagesByRequest(id)));
+    }
+
+    @RequireAuth
+    @PostMapping("/{id}/messages")
+    public ResponseEntity<CommonDto.ApiResponse<RequestDto.MessageResponse>> sendMessage(
+            @PathVariable Long id,
+            @Valid @RequestBody RequestDto.MessageCreateRequest request
+    ) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(CommonDto.ApiResponse.success("Message sent successfully", messageService.sendMessage(id, request)));
+    }
+
+    @RequireAuth
+    @GetMapping("/{id}/quotes")
+    public ResponseEntity<CommonDto.ApiResponse<List<RequestDto.QuoteResponse>>> getQuotes(@PathVariable Long id) {
+        return ResponseEntity.ok(CommonDto.ApiResponse.success("Quotes fetched successfully", quoteService.getQuotesByRequest(id)));
+    }
+
+    @RequiredRoles(RoleName.CUSTOMER)
+    @PutMapping("/quotes/{quoteId}/accept")
+    public ResponseEntity<CommonDto.ApiResponse<RequestDto.QuoteResponse>> acceptQuote(@PathVariable Long quoteId) {
+        return ResponseEntity.ok(CommonDto.ApiResponse.success("Quote accepted successfully", quoteService.acceptQuote(quoteId)));
+    }
+
+    @RequiredRoles(RoleName.CUSTOMER)
+    @PutMapping("/quotes/{quoteId}/reject")
+    public ResponseEntity<CommonDto.ApiResponse<RequestDto.QuoteResponse>> rejectQuote(@PathVariable Long quoteId) {
+        return ResponseEntity.ok(CommonDto.ApiResponse.success("Quote rejected successfully", quoteService.rejectQuote(quoteId)));
+    }
+
+    @RequireAuth
+    @GetMapping("/{id}/payments")
+    public ResponseEntity<CommonDto.ApiResponse<List<RequestDto.PaymentResponse>>> getPayments(@PathVariable Long id) {
+        return ResponseEntity.ok(CommonDto.ApiResponse.success("Payments fetched successfully", paymentService.getPaymentsByRequest(id)));
+    }
+
+    @RequiredRoles(RoleName.CUSTOMER)
+    @PostMapping("/{id}/payments")
+    public ResponseEntity<CommonDto.ApiResponse<RequestDto.PaymentResponse>> createPayment(
+            @PathVariable Long id,
+            @Valid @RequestBody RequestDto.PaymentCreateRequest request
+    ) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(CommonDto.ApiResponse.success("Payment created successfully", paymentService.createPayment(id, request)));
+    }
+
+    @RequiredRoles(RoleName.CUSTOMER)
+    @PutMapping("/payments/{paymentId}/pay")
+    public ResponseEntity<CommonDto.ApiResponse<RequestDto.PaymentResponse>> pay(
+            @PathVariable Long paymentId,
+            @Valid @RequestBody RequestDto.PaymentActionRequest request
+    ) {
+        return ResponseEntity.ok(CommonDto.ApiResponse.success("Payment updated successfully", paymentService.pay(paymentId, request)));
+    }
+
+    @RequiredRoles(RoleName.CUSTOMER)
+    @PostMapping("/{id}/reviews")
+    public ResponseEntity<CommonDto.ApiResponse<RequestDto.ReviewResponse>> createReview(
+            @PathVariable Long id,
+            @Valid @RequestBody RequestDto.ReviewCreateRequest request
+    ) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(CommonDto.ApiResponse.success("Review created successfully", reviewService.createReview(id, request)));
+    }
+}
