@@ -65,7 +65,7 @@ public class RescueCompany {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
-    @OneToOne(fetch = FetchType.LAZY)
+    @OneToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "owner_account_id", unique = true)
     private Account ownerAccount;
 }

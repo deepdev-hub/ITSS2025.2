@@ -4,6 +4,7 @@ export const companyApi = {
   getMyCompany: () => unwrap(apiClient.get('/api/companies/me')),
   updateMyCompany: (payload) => unwrap(apiClient.put('/api/companies/me', payload)),
   getRequests: () => unwrap(apiClient.get('/api/companies/requests')),
+  getRequestDetail: (id) => unwrap(apiClient.get(`/api/companies/requests/${id}`)),
   createAssignment: (requestId, payload) => unwrap(apiClient.post(`/api/companies/requests/${requestId}/assignments`, payload)),
   createQuote: (requestId, payload) => unwrap(apiClient.post(`/api/companies/requests/${requestId}/quotes`, payload)),
   sendQuote: (quoteId) => unwrap(apiClient.put(`/api/companies/quotes/${quoteId}/send`)),

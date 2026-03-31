@@ -192,6 +192,20 @@ textarea {
   gap: 0.75rem;
 }
 
+.actions-stack {
+  display: grid;
+  gap: 0.65rem;
+  min-width: 220px;
+}
+
+.actions-stack select {
+  width: 100%;
+  padding: 0.75rem 0.95rem;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: #fff;
+}
+
 .hero-grid,
 .stats-grid {
   display: grid;
@@ -218,6 +232,11 @@ textarea {
   padding: 1.4rem;
 }
 
+.card-muted {
+  background: var(--surface);
+  box-shadow: none;
+}
+
 .card h2,
 .card h3 {
   margin-top: 0;
@@ -239,6 +258,31 @@ textarea {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 1rem;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+.info-item {
+  padding: 1rem;
+  border-radius: 18px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.info-item span {
+  display: block;
+  color: var(--muted);
+  margin-bottom: 0.4rem;
+  font-size: 0.92rem;
+}
+
+.info-item strong {
+  display: block;
 }
 
 .field {
@@ -263,6 +307,12 @@ textarea {
 .field textarea {
   min-height: 110px;
   resize: vertical;
+}
+
+.muted-line {
+  color: var(--muted);
+  font-size: 0.92rem;
+  margin-top: 0.25rem;
 }
 
 .table-wrapper {
@@ -386,6 +436,37 @@ th {
 .notice.error {
   background: rgba(185, 61, 50, 0.12);
   color: var(--danger);
+}
+
+.timeline {
+  display: grid;
+  gap: 1rem;
+}
+
+.timeline-item {
+  display: grid;
+  grid-template-columns: 18px 1fr;
+  gap: 0.85rem;
+}
+
+.timeline-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background: var(--primary);
+  margin-top: 0.4rem;
+}
+
+.timeline-content {
+  padding-bottom: 1rem;
+  border-bottom: 1px solid rgba(36, 48, 59, 0.08);
+}
+
+.timeline-title {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-bottom: 0.35rem;
 }
 
 @keyframes spin {

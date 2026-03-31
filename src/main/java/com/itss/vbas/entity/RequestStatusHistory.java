@@ -34,7 +34,7 @@ public class RequestStatusHistory {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @ManyToOne(fetch = FetchType.EAGER, optional = false)
     @JoinColumn(name = "request_id", nullable = false)
     private RescueRequest request;
 
@@ -46,7 +46,7 @@ public class RequestStatusHistory {
     @Column(name = "new_status", nullable = false, length = 20)
     private RescueRequestStatus newStatus;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @ManyToOne(fetch = FetchType.EAGER, optional = false)
     @JoinColumn(name = "changed_by_user_id", nullable = false)
     private Account changedByUser;
 

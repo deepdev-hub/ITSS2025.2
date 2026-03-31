@@ -323,6 +323,7 @@ public class AppMapper {
                 request.getDescription(),
                 request.getIncidentType().getIncidentName(),
                 request.getServiceType() == null ? null : request.getServiceType().getServiceName(),
+                request.getLocation() == null ? null : buildFullAddress(request.getLocation()),
                 request.getVehicle() == null ? null : request.getVehicle().getBrand() + " " + request.getVehicle().getModel() + " - " + request.getVehicle().getPlateNumber(),
                 request.getCustomer().getFullName(),
                 request.getCreatedAt(),

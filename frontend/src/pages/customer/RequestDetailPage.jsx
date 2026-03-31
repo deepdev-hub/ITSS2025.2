@@ -3,11 +3,29 @@ import { useParams } from 'react-router-dom';
 import { requestApi } from '../../api/requestApi';
 import { getApiError } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
+import Loader from '../../components/common/Loader';
 import PageHeader from '../../components/common/PageHeader';
 import StatusBadge from '../../components/common/StatusBadge';
+import {
+  canCustomerCancel,
+  formatCurrency,
+  formatDateTime,
+  getAllowedStatusOptions,
+} from '../../utils/requestUi';
 
-function formatDate(value) {
-  return value ? new Date(value).toLocaleString() : 'N/A';
+const defaultPaymentForm = {
+  amount: '',
+  paymentMethod: 'CASH',
+  paymentStatus: 'PAID',
+};
+
+const defaultReviewForm = {
+  ratingScore: 5,
+  comment: '',
+};
+
+function getQuoteAmount(quote) {
+  return quote?.finalAmount ?? quote?.estimatedAmount ?? quote?.subtotal ?? null;
 }
 
 export default function RequestDetailPage() {
@@ -18,13 +36,29 @@ export default function RequestDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const [busyAction, setBusyAction] = useState('');
   const [messageInput, setMessageInput] = useState('');
   const [statusForm, setStatusForm] = useState({ status: 'IN_PROGRESS', note: '' });
-  const [paymentForm, setPaymentForm] = useState({ amount: '', paymentMethod: 'CASH', paymentStatus: 'PAID' });
-  const [reviewForm, setReviewForm] = useState({ ratingScore: 5, comment: '' });
+  const [paymentForm, setPaymentForm] = useState(defaultPaymentForm);
+  const [reviewForm, setReviewForm] = useState(defaultReviewForm);
 
   const isCustomer = user?.roleName === 'CUSTOMER';
   const isOpsRole = ['ADMIN', 'RESCUE_COMPANY', 'RESCUE_STAFF'].includes(user?.roleName);
+
+  const statusOptions = useMemo(
+    () => getAllowedStatusOptions(user?.roleName, detail?.status),
+    [detail?.status, user?.roleName],
+  );
+
+  const acceptedQuote = useMemo(
+    () => detail?.quotes?.find((item) => item.status === 'ACCEPTED') ?? null,
+    [detail],
+  );
+
+  const pendingPayment = useMemo(
+    () => detail?.payments?.find((item) => item.paymentStatus === 'PENDING') ?? null,
+    [detail],
+  );
 
   const loadData = async () => {
     setLoading(true);
@@ -36,10 +70,6 @@ export default function RequestDetailPage() {
       ]);
       setDetail(requestDetail);
       setMessages(requestMessages);
-      const pending = requestDetail.payments?.find((item) => item.paymentStatus === 'PENDING');
-      if (pending) {
-        setPaymentForm((previous) => ({ ...previous, amount: pending.amount || '' }));
-      }
     } catch (err) {
       setError(getApiError(err));
     } finally {
@@ -51,104 +81,112 @@ export default function RequestDetailPage() {
     loadData();
   }, [id]);
 
-  const pendingPayment = useMemo(
-    () => detail?.payments?.find((item) => item.paymentStatus === 'PENDING'),
-    [detail],
-  );
+  useEffect(() => {
+    if (!detail) {
+      return;
+    }
+    const nextStatusOptions = getAllowedStatusOptions(user?.roleName, detail.status);
+    const acceptedAmount = getQuoteAmount(detail.quotes?.find((item) => item.status === 'ACCEPTED'));
+    const nextPaymentAmount = pendingPayment?.amount ?? acceptedAmount ?? '';
+
+    setStatusForm((previous) => ({
+      status: nextStatusOptions.includes(previous.status) ? previous.status : (nextStatusOptions[0] || previous.status),
+      note: previous.note,
+    }));
+    setPaymentForm((previous) => ({
+      ...previous,
+      amount: nextPaymentAmount === '' ? previous.amount : nextPaymentAmount,
+    }));
+  }, [detail, pendingPayment, user?.roleName]);
+
+  const runAction = async (actionKey, action, successMessage) => {
+    setBusyAction(actionKey);
+    setError('');
+    setNotice('');
+    try {
+      await action();
+      setNotice(successMessage);
+      await loadData();
+    } catch (err) {
+      setError(getApiError(err));
+    } finally {
+      setBusyAction('');
+    }
+  };
 
   const sendMessage = async (event) => {
     event.preventDefault();
     if (!messageInput.trim()) {
       return;
     }
-    try {
-      await requestApi.sendMessage(id, { content: messageInput });
-      setMessageInput('');
-      await loadData();
-    } catch (err) {
-      setError(getApiError(err));
-    }
+    await runAction(
+      'message',
+      async () => {
+        await requestApi.sendMessage(id, { content: messageInput.trim() });
+        setMessageInput('');
+      },
+      'Message sent successfully.',
+    );
   };
 
-  const cancelRequest = async () => {
-    try {
-      await requestApi.cancelRequest(id, { note: 'Canceled by customer' });
-      setNotice('Request canceled successfully');
-      await loadData();
-    } catch (err) {
-      setError(getApiError(err));
-    }
-  };
+  const cancelRequest = async () => runAction(
+    'cancel',
+    () => requestApi.cancelRequest(id, { note: 'Canceled by customer from request detail' }),
+    'Request canceled successfully.',
+  );
 
   const updateStatus = async (event) => {
     event.preventDefault();
-    try {
-      await requestApi.updateStatus(id, statusForm);
-      setNotice('Request status updated successfully');
-      await loadData();
-    } catch (err) {
-      setError(getApiError(err));
-    }
+    await runAction(
+      'status',
+      () => requestApi.updateStatus(id, statusForm),
+      'Request status updated successfully.',
+    );
   };
 
-  const decideQuote = async (quoteId, action) => {
-    try {
-      if (action === 'accept') {
-        await requestApi.acceptQuote(quoteId);
-        setNotice('Quote accepted successfully');
-      } else {
-        await requestApi.rejectQuote(quoteId);
-        setNotice('Quote rejected successfully');
-      }
-      await loadData();
-    } catch (err) {
-      setError(getApiError(err));
-    }
-  };
+  const decideQuote = async (quoteId, action) => runAction(
+    `quote-${action}`,
+    () => (action === 'accept' ? requestApi.acceptQuote(quoteId) : requestApi.rejectQuote(quoteId)),
+    `Quote ${action === 'accept' ? 'accepted' : 'rejected'} successfully.`,
+  );
 
-  const createPayment = async (event) => {
-    event.preventDefault();
-    try {
-      await requestApi.createPayment(id, {
-        amount: paymentForm.amount ? Number(paymentForm.amount) : null,
-        paymentMethod: paymentForm.paymentMethod,
-      });
-      setNotice('Payment record created successfully');
-      await loadData();
-    } catch (err) {
-      setError(getApiError(err));
-    }
-  };
+  const createPayment = async () => runAction(
+    'create-payment',
+    () => requestApi.createPayment(id, {
+      amount: paymentForm.amount ? Number(paymentForm.amount) : null,
+      paymentMethod: paymentForm.paymentMethod,
+    }),
+    'Payment record created successfully.',
+  );
 
   const payNow = async () => {
     if (!pendingPayment) {
       return;
     }
-    try {
-      await requestApi.pay(pendingPayment.id, { paymentStatus: paymentForm.paymentStatus });
-      setNotice('Payment updated successfully');
-      await loadData();
-    } catch (err) {
-      setError(getApiError(err));
-    }
+    await runAction(
+      'pay',
+      () => requestApi.pay(pendingPayment.id, { paymentStatus: paymentForm.paymentStatus }),
+      'Payment updated successfully.',
+    );
   };
 
   const createReview = async (event) => {
     event.preventDefault();
-    try {
-      await requestApi.createReview(id, {
-        ratingScore: Number(reviewForm.ratingScore),
-        comment: reviewForm.comment,
-      });
-      setNotice('Review submitted successfully');
-      await loadData();
-    } catch (err) {
-      setError(getApiError(err));
-    }
+    await runAction(
+      'review',
+      async () => {
+        await requestApi.createReview(id, {
+          ratingScore: Number(reviewForm.ratingScore),
+          comment: reviewForm.comment,
+        });
+        setReviewForm(defaultReviewForm);
+      },
+      'Review submitted successfully.',
+    );
   };
 
   if (loading) {
-    return <div className="card">Loading request detail...</div>;
+    return <Loader label="Loading request detail..." />;
   }
 
   if (!detail) {
@@ -159,7 +197,7 @@ export default function RequestDetailPage() {
     <>
       <PageHeader
         title={`Request ${detail.requestCode}`}
-        subtitle={`Created ${formatDate(detail.createdAt)}`}
+        subtitle={`Created ${formatDateTime(detail.createdAt)}`}
       />
 
       {notice ? <div className="notice">{notice}</div> : null}
@@ -168,68 +206,99 @@ export default function RequestDetailPage() {
       <div className="grid-two">
         <div className="card">
           <h2>Request Overview</h2>
-          <div className="form-grid">
-            <div><strong>Status</strong><div><StatusBadge value={detail.status} /></div></div>
-            <div><strong>Priority</strong><div><StatusBadge value={detail.priorityLevel} /></div></div>
-            <div><strong>Incident</strong><div>{detail.incidentType?.name || 'N/A'}</div></div>
-            <div><strong>Service</strong><div>{detail.serviceType?.name || 'N/A'}</div></div>
-            <div><strong>Customer</strong><div>{detail.customer?.fullName || 'N/A'}</div></div>
-            <div><strong>Company</strong><div>{detail.assignedCompany?.companyName || 'Waiting for assignment'}</div></div>
+          <div className="info-grid">
+            <div className="info-item">
+              <span>Status</span>
+              <strong><StatusBadge value={detail.status} /></strong>
+            </div>
+            <div className="info-item">
+              <span>Priority</span>
+              <strong><StatusBadge value={detail.priorityLevel} /></strong>
+            </div>
+            <div className="info-item">
+              <span>Incident</span>
+              <strong>{detail.incidentType?.name || 'N/A'}</strong>
+            </div>
+            <div className="info-item">
+              <span>Service</span>
+              <strong>{detail.serviceType?.name || 'N/A'}</strong>
+            </div>
+            <div className="info-item">
+              <span>Customer</span>
+              <strong>{detail.customer?.fullName || 'N/A'}</strong>
+            </div>
+            <div className="info-item">
+              <span>Assigned Company</span>
+              <strong>{detail.assignedCompany?.companyName || 'Waiting for assignment'}</strong>
+            </div>
           </div>
 
           <div className="field">
             <label>Description</label>
-            <textarea value={detail.description || ''} disabled />
+            <textarea value={detail.description || 'No description provided.'} disabled />
           </div>
 
           <div className="field">
-            <label>Location</label>
-            <textarea value={detail.location?.fullAddress || ''} disabled />
+            <label>Breakdown Location</label>
+            <textarea value={detail.location?.fullAddress || 'No location available.'} disabled />
           </div>
 
           <div className="field">
-            <label>Vehicle</label>
+            <label>Customer Vehicle</label>
             <input
               value={
                 detail.vehicle
                   ? `${detail.vehicle.brand} ${detail.vehicle.model} - ${detail.vehicle.plateNumber}`
-                  : 'No linked vehicle'
+                  : 'No linked customer vehicle'
               }
               disabled
             />
           </div>
 
-          {detail.currentAssignment ? (
-            <div className="card" style={{ marginTop: '1rem' }}>
-              <h3>Current Assignment</h3>
-              <p><strong>Staff:</strong> {detail.currentAssignment.staffName || 'Not assigned'}</p>
-              <p><strong>Vehicle:</strong> {detail.currentAssignment.vehicleCode || 'Not assigned'}</p>
-              <p><strong>Assignment Status:</strong> <StatusBadge value={detail.currentAssignment.status} /></p>
+          <div className="grid-three" style={{ marginTop: '1rem' }}>
+            <div className="card card-muted">
+              <h3>Company</h3>
+              <p>{detail.assignedCompany?.companyName || 'Not assigned yet'}</p>
+              <p className="muted-line">{detail.assignedCompany?.phone || detail.assignedCompany?.email || 'Waiting for dispatch'}</p>
             </div>
-          ) : null}
+            <div className="card card-muted">
+              <h3>Assigned Staff</h3>
+              <p>{detail.currentAssignment?.staffName || 'Not assigned yet'}</p>
+              <p className="muted-line">{detail.review?.staffName || detail.currentAssignment?.status || 'Pending assignment'}</p>
+            </div>
+            <div className="card card-muted">
+              <h3>Rescue Vehicle</h3>
+              <p>{detail.currentAssignment?.vehicleCode || 'Not assigned yet'}</p>
+              <p className="muted-line">{detail.currentAssignment?.vehiclePlateNumber || 'No plate information'}</p>
+            </div>
+          </div>
 
-          {isCustomer && !['COMPLETED', 'CANCELED'].includes(detail.status) ? (
+          {isCustomer && canCustomerCancel(detail.status) ? (
             <div className="actions-row" style={{ marginTop: '1rem' }}>
-              <button className="button button-danger" type="button" onClick={cancelRequest}>
-                Cancel Request
+              <button
+                className="button button-danger"
+                type="button"
+                disabled={busyAction === 'cancel'}
+                onClick={cancelRequest}
+              >
+                {busyAction === 'cancel' ? 'Canceling...' : 'Cancel Request'}
               </button>
             </div>
           ) : null}
 
-          {isOpsRole ? (
-            <form className="card" style={{ marginTop: '1rem' }} onSubmit={updateStatus}>
-              <h3>Update Status</h3>
+          {isOpsRole && statusOptions.length > 0 ? (
+            <form className="card card-muted" style={{ marginTop: '1rem' }} onSubmit={updateStatus}>
+              <h3>Update Progress</h3>
               <div className="form-grid">
                 <div className="field">
-                  <label>Status</label>
+                  <label>Next Status</label>
                   <select
                     value={statusForm.status}
                     onChange={(event) => setStatusForm((previous) => ({ ...previous, status: event.target.value }))}
                   >
-                    <option value="MATCHED">MATCHED</option>
-                    <option value="IN_PROGRESS">IN_PROGRESS</option>
-                    <option value="COMPLETED">COMPLETED</option>
-                    <option value="CANCELED">CANCELED</option>
+                    {statusOptions.map((option) => (
+                      <option key={option} value={option}>{option}</option>
+                    ))}
                   </select>
                 </div>
                 <div className="field">
@@ -237,48 +306,81 @@ export default function RequestDetailPage() {
                   <input
                     value={statusForm.note}
                     onChange={(event) => setStatusForm((previous) => ({ ...previous, note: event.target.value }))}
+                    placeholder="Optional progress note"
                   />
                 </div>
               </div>
-              <button className="button button-primary" type="submit">Update status</button>
+              <button className="button button-primary" type="submit" disabled={busyAction === 'status'}>
+                {busyAction === 'status' ? 'Updating...' : 'Update status'}
+              </button>
             </form>
           ) : null}
         </div>
 
         <div className="card">
-          <h2>Quotes</h2>
+          <h2>Quote & Payment</h2>
+
           <div className="table-wrapper">
             <table>
               <thead>
                 <tr>
-                  <th>Code</th>
-                  <th>Company</th>
+                  <th>Quote</th>
+                  <th>Service</th>
+                  <th>Staff</th>
+                  <th>Total</th>
+                  <th>Expires</th>
                   <th>Status</th>
-                  <th>Amount</th>
                   <th />
                 </tr>
               </thead>
               <tbody>
-                {(detail.quotes || []).map((quote) => (
-                  <tr key={quote.id}>
-                    <td>{quote.quoteCode}</td>
-                    <td>{quote.companyName}</td>
-                    <td><StatusBadge value={quote.status} /></td>
-                    <td>{quote.finalAmount ?? quote.estimatedAmount ?? 'N/A'}</td>
-                    <td>
-                      {isCustomer && quote.status === 'SENT' ? (
-                        <div className="actions-row">
-                          <button className="button button-primary" type="button" onClick={() => decideQuote(quote.id, 'accept')}>
-                            Accept
-                          </button>
-                          <button className="button button-danger" type="button" onClick={() => decideQuote(quote.id, 'reject')}>
-                            Reject
-                          </button>
-                        </div>
-                      ) : null}
-                    </td>
+                {(detail.quotes || []).length === 0 ? (
+                  <tr>
+                    <td colSpan="7">No quote has been created yet.</td>
                   </tr>
-                ))}
+                ) : (
+                  detail.quotes.map((quote) => (
+                    <tr key={quote.id}>
+                      <td>
+                        <strong>{quote.quoteCode}</strong>
+                        <div className="muted-line">{quote.companyName}</div>
+                      </td>
+                      <td>
+                        <strong>{quote.serviceName || 'Breakdown Assistance'}</strong>
+                        <div className="muted-line">
+                          Qty {quote.quantity || 1}
+                          {quote.unitPrice ? ` x ${formatCurrency(quote.unitPrice)}` : ''}
+                        </div>
+                      </td>
+                      <td>{quote.staffName || 'Company dispatch team'}</td>
+                      <td>{formatCurrency(getQuoteAmount(quote))}</td>
+                      <td>{formatDateTime(quote.expiresAt)}</td>
+                      <td><StatusBadge value={quote.status} /></td>
+                      <td>
+                        {isCustomer && quote.status === 'SENT' ? (
+                          <div className="actions-row">
+                            <button
+                              className="button button-primary"
+                              type="button"
+                              disabled={busyAction === 'quote-accept'}
+                              onClick={() => decideQuote(quote.id, 'accept')}
+                            >
+                              Accept
+                            </button>
+                            <button
+                              className="button button-danger"
+                              type="button"
+                              disabled={busyAction === 'quote-reject'}
+                              onClick={() => decideQuote(quote.id, 'reject')}
+                            >
+                              Reject
+                            </button>
+                          </div>
+                        ) : null}
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -291,35 +393,47 @@ export default function RequestDetailPage() {
                   <th>Amount</th>
                   <th>Method</th>
                   <th>Status</th>
+                  <th>Created</th>
                   <th>Paid At</th>
                 </tr>
               </thead>
               <tbody>
-                {(detail.payments || []).map((payment) => (
-                  <tr key={payment.id}>
-                    <td>{payment.amount}</td>
-                    <td>{payment.paymentMethod}</td>
-                    <td><StatusBadge value={payment.paymentStatus} /></td>
-                    <td>{formatDate(payment.paidAt)}</td>
+                {(detail.payments || []).length === 0 ? (
+                  <tr>
+                    <td colSpan="5">No payment record has been created yet.</td>
                   </tr>
-                ))}
+                ) : (
+                  detail.payments.map((payment) => (
+                    <tr key={payment.id}>
+                      <td>{formatCurrency(payment.amount)}</td>
+                      <td>{payment.paymentMethod}</td>
+                      <td><StatusBadge value={payment.paymentStatus} /></td>
+                      <td>{formatDateTime(payment.createdAt)}</td>
+                      <td>{formatDateTime(payment.paidAt)}</td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
 
           {isCustomer ? (
-            <div className="card" style={{ marginTop: '1rem' }}>
+            <div className="card card-muted" style={{ marginTop: '1rem' }}>
               <h3>Payment Actions</h3>
+              <p className="muted-line">
+                Accepted quote amount: {acceptedQuote ? formatCurrency(getQuoteAmount(acceptedQuote)) : 'No accepted quote yet'}
+              </p>
               <div className="form-grid">
                 <div className="field">
                   <label>Amount</label>
                   <input
                     value={paymentForm.amount}
                     onChange={(event) => setPaymentForm((previous) => ({ ...previous, amount: event.target.value }))}
+                    placeholder="Leave blank to use accepted quote amount"
                   />
                 </div>
                 <div className="field">
-                  <label>Method</label>
+                  <label>Payment Method</label>
                   <select
                     value={paymentForm.paymentMethod}
                     onChange={(event) => setPaymentForm((previous) => ({ ...previous, paymentMethod: event.target.value }))}
@@ -332,7 +446,7 @@ export default function RequestDetailPage() {
                   </select>
                 </div>
                 <div className="field">
-                  <label>Mock Result</label>
+                  <label>Mock Payment Result</label>
                   <select
                     value={paymentForm.paymentStatus}
                     onChange={(event) => setPaymentForm((previous) => ({ ...previous, paymentStatus: event.target.value }))}
@@ -344,20 +458,39 @@ export default function RequestDetailPage() {
               </div>
 
               <div className="actions-row">
-                <button className="button button-secondary" type="button" onClick={createPayment}>
-                  Create payment
+                <button
+                  className="button button-secondary"
+                  type="button"
+                  disabled={busyAction === 'create-payment'}
+                  onClick={createPayment}
+                >
+                  {busyAction === 'create-payment' ? 'Creating...' : 'Create payment record'}
                 </button>
                 {pendingPayment ? (
-                  <button className="button button-primary" type="button" onClick={payNow}>
-                    Pay pending
+                  <button
+                    className="button button-primary"
+                    type="button"
+                    disabled={busyAction === 'pay'}
+                    onClick={payNow}
+                  >
+                    {busyAction === 'pay' ? 'Processing...' : 'Pay pending record'}
                   </button>
                 ) : null}
               </div>
             </div>
           ) : null}
 
+          {detail.review ? (
+            <div className="card card-muted" style={{ marginTop: '1rem' }}>
+              <h3>Review</h3>
+              <p><strong>Rating:</strong> {detail.review.ratingScore}/5</p>
+              <p><strong>Comment:</strong> {detail.review.comment || 'No comment provided'}</p>
+              <p className="muted-line">Submitted {formatDateTime(detail.review.createdAt)}</p>
+            </div>
+          ) : null}
+
           {isCustomer && detail.status === 'COMPLETED' && !detail.review ? (
-            <form className="card" style={{ marginTop: '1rem' }} onSubmit={createReview}>
+            <form className="card card-muted" style={{ marginTop: '1rem' }} onSubmit={createReview}>
               <h3>Leave Review</h3>
               <div className="form-grid">
                 <div className="field">
@@ -378,18 +511,20 @@ export default function RequestDetailPage() {
                   <input
                     value={reviewForm.comment}
                     onChange={(event) => setReviewForm((previous) => ({ ...previous, comment: event.target.value }))}
+                    placeholder="Share your rescue experience"
                   />
                 </div>
               </div>
-              <button className="button button-primary" type="submit">Submit review</button>
+              <button className="button button-primary" type="submit" disabled={busyAction === 'review'}>
+                {busyAction === 'review' ? 'Submitting...' : 'Submit review'}
+              </button>
             </form>
           ) : null}
 
-          {detail.review ? (
-            <div className="card" style={{ marginTop: '1rem' }}>
+          {isCustomer && detail.status !== 'COMPLETED' && !detail.review ? (
+            <div className="card card-muted" style={{ marginTop: '1rem' }}>
               <h3>Review</h3>
-              <p><strong>Rating:</strong> {detail.review.ratingScore}/5</p>
-              <p><strong>Comment:</strong> {detail.review.comment || 'N/A'}</p>
+              <p className="muted-line">You can leave a review after the request is marked COMPLETED.</p>
             </div>
           ) : null}
         </div>
@@ -399,15 +534,19 @@ export default function RequestDetailPage() {
         <div className="card">
           <h2>Chat</h2>
           <div className="message-list">
-            {messages.map((message) => (
-              <div key={message.id} className="message-bubble">
-                <div className="message-meta">
-                  <span>{message.senderName} ({message.senderRole})</span>
-                  <span>{formatDate(message.sentAt)}</span>
+            {messages.length === 0 ? (
+              <p className="muted-line">No messages yet. Start the conversation here.</p>
+            ) : (
+              messages.map((message) => (
+                <div key={message.id} className="message-bubble">
+                  <div className="message-meta">
+                    <span>{message.senderName} ({message.senderRole})</span>
+                    <span>{formatDateTime(message.sentAt)}</span>
+                  </div>
+                  <div>{message.content}</div>
                 </div>
-                <div>{message.content}</div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
           <form onSubmit={sendMessage} style={{ marginTop: '1rem' }}>
             <div className="actions-row">
@@ -417,35 +556,37 @@ export default function RequestDetailPage() {
                 onChange={(event) => setMessageInput(event.target.value)}
                 placeholder="Send a message..."
               />
-              <button className="button button-primary" type="submit">Send</button>
+              <button className="button button-primary" type="submit" disabled={busyAction === 'message'}>
+                {busyAction === 'message' ? 'Sending...' : 'Send'}
+              </button>
             </div>
           </form>
         </div>
 
         <div className="card">
           <h2>Status History</h2>
-          <div className="table-wrapper">
-            <table>
-              <thead>
-                <tr>
-                  <th>Old</th>
-                  <th>New</th>
-                  <th>Changed By</th>
-                  <th>At</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(detail.history || []).map((item) => (
-                  <tr key={item.id}>
-                    <td>{item.oldStatus || 'N/A'}</td>
-                    <td><StatusBadge value={item.newStatus} /></td>
-                    <td>{item.changedByUserName}</td>
-                    <td>{formatDate(item.changedAt)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          {(detail.history || []).length === 0 ? (
+            <p className="muted-line">No status history recorded yet.</p>
+          ) : (
+            <div className="timeline">
+              {detail.history.map((item) => (
+                <div key={item.id} className="timeline-item">
+                  <div className="timeline-dot" />
+                  <div className="timeline-content">
+                    <div className="timeline-title">
+                      <strong>{item.oldStatus || 'NEW'}</strong>
+                      <span>{' -> '}</span>
+                      <strong>{item.newStatus}</strong>
+                    </div>
+                    <div className="muted-line">
+                      {item.changedByUserName} at {formatDateTime(item.changedAt)}
+                    </div>
+                    {item.note ? <div>{item.note}</div> : null}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </>

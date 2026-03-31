@@ -36,6 +36,7 @@ public final class RequestDto {
             String description,
             String incidentTypeName,
             String serviceTypeName,
+            String locationLabel,
             String vehicleLabel,
             String customerName,
             LocalDateTime createdAt,
