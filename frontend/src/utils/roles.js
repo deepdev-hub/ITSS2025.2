@@ -1,0 +1,55 @@
+export const ROLES = {
+  CUSTOMER: 'CUSTOMER',
+  ADMIN: 'ADMIN',
+  RESCUE_COMPANY: 'RESCUE_COMPANY',
+  RESCUE_STAFF: 'RESCUE_STAFF',
+};
+
+export function getDefaultRoute(roleName) {
+  switch (roleName) {
+    case ROLES.ADMIN:
+      return '/admin/dashboard';
+    case ROLES.RESCUE_COMPANY:
+      return '/company/dashboard';
+    case ROLES.RESCUE_STAFF:
+      return '/staff/dashboard';
+    case ROLES.CUSTOMER:
+    default:
+      return '/customer/requests';
+  }
+}
+
+export function getMenuItems(roleName) {
+  switch (roleName) {
+    case ROLES.ADMIN:
+      return [
+        { to: '/admin/dashboard', label: 'Dashboard' },
+        { to: '/admin/requests', label: 'Requests' },
+        { to: '/admin/accounts', label: 'Accounts' },
+        { to: '/admin/companies', label: 'Companies' },
+        { to: '/admin/incident-types', label: 'Incident Types' },
+        { to: '/admin/service-types', label: 'Service Types' },
+      ];
+    case ROLES.RESCUE_COMPANY:
+      return [
+        { to: '/company/dashboard', label: 'Dashboard' },
+        { to: '/company/profile', label: 'Company Profile' },
+        { to: '/company/requests', label: 'Assigned Requests' },
+        { to: '/company/branches', label: 'Branches' },
+        { to: '/company/staff', label: 'Staff' },
+        { to: '/company/vehicles', label: 'Vehicles' },
+      ];
+    case ROLES.RESCUE_STAFF:
+      return [
+        { to: '/staff/dashboard', label: 'Dashboard' },
+        { to: '/staff/assignments', label: 'My Assignments' },
+      ];
+    case ROLES.CUSTOMER:
+    default:
+      return [
+        { to: '/customer/requests', label: 'My Requests' },
+        { to: '/customer/requests/new', label: 'Create Request' },
+        { to: '/customer/vehicles', label: 'My Vehicles' },
+      ];
+  }
+}
