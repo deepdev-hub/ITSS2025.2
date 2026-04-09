@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { requestApi } from '../../api/requestApi';
 import { getApiError } from '../../api/client';
@@ -13,6 +13,10 @@ import {
   getAllowedStatusOptions,
 } from '../../utils/requestUi';
 
+const ACTIVE_POLL_INTERVAL = 5000;
+const STABLE_POLL_INTERVAL = 10000;
+const BACKGROUND_POLL_INTERVAL = 15000;
+
 const defaultPaymentForm = {
   amount: '',
   paymentMethod: 'CASH',
@@ -24,8 +28,50 @@ const defaultReviewForm = {
   comment: '',
 };
 
+function getCurrentPollMode() {
+  if (typeof document === 'undefined') {
+    return 'active';
+  }
+  return document.visibilityState === 'hidden' ? 'background' : 'active';
+}
+
 function getQuoteAmount(quote) {
   return quote?.finalAmount ?? quote?.estimatedAmount ?? quote?.subtotal ?? null;
+}
+
+function normalizeMessages(items = []) {
+  const byId = new Map();
+  [...items]
+    .sort((left, right) => new Date(left.sentAt).getTime() - new Date(right.sentAt).getTime())
+    .forEach((item) => {
+      byId.set(item.id, item);
+    });
+  return Array.from(byId.values());
+}
+
+function getProgressTitle(roleName) {
+  switch (roleName) {
+    case 'ADMIN':
+      return 'Admin Progress Control';
+    case 'RESCUE_COMPANY':
+      return 'Company Progress Control';
+    case 'RESCUE_STAFF':
+      return 'Staff Progress Control';
+    default:
+      return 'Progress Control';
+  }
+}
+
+function SectionHeader({ title, subtitle, aside }) {
+  return (
+    <div className="section-header">
+      <div>
+        <h2>{title}</h2>
+        {subtitle ? <p>{subtitle}</p> : null}
+      </div>
+      {aside}
+    </div>
+  );
 }
 
 export default function RequestDetailPage() {
@@ -34,6 +80,9 @@ export default function RequestDetailPage() {
   const [detail, setDetail] = useState(null);
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [pollMode, setPollMode] = useState(getCurrentPollMode);
+  const [lastSyncedAt, setLastSyncedAt] = useState(null);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [busyAction, setBusyAction] = useState('');
@@ -41,6 +90,10 @@ export default function RequestDetailPage() {
   const [statusForm, setStatusForm] = useState({ status: 'IN_PROGRESS', note: '' });
   const [paymentForm, setPaymentForm] = useState(defaultPaymentForm);
   const [reviewForm, setReviewForm] = useState(defaultReviewForm);
+  const refreshInFlightRef = useRef(false);
+  const messageListRef = useRef(null);
+  const shouldStickToBottomRef = useRef(true);
+  const lastMessageIdRef = useRef(null);
 
   const isCustomer = user?.roleName === 'CUSTOMER';
   const isOpsRole = ['ADMIN', 'RESCUE_COMPANY', 'RESCUE_STAFF'].includes(user?.roleName);
@@ -60,44 +113,151 @@ export default function RequestDetailPage() {
     [detail],
   );
 
-  const loadData = async () => {
-    setLoading(true);
-    setError('');
+  const sentQuote = useMemo(
+    () => detail?.quotes?.find((item) => item.status === 'SENT') ?? null,
+    [detail],
+  );
+
+  const canLeaveReview = isCustomer && detail?.status === 'COMPLETED' && !detail?.review;
+  const stableRequest = useMemo(
+    () => ['COMPLETED', 'CANCELED'].includes(detail?.status)
+      && !pendingPayment
+      && (detail?.status === 'CANCELED' || Boolean(detail?.review)),
+    [detail?.review, detail?.status, pendingPayment],
+  );
+
+  const pollIntervalMs = pollMode === 'background'
+    ? BACKGROUND_POLL_INTERVAL
+    : (stableRequest ? STABLE_POLL_INTERVAL : ACTIVE_POLL_INTERVAL);
+
+  const pollLabel = pollMode === 'background'
+    ? 'Background refresh every 15s'
+    : (stableRequest ? 'Auto refresh every 10s' : 'Auto refresh every 5s');
+
+  const refreshData = useCallback(async ({
+    silent = false,
+    showError = !silent,
+    force = false,
+  } = {}) => {
+    if (refreshInFlightRef.current && !force) {
+      return;
+    }
+
+    refreshInFlightRef.current = true;
+    if (silent) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+      if (showError) {
+        setError('');
+      }
+    }
+
     try {
       const [requestDetail, requestMessages] = await Promise.all([
         requestApi.getRequestDetail(id),
         requestApi.getMessages(id),
       ]);
       setDetail(requestDetail);
-      setMessages(requestMessages);
+      setMessages(normalizeMessages(requestMessages));
+      setLastSyncedAt(new Date().toISOString());
     } catch (err) {
-      setError(getApiError(err));
+      if (showError) {
+        setError(getApiError(err));
+      }
     } finally {
-      setLoading(false);
+      refreshInFlightRef.current = false;
+      if (silent) {
+        setRefreshing(false);
+      } else {
+        setLoading(false);
+      }
     }
-  };
+  }, [id]);
+
+  const scrollToLatestMessage = useCallback((behavior = 'smooth') => {
+    const container = messageListRef.current;
+    if (!container) {
+      return;
+    }
+    container.scrollTo({
+      top: container.scrollHeight,
+      behavior,
+    });
+  }, []);
 
   useEffect(() => {
-    loadData();
-  }, [id]);
+    refreshData({ force: true });
+  }, [refreshData]);
+
+  useEffect(() => {
+    const onVisibilityChange = () => {
+      setPollMode(getCurrentPollMode());
+    };
+
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
+  }, []);
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      if (busyAction) {
+        return;
+      }
+      refreshData({ silent: true, showError: false });
+    }, pollIntervalMs);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [busyAction, pollIntervalMs, refreshData]);
 
   useEffect(() => {
     if (!detail) {
       return;
     }
+
     const nextStatusOptions = getAllowedStatusOptions(user?.roleName, detail.status);
     const acceptedAmount = getQuoteAmount(detail.quotes?.find((item) => item.status === 'ACCEPTED'));
-    const nextPaymentAmount = pendingPayment?.amount ?? acceptedAmount ?? '';
+    const resolvedAmount = pendingPayment?.amount ?? acceptedAmount ?? '';
 
     setStatusForm((previous) => ({
       status: nextStatusOptions.includes(previous.status) ? previous.status : (nextStatusOptions[0] || previous.status),
       note: previous.note,
     }));
+
     setPaymentForm((previous) => ({
       ...previous,
-      amount: nextPaymentAmount === '' ? previous.amount : nextPaymentAmount,
+      amount: pendingPayment
+        ? (pendingPayment.amount ?? '')
+        : (previous.amount !== '' ? previous.amount : resolvedAmount),
     }));
   }, [detail, pendingPayment, user?.roleName]);
+
+  useEffect(() => {
+    const latestMessageId = messages[messages.length - 1]?.id ?? null;
+    const firstSync = lastMessageIdRef.current === null;
+    const hasNewMessage = latestMessageId !== null && latestMessageId !== lastMessageIdRef.current;
+
+    if (firstSync || busyAction === 'message' || (hasNewMessage && shouldStickToBottomRef.current)) {
+      requestAnimationFrame(() => {
+        scrollToLatestMessage(firstSync ? 'auto' : 'smooth');
+      });
+    }
+
+    lastMessageIdRef.current = latestMessageId;
+  }, [busyAction, messages, scrollToLatestMessage]);
+
+  const handleMessageScroll = () => {
+    const container = messageListRef.current;
+    if (!container) {
+      return;
+    }
+    const distanceToBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+    shouldStickToBottomRef.current = distanceToBottom < 96;
+  };
 
   const runAction = async (actionKey, action, successMessage) => {
     setBusyAction(actionKey);
@@ -106,7 +266,7 @@ export default function RequestDetailPage() {
     try {
       await action();
       setNotice(successMessage);
-      await loadData();
+      await refreshData({ silent: true, force: true });
     } catch (err) {
       setError(getApiError(err));
     } finally {
@@ -119,6 +279,7 @@ export default function RequestDetailPage() {
     if (!messageInput.trim()) {
       return;
     }
+    shouldStickToBottomRef.current = true;
     await runAction(
       'message',
       async () => {
@@ -198,6 +359,17 @@ export default function RequestDetailPage() {
       <PageHeader
         title={`Request ${detail.requestCode}`}
         subtitle={`Created ${formatDateTime(detail.createdAt)}`}
+        actions={(
+          <div className="actions-row">
+            <div className="sync-pill">
+              <strong>{refreshing ? 'Refreshing…' : pollLabel}</strong>
+              <span>{lastSyncedAt ? `Last sync ${formatDateTime(lastSyncedAt)}` : 'Waiting for first sync'}</span>
+            </div>
+            <button className="button button-secondary" type="button" onClick={() => refreshData({ silent: true, force: true })}>
+              Refresh now
+            </button>
+          </div>
+        )}
       />
 
       {notice ? <div className="notice">{notice}</div> : null}
@@ -205,7 +377,12 @@ export default function RequestDetailPage() {
 
       <div className="grid-two">
         <div className="card">
-          <h2>Request Overview</h2>
+          <SectionHeader
+            title="Request Overview"
+            subtitle="Core request data and active rescue assignment. Updates are refreshed automatically while you stay on this page."
+            aside={<StatusBadge value={detail.status} />}
+          />
+
           <div className="info-grid">
             <div className="info-item">
               <span>Status</span>
@@ -264,7 +441,7 @@ export default function RequestDetailPage() {
             <div className="card card-muted">
               <h3>Assigned Staff</h3>
               <p>{detail.currentAssignment?.staffName || 'Not assigned yet'}</p>
-              <p className="muted-line">{detail.review?.staffName || detail.currentAssignment?.status || 'Pending assignment'}</p>
+              <p className="muted-line">{detail.currentAssignment?.status || 'Pending assignment'}</p>
             </div>
             <div className="card card-muted">
               <h3>Rescue Vehicle</h3>
@@ -274,21 +451,26 @@ export default function RequestDetailPage() {
           </div>
 
           {isCustomer && canCustomerCancel(detail.status) ? (
-            <div className="actions-row" style={{ marginTop: '1rem' }}>
-              <button
-                className="button button-danger"
-                type="button"
-                disabled={busyAction === 'cancel'}
-                onClick={cancelRequest}
-              >
-                {busyAction === 'cancel' ? 'Canceling...' : 'Cancel Request'}
-              </button>
+            <div className="card card-muted" style={{ marginTop: '1rem' }}>
+              <h3>Customer Actions</h3>
+              <p className="muted-line">You can still cancel while the request is waiting, matching, or already accepted.</p>
+              <div className="actions-row">
+                <button
+                  className="button button-danger"
+                  type="button"
+                  disabled={busyAction === 'cancel'}
+                  onClick={cancelRequest}
+                >
+                  {busyAction === 'cancel' ? 'Canceling...' : 'Cancel Request'}
+                </button>
+              </div>
             </div>
           ) : null}
 
           {isOpsRole && statusOptions.length > 0 ? (
             <form className="card card-muted" style={{ marginTop: '1rem' }} onSubmit={updateStatus}>
-              <h3>Update Progress</h3>
+              <h3>{getProgressTitle(user?.roleName)}</h3>
+              <p className="muted-line">Only the allowed status options for your role are shown here.</p>
               <div className="form-grid">
                 <div className="field">
                   <label>Next Status</label>
@@ -318,7 +500,28 @@ export default function RequestDetailPage() {
         </div>
 
         <div className="card">
-          <h2>Quote & Payment</h2>
+          <SectionHeader
+            title="Quote, Payment & Review"
+            subtitle="Commercial and completion states for this request. These sections stay up to date automatically."
+          />
+
+          {isCustomer && sentQuote ? (
+            <div className="section-banner section-banner-warning">
+              A quote is waiting for your response. Accept or reject it below.
+            </div>
+          ) : null}
+
+          {isCustomer && pendingPayment ? (
+            <div className="section-banner section-banner-info">
+              A payment record is pending. You can complete the mock payment flow below.
+            </div>
+          ) : null}
+
+          {detail.review ? (
+            <div className="section-banner section-banner-success">
+              Review already submitted for this request.
+            </div>
+          ) : null}
 
           <div className="table-wrapper">
             <table>
@@ -489,7 +692,7 @@ export default function RequestDetailPage() {
             </div>
           ) : null}
 
-          {isCustomer && detail.status === 'COMPLETED' && !detail.review ? (
+          {canLeaveReview ? (
             <form className="card card-muted" style={{ marginTop: '1rem' }} onSubmit={createReview}>
               <h3>Leave Review</h3>
               <div className="form-grid">
@@ -521,10 +724,14 @@ export default function RequestDetailPage() {
             </form>
           ) : null}
 
-          {isCustomer && detail.status !== 'COMPLETED' && !detail.review ? (
+          {isCustomer && !canLeaveReview && !detail.review ? (
             <div className="card card-muted" style={{ marginTop: '1rem' }}>
               <h3>Review</h3>
-              <p className="muted-line">You can leave a review after the request is marked COMPLETED.</p>
+              <p className="muted-line">
+                {detail.status === 'COMPLETED'
+                  ? 'A review can be added once the page sync completes.'
+                  : 'You can leave a review after the request is marked COMPLETED.'}
+              </p>
             </div>
           ) : null}
         </div>
@@ -532,22 +739,47 @@ export default function RequestDetailPage() {
 
       <div className="grid-two">
         <div className="card">
-          <h2>Chat</h2>
-          <div className="message-list">
+          <SectionHeader
+            title="Chat"
+            subtitle="Messages refresh automatically while this page is open."
+            aside={<span className="muted-line">{messages.length} message(s)</span>}
+          />
+
+          <div ref={messageListRef} className="message-list" onScroll={handleMessageScroll}>
             {messages.length === 0 ? (
-              <p className="muted-line">No messages yet. Start the conversation here.</p>
+              <div className="message-empty">
+                <p>No messages yet.</p>
+                <p className="muted-line">Start the conversation to coordinate dispatch, quote, and progress updates.</p>
+              </div>
             ) : (
-              messages.map((message) => (
-                <div key={message.id} className="message-bubble">
-                  <div className="message-meta">
-                    <span>{message.senderName} ({message.senderRole})</span>
-                    <span>{formatDateTime(message.sentAt)}</span>
+              messages.map((message, index) => {
+                const previousMessage = messages[index - 1];
+                const isOwnMessage = message.senderId === user?.id;
+                const startsGroup = !previousMessage || previousMessage.senderId !== message.senderId;
+
+                return (
+                  <div
+                    key={message.id}
+                    className={`message-row ${isOwnMessage ? 'message-row-own' : ''} ${startsGroup ? '' : 'message-row-compact'}`}
+                  >
+                    <div className={`message-bubble ${isOwnMessage ? 'message-bubble-own' : ''}`}>
+                      {startsGroup ? (
+                        <div className="message-meta">
+                          <span className="message-sender">
+                            {isOwnMessage ? 'You' : message.senderName}
+                          </span>
+                          <span className="message-role-pill">{message.senderRole}</span>
+                        </div>
+                      ) : null}
+                      <div>{message.content}</div>
+                      <div className="message-time">{formatDateTime(message.sentAt)}</div>
+                    </div>
                   </div>
-                  <div>{message.content}</div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
+
           <form onSubmit={sendMessage} style={{ marginTop: '1rem' }}>
             <div className="actions-row">
               <input
@@ -555,8 +787,9 @@ export default function RequestDetailPage() {
                 value={messageInput}
                 onChange={(event) => setMessageInput(event.target.value)}
                 placeholder="Send a message..."
+                disabled={busyAction === 'message'}
               />
-              <button className="button button-primary" type="submit" disabled={busyAction === 'message'}>
+              <button className="button button-primary" type="submit" disabled={busyAction === 'message' || !messageInput.trim()}>
                 {busyAction === 'message' ? 'Sending...' : 'Send'}
               </button>
             </div>
@@ -564,7 +797,11 @@ export default function RequestDetailPage() {
         </div>
 
         <div className="card">
-          <h2>Status History</h2>
+          <SectionHeader
+            title="Status History"
+            subtitle="Each request state change is recorded in order and refreshed automatically."
+          />
+
           {(detail.history || []).length === 0 ? (
             <p className="muted-line">No status history recorded yet.</p>
           ) : (
@@ -573,15 +810,15 @@ export default function RequestDetailPage() {
                 <div key={item.id} className="timeline-item">
                   <div className="timeline-dot" />
                   <div className="timeline-content">
-                    <div className="timeline-title">
-                      <strong>{item.oldStatus || 'NEW'}</strong>
-                      <span>{' -> '}</span>
-                      <strong>{item.newStatus}</strong>
+                    <div className="timeline-status-line">
+                      {item.oldStatus ? <StatusBadge value={item.oldStatus} /> : <span className="timeline-origin">NEW</span>}
+                      <span className="timeline-arrow">{'->'}</span>
+                      <StatusBadge value={item.newStatus} />
                     </div>
                     <div className="muted-line">
                       {item.changedByUserName} at {formatDateTime(item.changedAt)}
                     </div>
-                    {item.note ? <div>{item.note}</div> : null}
+                    {item.note ? <div className="timeline-note">{item.note}</div> : null}
                   </div>
                 </div>
               ))}

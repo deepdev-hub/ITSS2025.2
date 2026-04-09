@@ -17,6 +17,7 @@ import AdminCompaniesPage from '../pages/admin/AdminCompaniesPage';
 import AdminIncidentTypesPage from '../pages/admin/AdminIncidentTypesPage';
 import AdminServiceTypesPage from '../pages/admin/AdminServiceTypesPage';
 import AdminRequestsPage from '../pages/admin/AdminRequestsPage';
+import AdminRolesPage from '../pages/admin/AdminRolesPage';
 import CompanyDashboardPage from '../pages/company/CompanyDashboardPage';
 import CompanyProfilePage from '../pages/company/CompanyProfilePage';
 import CompanyRequestsPage from '../pages/company/CompanyRequestsPage';
@@ -25,6 +26,7 @@ import CompanyStaffPage from '../pages/company/CompanyStaffPage';
 import CompanyVehiclesPage from '../pages/company/CompanyVehiclesPage';
 import StaffDashboardPage from '../pages/staff/StaffDashboardPage';
 import StaffAssignmentsPage from '../pages/staff/StaffAssignmentsPage';
+import ProfilePage from '../pages/ProfilePage';
 
 export default function AppRouter() {
   return (
@@ -37,6 +39,7 @@ export default function AppRouter() {
       <Route element={<ProtectedRoute />}>
         <Route element={<AppShell />}>
           <Route path="/app" element={<Navigate to="/" replace />} />
+          <Route path="/profile" element={<ProfilePage />} />
           <Route path="/requests/:id" element={<RequestDetailPage />} />
 
           <Route element={<ProtectedRoute roles={[ROLES.CUSTOMER]} />}>
@@ -48,6 +51,7 @@ export default function AppRouter() {
           <Route element={<ProtectedRoute roles={[ROLES.ADMIN]} />}>
             <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
             <Route path="/admin/accounts" element={<AdminAccountsPage />} />
+            <Route path="/admin/roles" element={<AdminRolesPage />} />
             <Route path="/admin/companies" element={<AdminCompaniesPage />} />
             <Route path="/admin/incident-types" element={<AdminIncidentTypesPage />} />
             <Route path="/admin/service-types" element={<AdminServiceTypesPage />} />
