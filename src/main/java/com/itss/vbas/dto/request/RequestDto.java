@@ -29,20 +29,21 @@ public final class RequestDto {
     }
 
     public record RequestSummaryResponse(
-            Long id,
-            String requestCode,
-            String status,
-            String priorityLevel,
-            String description,
-            String incidentTypeName,
-            String serviceTypeName,
-            String locationLabel,
-            String vehicleLabel,
-            String customerName,
-            LocalDateTime createdAt,
-            LocalDateTime updatedAt,
-            CommonDto.BasicCompanyResponse assignedCompany
-    ) {
+        Long id,
+        String requestCode,
+        String status,
+        String priorityLevel,
+        String description,
+        String incidentTypeName,
+        String serviceTypeName,
+        String locationLabel,
+        String vehicleLabel,
+        String customerName,
+        LocalDateTime createdAt,
+        LocalDateTime updatedAt,
+        CommonDto.BasicCompanyResponse assignedCompany,
+        Integer timeoutSeconds,    // tổng số giây timeout theo priority
+        LocalDateTime expiresAt) {
     }
 
     public record AssignmentRequest(
@@ -67,7 +68,9 @@ public final class RequestDto {
             LocalDateTime assignedAt,
             LocalDateTime acceptedAt,
             LocalDateTime rejectedAt,
-            String status
+            String status,
+            Integer timeoutSeconds,    // tổng số giây timeout theo priority
+            LocalDateTime expiresAt
     ) {
     }
 

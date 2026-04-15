@@ -334,7 +334,7 @@ public class AdminServiceImpl implements AdminService {
         return rescueRequestRepository.findAll()
                 .stream()
                 .sorted(Comparator.comparing(RescueRequest::getCreatedAt, Comparator.nullsLast(Comparator.reverseOrder())))
-                .map(request -> appMapper.toRequestSummaryResponse(request, requestSupportService.getAssignedCompany(request)))
+                .map(request -> appMapper.toRequestSummaryResponse(request, requestSupportService.getAssignedCompany(request),requestSupportService.getPendingAssignment(request)))
                 .toList();
     }
 

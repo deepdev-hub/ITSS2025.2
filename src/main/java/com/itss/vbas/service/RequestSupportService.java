@@ -23,4 +23,6 @@ public interface RequestSupportService {
     void assertAssignedStaff(RescueStaff staff, RescueRequest request);
 
     RescueRequest changeRequestStatus(RescueRequest request, RescueRequestStatus newStatus, Account changedBy, String note);
+
+    RequestAssignment getPendingAssignment(RescueRequest request);
 }

@@ -35,6 +35,7 @@ import com.itss.vbas.service.AddressService;
 import com.itss.vbas.service.CompanyService;
 import com.itss.vbas.service.RequestSupportService;
 import com.itss.vbas.util.PasswordUtil;
+import com.itss.vbas.util.TimeoutCalculator;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -183,10 +184,10 @@ public class CompanyServiceImpl implements CompanyService {
                 .orElseThrow(() -> new ResourceNotFoundException("Staff not found with id: " + id));
         Account user = staff.getUser();
 
-        if (request.email() != null && !request.email().equalsIgnoreCase(user.getEmail()) && accountRepository.existsByEmailIgnoreCase(request.email())) {
+        if (request.email() != null && !request.email().equalsIgnoreCase(user.getEmail())
+                && accountRepository.existsByEmailIgnoreCase(request.email())) {
             throw new BadRequestException("Email is already in use");
         }
-
         if (request.email() != null && !request.email().isBlank()) {
             user.setEmail(request.email().trim().toLowerCase());
         }
@@ -267,10 +268,22 @@ public class CompanyServiceImpl implements CompanyService {
         RescueCompany company = getCurrentCompany();
         return rescueRequestRepository.findAssignedRequestsByCompanyId(company.getId())
                 .stream()
-                .map(request -> appMapper.toRequestSummaryResponse(request, company))
+                .map(request -> appMapper.toRequestSummaryResponse(
+                        request, company, requestSupportService.getPendingAssignment(request)))
                 .toList();
     }
 
+    /**
+     * Assigns a staff member and rescue vehicle to an existing request assignment.
+     * <p>
+     * Assigning staff is the implicit ACCEPTANCE of the assignment window — the
+     * assignment status transitions from PENDING → ACCEPTED.
+     * <p>
+     * Expiry guard: if the PENDING assignment's timeout window has already elapsed
+     * when this method is called, we eagerly reject the assignment (consistent with
+     * the scheduled job) and throw a 400 so the company cannot sneak in a late
+     * acceptance. The admin must then reassign to another company.
+     */
     @Override
     public RequestDto.AssignmentResponse assignStaffAndVehicle(Long requestId, RequestDto.AssignmentRequest request) {
         if (request.staffId() == null || request.vehicleId() == null) {
@@ -283,29 +296,61 @@ public class CompanyServiceImpl implements CompanyService {
                 .orElseThrow(() -> new ResourceNotFoundException("Rescue request not found with id: " + requestId));
         requestSupportService.assertAssignedCompany(company, rescueRequest);
 
+        // ── Expiry guard ───────────────────────────────────────────────────────────
+        RequestAssignment existingAssignment = requestAssignmentRepository
+                .findFirstByRequestIdAndCompanyIdOrderByAssignedAtDesc(requestId, company.getId())
+                .orElse(null);
+
+        if (existingAssignment != null && existingAssignment.getStatus() == AssignmentStatus.PENDING) {
+            LocalDateTime expiresAt = TimeoutCalculator.calculateExpiresAt(existingAssignment);
+            if (LocalDateTime.now().isAfter(expiresAt)) {
+                // Eagerly expire to stay consistent with the scheduled job
+                existingAssignment.setStatus(AssignmentStatus.REJECTED);
+                existingAssignment.setRejectedAt(LocalDateTime.now());
+                requestAssignmentRepository.save(existingAssignment);
+                throw new BadRequestException(
+                        "Assignment has expired. The acceptance window has closed. " +
+                        "Please wait for the admin to reassign the request to another company.");
+            }
+        }
+
+        // Block action on already-rejected or completed assignments
+        if (existingAssignment != null
+                && existingAssignment.getStatus() != AssignmentStatus.PENDING
+                && existingAssignment.getStatus() != AssignmentStatus.ACCEPTED) {
+            throw new BadRequestException(
+                    "This assignment is no longer active (status: " + existingAssignment.getStatus() + "). " +
+                    "The request may have been reassigned or cancelled.");
+        }
+
         RescueStaff staff = rescueStaffRepository.findByIdAndCompanyId(request.staffId(), company.getId())
                 .orElseThrow(() -> new BadRequestException("Selected staff does not belong to your company"));
         RescueVehicle vehicle = rescueVehicleRepository.findByIdAndBranchCompanyId(request.vehicleId(), company.getId())
                 .orElseThrow(() -> new BadRequestException("Selected rescue vehicle does not belong to your company"));
 
-        RequestAssignment assignment = requestAssignmentRepository.findFirstByRequestIdAndCompanyIdOrderByAssignedAtDesc(requestId, company.getId())
-                .orElseGet(() -> RequestAssignment.builder()
+        // Re-use existing record or create new one
+        RequestAssignment assignment = existingAssignment != null
+                ? existingAssignment
+                : RequestAssignment.builder()
                         .request(rescueRequest)
                         .company(company)
                         .assignedByUser(account)
                         .status(AssignmentStatus.PENDING)
-                        .build());
+                        .build();
 
         assignment.setAssignedByUser(account);
         assignment.setStaff(staff);
         assignment.setVehicle(vehicle);
         assignment.setAcceptedAt(LocalDateTime.now());
         assignment.setRejectedAt(null);
+        // Assigning staff = implicit ACCEPTANCE — countdown stops here
         assignment.setStatus(AssignmentStatus.ACCEPTED);
         RequestAssignment savedAssignment = requestAssignmentRepository.save(assignment);
 
-        if (rescueRequest.getStatus() == RescueRequestStatus.CREATED || rescueRequest.getStatus() == RescueRequestStatus.SEARCHING) {
-            requestSupportService.changeRequestStatus(rescueRequest, RescueRequestStatus.MATCHED, account, request.note());
+        if (rescueRequest.getStatus() == RescueRequestStatus.CREATED
+                || rescueRequest.getStatus() == RescueRequestStatus.SEARCHING) {
+            requestSupportService.changeRequestStatus(
+                    rescueRequest, RescueRequestStatus.MATCHED, account, request.note());
         }
 
         return appMapper.toAssignmentResponse(savedAssignment);
@@ -321,6 +366,8 @@ public class CompanyServiceImpl implements CompanyService {
                 .map(appMapper::toAssignmentResponse)
                 .toList();
     }
+
+    // ── Private helpers ───────────────────────────────────────────────────────
 
     private RescueCompany getCurrentCompany() {
         return requestSupportService.getCurrentCompany(authContext.getCurrentAccount());

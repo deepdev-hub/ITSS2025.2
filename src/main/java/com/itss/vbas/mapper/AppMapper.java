@@ -1,5 +1,6 @@
 package com.itss.vbas.mapper;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 import com.itss.vbas.dto.admin.AdminDto;
@@ -24,6 +25,9 @@ import com.itss.vbas.entity.RescueStaff;
 import com.itss.vbas.entity.RescueVehicle;
 import com.itss.vbas.entity.Review;
 import com.itss.vbas.entity.ServiceType;
+import com.itss.vbas.service.impl.AssignmentTimeoutServiceImpl;
+import com.itss.vbas.util.TimeoutCalculator;
+
 import org.springframework.stereotype.Component;
 
 @Component
@@ -217,29 +221,43 @@ public class AppMapper {
         );
     }
 
+    private final AssignmentTimeoutServiceImpl assignmentTimeoutService;
+
+    public AppMapper(AssignmentTimeoutServiceImpl assignmentTimeoutService) {
+    this.assignmentTimeoutService = assignmentTimeoutService;
+    }
+
     public RequestDto.AssignmentResponse toAssignmentResponse(RequestAssignment assignment) {
         if (assignment == null) {
             return null;
         }
+
+        Integer timeoutSeconds = null;
+        LocalDateTime expiresAt = null;
+
+        timeoutSeconds = TimeoutCalculator.getTimeoutSeconds(assignment.getRequest().getPriorityLevel());
+        expiresAt = TimeoutCalculator.calculateExpiresAt(assignment);
+
         return new RequestDto.AssignmentResponse(
-                assignment.getId(),
-                assignment.getRequest().getId(),
-                assignment.getCompany().getId(),
-                assignment.getCompany().getCompanyName(),
-                assignment.getStaff() == null ? null : assignment.getStaff().getId(),
-                assignment.getStaff() == null ? null : assignment.getStaff().getUser().getFullName(),
-                assignment.getVehicle() == null ? null : assignment.getVehicle().getId(),
-                assignment.getVehicle() == null ? null : assignment.getVehicle().getVehicleCode(),
-                assignment.getVehicle() == null ? null : assignment.getVehicle().getPlateNumber(),
-                assignment.getAssignedByUser().getId(),
-                assignment.getAssignedByUser().getFullName(),
-                assignment.getAssignedAt(),
-                assignment.getAcceptedAt(),
-                assignment.getRejectedAt(),
-                assignment.getStatus().name()
+            assignment.getId(),
+            assignment.getRequest().getId(),
+            assignment.getCompany().getId(),
+            assignment.getCompany().getCompanyName(),
+            assignment.getStaff() == null ? null : assignment.getStaff().getId(),
+            assignment.getStaff() == null ? null : assignment.getStaff().getUser().getFullName(),
+            assignment.getVehicle() == null ? null : assignment.getVehicle().getId(),
+            assignment.getVehicle() == null ? null : assignment.getVehicle().getVehicleCode(),
+            assignment.getVehicle() == null ? null : assignment.getVehicle().getPlateNumber(),
+            assignment.getAssignedByUser().getId(),
+            assignment.getAssignedByUser().getFullName(),
+            assignment.getAssignedAt(),
+            assignment.getAcceptedAt(),
+            assignment.getRejectedAt(),
+            assignment.getStatus().name(),
+            timeoutSeconds,
+            expiresAt
         );
     }
-
     public RequestDto.StatusHistoryResponse toStatusHistoryResponse(RequestStatusHistory history) {
         return new RequestDto.StatusHistoryResponse(
                 history.getId(),
@@ -314,7 +332,24 @@ public class AppMapper {
         );
     }
 
-    public RequestDto.RequestSummaryResponse toRequestSummaryResponse(RescueRequest request, RescueCompany assignedCompany) {
+    public RequestDto.RequestSummaryResponse toRequestSummaryResponse(
+            RescueRequest request,
+            RescueCompany assignedCompany,
+            RequestAssignment pendingAssignment 
+    ) {
+        // ── Compute countdown fields only when a PENDING assignment exists 
+        Integer timeoutSeconds = null;
+        LocalDateTime expiresAt = null;
+
+        if (pendingAssignment != null
+                && pendingAssignment.getAssignedAt() != null
+                && request.getPriorityLevel() != null) {
+
+            timeoutSeconds = TimeoutCalculator.getTimeoutSeconds(
+                    request.getPriorityLevel());
+            expiresAt = TimeoutCalculator.calculateExpiresAt(pendingAssignment);
+        }
+
         return new RequestDto.RequestSummaryResponse(
                 request.getId(),
                 request.getRequestCode(),
@@ -324,11 +359,16 @@ public class AppMapper {
                 request.getIncidentType().getIncidentName(),
                 request.getServiceType() == null ? null : request.getServiceType().getServiceName(),
                 request.getLocation() == null ? null : buildFullAddress(request.getLocation()),
-                request.getVehicle() == null ? null : request.getVehicle().getBrand() + " " + request.getVehicle().getModel() + " - " + request.getVehicle().getPlateNumber(),
+                request.getVehicle() == null ? null
+                        : request.getVehicle().getBrand() + " "
+                                + request.getVehicle().getModel() + " - "
+                                + request.getVehicle().getPlateNumber(),
                 request.getCustomer().getFullName(),
                 request.getCreatedAt(),
                 request.getUpdatedAt(),
-                toBasicCompanyResponse(assignedCompany)
+                toBasicCompanyResponse(assignedCompany),
+                timeoutSeconds, 
+                expiresAt 
         );
     }
 

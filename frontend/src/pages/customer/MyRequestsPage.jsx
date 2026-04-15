@@ -2,17 +2,51 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { requestApi } from '../../api/requestApi';
 import { getApiError } from '../../api/client';
+import Countdown from '../../components/common/Countdown';
 import Loader from '../../components/common/Loader';
 import PageHeader from '../../components/common/PageHeader';
 import StatusBadge from '../../components/common/StatusBadge';
 import { canCustomerCancel, formatDateTime, getRequestLocationLabel } from '../../utils/requestUi';
 
+/**
+ * Shows a countdown or expiry message while the assigned company has not yet
+ * confirmed (status = MATCHED).
+ *
+ * NOTE: RequestSummaryResponse exposes `expiresAt` at the TOP level —
+ *       it is NOT nested inside currentAssignment for summary responses.
+ *       Only RequestDetailResponse has the nested currentAssignment object.
+ */
+function AssignmentCountdown({ request }) {
+  // expiresAt lives at the top level of RequestSummaryResponse
+  const expiresAt = request?.expiresAt;
+  const status    = request?.status;
+
+  // Only relevant while waiting for the assigned company to confirm
+  if (status !== 'MATCHED' || !expiresAt) return null;
+
+  const isExpired = new Date(expiresAt).getTime() <= Date.now();
+
+  if (isExpired) {
+    return (
+      <div className="muted-line" style={{ marginTop: '0.3rem', color: 'var(--danger)', fontSize: '0.82rem' }}>
+        No company accepted (timed out)
+      </div>
+    );
+  }
+
+  return (
+    <div className="muted-line" style={{ marginTop: '0.3rem' }}>
+      <Countdown expiresAt={expiresAt} label="Company responds in:" />
+    </div>
+  );
+}
+
 export default function MyRequestsPage() {
-  const [requests, setRequests] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [notice, setNotice] = useState('');
-  const [actionId, setActionId] = useState(null);
+  const [requests, setRequests]   = useState([]);
+  const [loading, setLoading]     = useState(true);
+  const [error, setError]         = useState('');
+  const [notice, setNotice]       = useState('');
+  const [actionId, setActionId]   = useState(null);
 
   const loadRequests = async () => {
     setLoading(true);
@@ -54,7 +88,7 @@ export default function MyRequestsPage() {
       />
 
       {notice ? <div className="notice">{notice}</div> : null}
-      {error ? <div className="notice error">{error}</div> : null}
+      {error  ? <div className="notice error">{error}</div> : null}
 
       {loading ? <Loader label="Loading your rescue requests..." /> : null}
 
@@ -90,7 +124,11 @@ export default function MyRequestsPage() {
                       </td>
                       <td>{getRequestLocationLabel(request)}</td>
                       <td><StatusBadge value={request.priorityLevel} /></td>
-                      <td><StatusBadge value={request.status} /></td>
+                      <td>
+                        {/* Status badge + assignment countdown beneath it */}
+                        <StatusBadge value={request.status} />
+                        <AssignmentCountdown request={request} />
+                      </td>
                       <td>{formatDateTime(request.createdAt)}</td>
                       <td>{request.assignedCompany?.companyName || 'Waiting for assignment'}</td>
                       <td>
