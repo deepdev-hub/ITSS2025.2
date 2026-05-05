@@ -131,7 +131,11 @@ public class RescueRequestServiceImpl implements RescueRequestService {
         Account customer = authContext.getCurrentAccount();
         return rescueRequestRepository.findByCustomerIdOrderByCreatedAtDesc(customer.getId())
                 .stream()
-                .map(request -> appMapper.toRequestSummaryResponse(request, requestSupportService.getAssignedCompany(request)))
+                .map(request -> appMapper.toRequestSummaryResponse(
+                        request,
+                        requestSupportService.getAssignedCompany(request),
+                        requestSupportService.getLatestAssignment(request)
+                ))
                 .toList();
     }
 

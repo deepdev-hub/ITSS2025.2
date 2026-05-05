@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { companyApi } from '../../api/companyApi';
 import { requestApi } from '../../api/requestApi';
 import { getApiError } from '../../api/client';
+import Countdown from '../../components/common/Countdown';
 import Loader from '../../components/common/Loader';
 import PageHeader from '../../components/common/PageHeader';
 import StatusBadge from '../../components/common/StatusBadge';
@@ -232,6 +233,7 @@ export default function CompanyRequestsPage() {
                     <th>Incident</th>
                     <th>Priority</th>
                     <th>Status</th>
+                    <th>Countdown</th>
                     <th />
                   </tr>
                 </thead>
@@ -245,6 +247,9 @@ export default function CompanyRequestsPage() {
                       <td>{request.incidentTypeName}</td>
                       <td><StatusBadge value={request.priorityLevel} /></td>
                       <td><StatusBadge value={request.status} /></td>
+                      <td>
+                        <Countdown expiresAt={request.expiresAt} status={request.assignmentStatus} label="" />
+                      </td>
                       <td>
                         <div className="actions-row">
                           <button className="button button-secondary" type="button" onClick={() => setActiveRequestId(request.id)}>
@@ -325,6 +330,10 @@ export default function CompanyRequestsPage() {
                 <p><strong>Staff:</strong> {detail.currentAssignment?.staffName || 'Not assigned yet'}</p>
                 <p><strong>Vehicle:</strong> {detail.currentAssignment?.vehicleCode || 'Not assigned yet'}</p>
                 <p><strong>Assignment Status:</strong> {detail.currentAssignment?.status || 'Pending'}</p>
+                <Countdown
+                  expiresAt={detail.currentAssignment?.expiresAt}
+                  status={detail.currentAssignment?.status}
+                />
               </div>
 
               <form className="card card-muted" style={{ marginTop: '1rem' }} onSubmit={handleAssignment}>

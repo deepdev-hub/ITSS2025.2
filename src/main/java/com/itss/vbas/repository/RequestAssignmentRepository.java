@@ -14,6 +14,10 @@ public interface RequestAssignmentRepository extends JpaRepository<RequestAssign
 
     Optional<RequestAssignment> findFirstByRequestIdAndCompanyIdOrderByAssignedAtDesc(Long requestId, Long companyId);
 
+    Optional<RequestAssignment> findFirstByRequestIdAndStatusOrderByAssignedAtDesc(Long requestId, AssignmentStatus status);
+
+    List<RequestAssignment> findByStatusOrderByAssignedAtAsc(AssignmentStatus status);
+
     List<RequestAssignment> findByStaffIdOrderByAssignedAtDesc(Long staffId);
 
     long countByCompanyId(Long companyId);

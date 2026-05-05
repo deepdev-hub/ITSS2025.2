@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { requestApi } from '../../api/requestApi';
 import { getApiError } from '../../api/client';
+import Countdown from '../../components/common/Countdown';
 import Loader from '../../components/common/Loader';
 import PageHeader from '../../components/common/PageHeader';
 import StatusBadge from '../../components/common/StatusBadge';
@@ -74,6 +75,7 @@ export default function MyRequestsPage() {
                     <th>Status</th>
                     <th>Created</th>
                     <th>Assigned Company</th>
+                    <th>Countdown</th>
                     <th />
                   </tr>
                 </thead>
@@ -93,6 +95,9 @@ export default function MyRequestsPage() {
                       <td><StatusBadge value={request.status} /></td>
                       <td>{formatDateTime(request.createdAt)}</td>
                       <td>{request.assignedCompany?.companyName || 'Waiting for assignment'}</td>
+                      <td>
+                        <Countdown expiresAt={request.expiresAt} status={request.assignmentStatus} label="" />
+                      </td>
                       <td>
                         <div className="actions-row">
                           <Link className="button button-secondary" to={`/requests/${request.id}`}>
