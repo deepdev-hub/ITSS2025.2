@@ -10,7 +10,6 @@ const initialForm = {
   password: '',
   fullName: '',
   phone: '',
-  branchId: '',
   jobTitle: '',
   status: 'ACTIVE',
 };
@@ -18,7 +17,6 @@ const initialForm = {
 export default function AdminCompanyStaffPage() {
   const [companies, setCompanies] = useState([]);
   const [selectedCompanyId, setSelectedCompanyId] = useState('');
-  const [branches, setBranches] = useState([]);
   const [staff, setStaff] = useState([]);
   const [form, setForm] = useState(initialForm);
   const [editingId, setEditingId] = useState(null);
@@ -44,16 +42,11 @@ export default function AdminCompanyStaffPage() {
 
   const loadCompanyData = async (companyId) => {
     if (!companyId) {
-      setBranches([]);
       setStaff([]);
       return;
     }
     try {
-      const [branchList, staffList] = await Promise.all([
-        adminApi.getCompanyBranches(companyId),
-        adminApi.getCompanyStaff(companyId),
-      ]);
-      setBranches(branchList);
+      const staffList = await adminApi.getCompanyStaff(companyId);
       setStaff(staffList);
     } catch (err) {
       setError(getApiError(err));
@@ -88,7 +81,6 @@ export default function AdminCompanyStaffPage() {
       password: '',
       fullName: item.fullName || '',
       phone: item.phone || '',
-      branchId: item.branchId || '',
       jobTitle: item.jobTitle || '',
       status: item.status || 'ACTIVE',
     });
@@ -102,7 +94,6 @@ export default function AdminCompanyStaffPage() {
   const buildPayload = () => ({
     ...form,
     userId: form.userId ? Number(form.userId) : null,
-    branchId: form.branchId ? Number(form.branchId) : null,
   });
 
   const handleSubmit = async (event) => {
@@ -187,15 +178,6 @@ export default function AdminCompanyStaffPage() {
               <input name="phone" value={form.phone} onChange={handleChange} />
             </div>
             <div className="field">
-              <label>Branch</label>
-              <select name="branchId" value={form.branchId} onChange={handleChange}>
-                <option value="">No branch</option>
-                {branches.map((branch) => (
-                  <option key={branch.id} value={branch.id}>{branch.branchName}</option>
-                ))}
-              </select>
-            </div>
-            <div className="field">
               <label>Job Title</label>
               <input name="jobTitle" value={form.jobTitle} onChange={handleChange} />
             </div>
@@ -224,7 +206,6 @@ export default function AdminCompanyStaffPage() {
                 <tr>
                   <th>Name</th>
                   <th>Email</th>
-                  <th>Branch</th>
                   <th>Status</th>
                   <th />
                 </tr>
@@ -234,7 +215,6 @@ export default function AdminCompanyStaffPage() {
                   <tr key={item.id}>
                     <td>{item.fullName}</td>
                     <td>{item.email}</td>
-                    <td>{branches.find((branch) => branch.id === item.branchId)?.branchName || 'N/A'}</td>
                     <td><StatusBadge value={item.status} /></td>
                     <td>
                       <div className="actions-row">
@@ -246,7 +226,7 @@ export default function AdminCompanyStaffPage() {
                 ))}
                 {staff.length === 0 ? (
                   <tr>
-                    <td colSpan="5">No staff found</td>
+                    <td colSpan="4">No staff found</td>
                   </tr>
                 ) : null}
               </tbody>

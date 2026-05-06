@@ -181,11 +181,6 @@ public class AdminController {
         return ResponseEntity.ok(CommonDto.ApiResponse.success("Company suspended successfully"));
     }
 
-    @GetMapping("/companies/{companyId}/branches")
-    public ResponseEntity<CommonDto.ApiResponse<List<CompanyDto.BranchResponse>>> getCompanyBranches(@PathVariable Long companyId) {
-        return ResponseEntity.ok(CommonDto.ApiResponse.success("Company branches fetched successfully", adminService.getCompanyBranches(companyId)));
-    }
-
     @GetMapping("/companies/{companyId}/staff")
     public ResponseEntity<CommonDto.ApiResponse<List<CompanyDto.StaffResponse>>> getCompanyStaff(@PathVariable Long companyId) {
         return ResponseEntity.ok(CommonDto.ApiResponse.success("Company staff fetched successfully", adminService.getCompanyStaff(companyId)));

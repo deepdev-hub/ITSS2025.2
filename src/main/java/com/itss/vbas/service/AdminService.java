@@ -56,8 +56,6 @@ public interface AdminService {
 
     void deleteCompany(Long id);
 
-    List<CompanyDto.BranchResponse> getCompanyBranches(Long companyId);
-
     List<CompanyDto.StaffResponse> getCompanyStaff(Long companyId);
 
     CompanyDto.StaffResponse createCompanyStaff(Long companyId, CompanyDto.StaffRequest request);
