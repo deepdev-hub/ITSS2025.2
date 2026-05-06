@@ -31,6 +31,7 @@ import com.itss.vbas.repository.RescueStaffRepository;
 import com.itss.vbas.repository.RescueVehicleRepository;
 import com.itss.vbas.repository.RoleRepository;
 import com.itss.vbas.security.AuthContext;
+import com.itss.vbas.service.AddressService; // Đã thêm import AddressService
 import com.itss.vbas.service.CompanyService;
 import com.itss.vbas.service.RequestSupportService;
 import com.itss.vbas.util.PasswordUtil;
@@ -48,6 +49,7 @@ public class CompanyServiceImpl implements CompanyService {
     private final RequestAssignmentRepository requestAssignmentRepository;
     private final AccountRepository accountRepository;
     private final RoleRepository roleRepository;
+    private final AddressService addressService; // Đã khôi phục AddressService
     private final RequestSupportService requestSupportService;
     private final AuthContext authContext;
     private final AppMapper appMapper;
@@ -60,6 +62,7 @@ public class CompanyServiceImpl implements CompanyService {
             RequestAssignmentRepository requestAssignmentRepository,
             AccountRepository accountRepository,
             RoleRepository roleRepository,
+            AddressService addressService, // Đã khôi phục AddressService
             RequestSupportService requestSupportService,
             AuthContext authContext,
             AppMapper appMapper
@@ -71,6 +74,7 @@ public class CompanyServiceImpl implements CompanyService {
         this.requestAssignmentRepository = requestAssignmentRepository;
         this.accountRepository = accountRepository;
         this.roleRepository = roleRepository;
+        this.addressService = addressService; // Đã gán giá trị
         this.requestSupportService = requestSupportService;
         this.authContext = authContext;
         this.appMapper = appMapper;
@@ -100,33 +104,9 @@ public class CompanyServiceImpl implements CompanyService {
         RescueCompany company = getCurrentCompany();
         return rescueStaffRepository.findByCompanyIdOrderByIdDesc(company.getId())
                 .stream()
-                .map(staff -> {
-
-                    java.math.BigDecimal lat = null;
-                    java.math.BigDecimal lng = null;
-
-                    if (staff.getUser() != null && staff.getUser().getDefaultAddress() != null) {
-                        lat = staff.getUser().getDefaultAddress().getLatitude();
-                        lng = staff.getUser().getDefaultAddress().getLongitude();
-                    }
-
-                    return new CompanyDto.StaffResponse(
-                        staff.getId(),
-                        staff.getUser() != null ? staff.getUser().getId() : null,
-                        staff.getCompany() != null ? staff.getCompany().getId() : null,
-                        staff.getBranch() != null ? staff.getBranch().getId() : null,
-                        staff.getUser() != null ? staff.getUser().getFullName() : null,
-                        staff.getUser() != null ? staff.getUser().getEmail() : null,
-                        staff.getUser() != null ? staff.getUser().getPhone() : null,
-                        staff.getJobTitle(),
-                        staff.getStatus() != null ? staff.getStatus().name() : null,
-                        lat, 
-                        lng  
-                    );
-                })
+                .map(appMapper::toStaffResponse) // Rút gọn lại cực kỳ sạch sẽ
                 .toList();
-            }
-
+    }
 
     @Override
     public CompanyDto.StaffResponse createStaff(CompanyDto.StaffRequest request) {
@@ -342,9 +322,8 @@ public class CompanyServiceImpl implements CompanyService {
 
     @Override
     public void updateStaffLocation(CompanyDto.LocationUpdateRequest request) {
-        Account account = authContext.getCurrentAccount(); // Lấy account của Staff
+        Account account = authContext.getCurrentAccount(); 
 
-        // Lay dia chi mac dinh
         Address currentAddress = account.getDefaultAddress(); 
         
         if(currentAddress == null){
