@@ -10,16 +10,6 @@ public interface CompanyService {
 
     CompanyDto.CompanyResponse updateMyCompany(CompanyDto.CompanyRequest request);
 
-    List<CompanyDto.BranchResponse> getBranches();
-
-    CompanyDto.BranchResponse getBranch(Long id);
-
-    CompanyDto.BranchResponse createBranch(CompanyDto.BranchRequest request);
-
-    CompanyDto.BranchResponse updateBranch(Long id, CompanyDto.BranchRequest request);
-
-    void deleteBranch(Long id);
-
     List<CompanyDto.StaffResponse> getStaff();
 
     CompanyDto.StaffResponse createStaff(CompanyDto.StaffRequest request);

@@ -37,9 +37,6 @@ FROM public.roles r
 WHERE r.role_name = 'RESCUE_STAFF'
 ON CONFLICT (email) DO NOTHING;
 
-INSERT INTO public.addresses (country, province, district, ward, street, detail, latitude, longitude)
-VALUES ('Vietnam', 'Ho Chi Minh City', 'District 1', 'Ben Nghe', 'Le Loi', 'Main office branch', 10.7731000, 106.7043000);
-
 INSERT INTO public.customer_vehicles (customer_id, brand, model, plate_number, manufacture_year, color, fuel_type, notes)
 SELECT a.id, 'Toyota', 'Vios', '51A-888.88', 2021, 'White', 'Gasoline', 'Seed vehicle for demo customer'
 FROM public.account a
@@ -56,28 +53,10 @@ WHERE a.email = 'company@vbas.local'
       WHERE c.company_name = 'RapidTow Rescue'
   );
 
-INSERT INTO public.rescue_company_branches (company_id, branch_name, phone, address_id, latitude, longitude, is_main_branch)
-SELECT c.id, 'RapidTow Central Branch', '0900000011', addr.id, 10.7731000, 106.7043000, true
-FROM public.rescue_companies c
-CROSS JOIN LATERAL (
-    SELECT id
-    FROM public.addresses
-    WHERE street = 'Le Loi' AND province = 'Ho Chi Minh City'
-    ORDER BY id DESC
-    LIMIT 1
-) addr
-WHERE c.company_name = 'RapidTow Rescue'
-  AND NOT EXISTS (
-      SELECT 1
-      FROM public.rescue_company_branches b
-      WHERE b.company_id = c.id AND b.branch_name = 'RapidTow Central Branch'
-  );
-
-INSERT INTO public.rescue_staff (user_id, company_id, branch_id, job_title, status)
-SELECT staff_account.id, company.id, branch.id, 'Field Technician', 'ACTIVE'
+INSERT INTO public.rescue_staff (user_id, company_id, job_title, status)
+SELECT staff_account.id, company.id, 'Field Technician', 'ACTIVE'
 FROM public.account staff_account
 JOIN public.rescue_companies company ON company.company_name = 'RapidTow Rescue'
-JOIN public.rescue_company_branches branch ON branch.company_id = company.id AND branch.branch_name = 'RapidTow Central Branch'
 WHERE staff_account.email = 'staff@vbas.local'
   AND NOT EXISTS (
       SELECT 1
@@ -85,10 +64,10 @@ WHERE staff_account.email = 'staff@vbas.local'
       WHERE rs.user_id = staff_account.id
   );
 
-INSERT INTO public.rescue_vehicles (branch_id, vehicle_code, vehicle_type, plate_number, status)
-SELECT branch.id, 'RT-TRUCK-01', 'Tow Truck', '50C-123.45', 'AVAILABLE'
-FROM public.rescue_company_branches branch
-WHERE branch.branch_name = 'RapidTow Central Branch'
+INSERT INTO public.rescue_vehicles (company_id, vehicle_code, vehicle_type, plate_number, status)
+SELECT company.id, 'RT-TRUCK-01', 'Tow Truck', '50C-123.45', 'AVAILABLE'
+FROM public.rescue_companies company
+WHERE company.company_name = 'RapidTow Rescue'
   AND NOT EXISTS (
       SELECT 1
       FROM public.rescue_vehicles rv

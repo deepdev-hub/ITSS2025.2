@@ -1,6 +1,7 @@
 package com.itss.vbas.mapper;
 
 import java.util.List;
+import java.util.stream.Stream;
 
 import com.itss.vbas.dto.admin.AdminDto;
 import com.itss.vbas.dto.auth.AuthDto;
@@ -18,7 +19,6 @@ import com.itss.vbas.entity.Quote;
 import com.itss.vbas.entity.RequestAssignment;
 import com.itss.vbas.entity.RequestStatusHistory;
 import com.itss.vbas.entity.RescueCompany;
-import com.itss.vbas.entity.RescueCompanyBranch;
 import com.itss.vbas.entity.RescueRequest;
 import com.itss.vbas.entity.RescueStaff;
 import com.itss.vbas.entity.RescueVehicle;
@@ -185,25 +185,11 @@ public class AppMapper {
         );
     }
 
-    public CompanyDto.BranchResponse toBranchResponse(RescueCompanyBranch branch) {
-        return new CompanyDto.BranchResponse(
-                branch.getId(),
-                branch.getCompany().getId(),
-                branch.getBranchName(),
-                branch.getPhone(),
-                toAddressResponse(branch.getAddress()),
-                branch.getLatitude(),
-                branch.getLongitude(),
-                branch.getIsMainBranch()
-        );
-    }
-
     public CompanyDto.StaffResponse toStaffResponse(RescueStaff staff) {
         return new CompanyDto.StaffResponse(
                 staff.getId(),
                 staff.getUser().getId(),
                 staff.getCompany().getId(),
-                staff.getBranch() == null ? null : staff.getBranch().getId(),
                 staff.getUser().getFullName(),
                 staff.getUser().getEmail(),
                 staff.getUser().getPhone(),
@@ -215,8 +201,7 @@ public class AppMapper {
     public CompanyDto.VehicleResponse toRescueVehicleResponse(RescueVehicle rescueVehicle) {
         return new CompanyDto.VehicleResponse(
                 rescueVehicle.getId(),
-                rescueVehicle.getBranch().getId(),
-                rescueVehicle.getBranch().getBranchName(),
+                rescueVehicle.getCompany().getId(),
                 rescueVehicle.getVehicleCode(),
                 rescueVehicle.getVehicleType(),
                 rescueVehicle.getPlateNumber(),
@@ -381,8 +366,7 @@ public class AppMapper {
     }
 
     private String buildFullAddress(Address address) {
-        return List.of(address.getDetail(), address.getStreet(), address.getWard(), address.getDistrict(), address.getProvince(), address.getCountry())
-                .stream()
+        return Stream.of(address.getDetail(), address.getStreet(), address.getWard(), address.getDistrict(), address.getProvince(), address.getCountry())
                 .filter(value -> value != null && !value.isBlank())
                 .reduce((left, right) -> left + ", " + right)
                 .orElse("");

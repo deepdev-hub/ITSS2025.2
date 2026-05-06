@@ -6,7 +6,7 @@ import Loader from '../../components/common/Loader';
 import PageHeader from '../../components/common/PageHeader';
 import StatCard from '../../components/common/StatCard';
 import StatusBadge from '../../components/common/StatusBadge';
-import { formatDateTime, getRequestLocationLabel } from '../../utils/requestUi';
+import { formatCurrency, formatDateTime, getRequestLocationLabel } from '../../utils/requestUi';
 
 export default function AdminDashboardPage() {
   const [dashboard, setDashboard] = useState(null);
@@ -14,6 +14,7 @@ export default function AdminDashboardPage() {
   const [companies, setCompanies] = useState([]);
   const [assignForm, setAssignForm] = useState({});
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [assigningId, setAssigningId] = useState(null);
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
@@ -42,6 +43,8 @@ export default function AdminDashboardPage() {
   }, []);
 
   const recentRequests = useMemo(() => requests.slice(0, 8), [requests]);
+  const snapshotDateLabel = dashboard?.statDate || 'N/A';
+  const averageRatingLabel = dashboard?.averageRating ?? 'N/A';
 
   const handleAssign = async (requestId) => {
     const companyId = assignForm[requestId];
@@ -67,12 +70,45 @@ export default function AdminDashboardPage() {
     }
   };
 
+  const handleRefreshDashboard = async () => {
+    setRefreshing(true);
+    setNotice('');
+    setError('');
+    try {
+      const [dashboardData, requestList, companyList] = await Promise.all([
+        adminApi.refreshDashboard(),
+        adminApi.getRequests(),
+        adminApi.getCompanies(),
+      ]);
+      setDashboard(dashboardData);
+      setRequests(requestList);
+      setCompanies(companyList.filter((company) => company.status === 'APPROVED'));
+      setNotice('Dashboard information updated successfully.');
+    } catch (err) {
+      setError(getApiError(err));
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   return (
     <>
       <PageHeader
         title="Admin Dashboard"
-        subtitle="Monitor system health, review recent rescue requests, and assign a company without leaving the dashboard."
-        actions={<Link className="button button-secondary" to="/admin/requests">Open request management</Link>}
+        subtitle="Monitor saved daily statistics, refresh the snapshot on demand, and assign a company without leaving the dashboard."
+        actions={(
+          <div className="actions-row">
+            <button
+              className="button button-primary"
+              type="button"
+              disabled={loading || refreshing}
+              onClick={handleRefreshDashboard}
+            >
+              {refreshing ? 'Updating...' : 'Update information'}
+            </button>
+            <Link className="button button-secondary" to="/admin/requests">Open request management</Link>
+          </div>
+        )}
       />
 
       {notice ? <div className="notice">{notice}</div> : null}
@@ -82,15 +118,47 @@ export default function AdminDashboardPage() {
 
       {!loading ? (
         <>
+          <div className="card">
+            <div className="section-header">
+              <div>
+                <h2>Statistics Snapshot</h2>
+                <p>The dashboard reads from the latest row in `daily_statistics`. Use update when you want to recalculate and persist a fresh snapshot.</p>
+              </div>
+            </div>
+
+            <div className="info-grid">
+              <div className="info-item">
+                <span>Snapshot Date</span>
+                <strong>{snapshotDateLabel}</strong>
+              </div>
+              <div className="info-item">
+                <span>Calculated At</span>
+                <strong>{formatDateTime(dashboard?.calculatedAt)}</strong>
+              </div>
+              <div className="info-item">
+                <span>Total Accounts</span>
+                <strong>{dashboard?.totalAccounts ?? 0}</strong>
+              </div>
+              <div className="info-item">
+                <span>Pending Requests</span>
+                <strong>{dashboard?.pendingRequests ?? 0}</strong>
+              </div>
+            </div>
+          </div>
+
           <div className="stats-grid">
-            <StatCard label="Total Accounts" value={dashboard?.totalAccounts ?? 0} />
-            <StatCard label="Customers" value={dashboard?.totalCustomers ?? 0} />
-            <StatCard label="Total Companies" value={dashboard?.totalCompanies ?? 0} />
-            <StatCard label="Total Requests" value={dashboard?.totalRequests ?? 0} />
-            <StatCard label="Pending Requests" value={dashboard?.pendingRequests ?? 0} />
-            <StatCard label="Total Payments" value={dashboard?.totalPayments ?? 0} />
-            <StatCard label="Paid Payments" value={dashboard?.paidPayments ?? 0} />
-            <StatCard label="Total Reviews" value={dashboard?.totalReviews ?? 0} />
+            <StatCard label="Requests" value={dashboard?.requestCount ?? 0} />
+            <StatCard label="Completed Requests" value={dashboard?.completedRequestCount ?? 0} />
+            <StatCard label="Canceled Requests" value={dashboard?.canceledRequestCount ?? 0} />
+            <StatCard label="In Progress Requests" value={dashboard?.inProgressRequestCount ?? 0} />
+            <StatCard label="Paid Payments" value={dashboard?.paidPaymentCount ?? 0} />
+            <StatCard label="Revenue" value={formatCurrency(dashboard?.revenue ?? 0)} />
+            <StatCard label="Reviews" value={dashboard?.reviewCount ?? 0} />
+            <StatCard label="Average Rating" value={averageRatingLabel} />
+            <StatCard label="Customers" value={dashboard?.customerCount ?? 0} />
+            <StatCard label="Staff" value={dashboard?.staffCount ?? 0} />
+            <StatCard label="Companies" value={dashboard?.companyCount ?? 0} />
+            <StatCard label="Approved Companies" value={dashboard?.approvedCompanyCount ?? 0} />
           </div>
 
           <div className="card">

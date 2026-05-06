@@ -5,6 +5,7 @@ import java.util.Optional;
 
 import com.itss.vbas.entity.Review;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 
 public interface ReviewRepository extends JpaRepository<Review, Long> {
     Optional<Review> findByRequestId(Long requestId);
@@ -12,4 +13,7 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
     List<Review> findByCompanyIdOrderByCreatedAtDesc(Long companyId);
 
     long countByCompanyId(Long companyId);
+
+    @Query("select avg(r.ratingScore) from Review r")
+    Double findAverageRating();
 }

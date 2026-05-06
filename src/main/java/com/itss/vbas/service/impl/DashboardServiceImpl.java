@@ -1,19 +1,26 @@
 package com.itss.vbas.service.impl;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import com.itss.vbas.dto.dashboard.DashboardDto;
 import com.itss.vbas.entity.Account;
+import com.itss.vbas.entity.DailyStatistic;
 import com.itss.vbas.entity.RequestAssignment;
 import com.itss.vbas.entity.RescueCompany;
 import com.itss.vbas.entity.RescueRequest;
 import com.itss.vbas.entity.RescueStaff;
 import com.itss.vbas.enums.AssignmentStatus;
+import com.itss.vbas.enums.CompanyStatus;
 import com.itss.vbas.enums.PaymentStatus;
 import com.itss.vbas.enums.QuoteStatus;
 import com.itss.vbas.enums.RescueRequestStatus;
 import com.itss.vbas.enums.RoleName;
 import com.itss.vbas.repository.AccountRepository;
+import com.itss.vbas.repository.DailyStatisticRepository;
 import com.itss.vbas.repository.PaymentRepository;
 import com.itss.vbas.repository.QuoteRepository;
 import com.itss.vbas.repository.RequestAssignmentRepository;
@@ -33,6 +40,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class DashboardServiceImpl implements DashboardService {
 
     private final AccountRepository accountRepository;
+    private final DailyStatisticRepository dailyStatisticRepository;
     private final RescueCompanyRepository rescueCompanyRepository;
     private final RescueRequestRepository rescueRequestRepository;
     private final PaymentRepository paymentRepository;
@@ -46,6 +54,7 @@ public class DashboardServiceImpl implements DashboardService {
 
     public DashboardServiceImpl(
             AccountRepository accountRepository,
+            DailyStatisticRepository dailyStatisticRepository,
             RescueCompanyRepository rescueCompanyRepository,
             RescueRequestRepository rescueRequestRepository,
             PaymentRepository paymentRepository,
@@ -58,6 +67,7 @@ public class DashboardServiceImpl implements DashboardService {
             AuthContext authContext
     ) {
         this.accountRepository = accountRepository;
+        this.dailyStatisticRepository = dailyStatisticRepository;
         this.rescueCompanyRepository = rescueCompanyRepository;
         this.rescueRequestRepository = rescueRequestRepository;
         this.paymentRepository = paymentRepository;
@@ -72,20 +82,34 @@ public class DashboardServiceImpl implements DashboardService {
 
     @Override
     public DashboardDto.AdminDashboardResponse getAdminDashboard() {
-        long pendingRequests = rescueRequestRepository.countByStatus(RescueRequestStatus.CREATED)
-                + rescueRequestRepository.countByStatus(RescueRequestStatus.SEARCHING)
-                + rescueRequestRepository.countByStatus(RescueRequestStatus.MATCHED);
+        DailyStatistic statistics = dailyStatisticRepository.findTopByOrderByStatDateDesc()
+                .orElseGet(this::buildCurrentStatisticsSnapshot);
+        return toAdminDashboardResponse(statistics);
+    }
 
-        return new DashboardDto.AdminDashboardResponse(
-                accountRepository.count(),
-                accountRepository.countByRoleRoleName(RoleName.CUSTOMER),
-                rescueCompanyRepository.count(),
-                rescueRequestRepository.count(),
-                pendingRequests,
-                paymentRepository.count(),
-                paymentRepository.countByPaymentStatus(PaymentStatus.PAID),
-                reviewRepository.count()
-        );
+    @Override
+    @Transactional
+    public DashboardDto.AdminDashboardResponse refreshAdminDashboard() {
+        LocalDate today = LocalDate.now();
+        DailyStatistic snapshot = buildCurrentStatisticsSnapshot();
+        DailyStatistic statistics = dailyStatisticRepository.findByStatDate(today)
+                .orElseGet(() -> DailyStatistic.builder().statDate(today).build());
+
+        statistics.setRequestCount(snapshot.getRequestCount());
+        statistics.setCompletedRequestCount(snapshot.getCompletedRequestCount());
+        statistics.setCanceledRequestCount(snapshot.getCanceledRequestCount());
+        statistics.setInProgressRequestCount(snapshot.getInProgressRequestCount());
+        statistics.setPaidPaymentCount(snapshot.getPaidPaymentCount());
+        statistics.setRevenue(snapshot.getRevenue());
+        statistics.setReviewCount(snapshot.getReviewCount());
+        statistics.setAverageRating(snapshot.getAverageRating());
+        statistics.setCustomerCount(snapshot.getCustomerCount());
+        statistics.setStaffCount(snapshot.getStaffCount());
+        statistics.setCompanyCount(snapshot.getCompanyCount());
+        statistics.setApprovedCompanyCount(snapshot.getApprovedCompanyCount());
+        statistics.setCalculatedAt(snapshot.getCalculatedAt());
+
+        return toAdminDashboardResponse(dailyStatisticRepository.save(statistics));
     }
 
     @Override
@@ -99,7 +123,7 @@ public class DashboardServiceImpl implements DashboardService {
                 requests.size(),
                 requests.stream().filter(request -> request.getStatus() == RescueRequestStatus.IN_PROGRESS).count(),
                 rescueStaffRepository.countByCompanyId(company.getId()),
-                rescueVehicleRepository.countByBranchCompanyId(company.getId()),
+                rescueVehicleRepository.countByCompanyId(company.getId()),
                 quoteRepository.countByCompanyId(company.getId()),
                 quoteRepository.countByCompanyIdAndStatus(company.getId(), QuoteStatus.SENT),
                 reviewRepository.countByCompanyId(company.getId())
@@ -122,5 +146,73 @@ public class DashboardServiceImpl implements DashboardService {
                         .filter(request -> request.getStatus() == RescueRequestStatus.ACCEPTED || request.getStatus() == RescueRequestStatus.IN_PROGRESS)
                         .count()
         );
+    }
+
+    private DashboardDto.AdminDashboardResponse toAdminDashboardResponse(DailyStatistic statistics) {
+        long totalAccounts = accountRepository.count();
+        long totalCustomers = accountRepository.countByRoleRoleName(RoleName.CUSTOMER);
+        long totalCompanies = rescueCompanyRepository.count();
+        long totalRequests = rescueRequestRepository.count();
+        long totalPayments = paymentRepository.count();
+        long totalReviews = reviewRepository.count();
+        long pendingRequests = rescueRequestRepository.countByStatus(RescueRequestStatus.CREATED)
+                + rescueRequestRepository.countByStatus(RescueRequestStatus.SEARCHING)
+                + rescueRequestRepository.countByStatus(RescueRequestStatus.MATCHED);
+
+        return new DashboardDto.AdminDashboardResponse(
+                statistics.getStatDate(),
+                statistics.getCalculatedAt(),
+                defaultLong(statistics.getRequestCount()),
+                defaultLong(statistics.getCompletedRequestCount()),
+                defaultLong(statistics.getCanceledRequestCount()),
+                defaultLong(statistics.getInProgressRequestCount()),
+                defaultLong(statistics.getPaidPaymentCount()),
+                defaultMoney(statistics.getRevenue()),
+                defaultLong(statistics.getReviewCount()),
+                statistics.getAverageRating(),
+                defaultLong(statistics.getCustomerCount()),
+                defaultLong(statistics.getStaffCount()),
+                defaultLong(statistics.getCompanyCount()),
+                defaultLong(statistics.getApprovedCompanyCount()),
+                totalAccounts,
+                totalCustomers,
+                totalCompanies,
+                totalRequests,
+                pendingRequests,
+                totalPayments,
+                paymentRepository.countByPaymentStatus(PaymentStatus.PAID),
+                totalReviews
+        );
+    }
+
+    private DailyStatistic buildCurrentStatisticsSnapshot() {
+        Double averageRatingValue = reviewRepository.findAverageRating();
+
+        return DailyStatistic.builder()
+                .statDate(LocalDate.now())
+                .requestCount(rescueRequestRepository.count())
+                .completedRequestCount(rescueRequestRepository.countByStatus(RescueRequestStatus.COMPLETED))
+                .canceledRequestCount(rescueRequestRepository.countByStatus(RescueRequestStatus.CANCELED))
+                .inProgressRequestCount(rescueRequestRepository.countByStatus(RescueRequestStatus.IN_PROGRESS))
+                .paidPaymentCount(paymentRepository.countByPaymentStatus(PaymentStatus.PAID))
+                .revenue(defaultMoney(paymentRepository.sumAmountByPaymentStatus(PaymentStatus.PAID)))
+                .reviewCount(reviewRepository.count())
+                .averageRating(averageRatingValue == null
+                        ? null
+                        : BigDecimal.valueOf(averageRatingValue).setScale(2, RoundingMode.HALF_UP))
+                .customerCount(accountRepository.countByRoleRoleName(RoleName.CUSTOMER))
+                .staffCount(rescueStaffRepository.count())
+                .companyCount(rescueCompanyRepository.count())
+                .approvedCompanyCount(rescueCompanyRepository.countByStatus(CompanyStatus.APPROVED))
+                .calculatedAt(LocalDateTime.now())
+                .build();
+    }
+
+    private long defaultLong(Long value) {
+        return value == null ? 0L : value;
+    }
+
+    private BigDecimal defaultMoney(BigDecimal value) {
+        return value == null ? BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP) : value.setScale(2, RoundingMode.HALF_UP);
     }
 }

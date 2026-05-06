@@ -8,7 +8,6 @@ import com.itss.vbas.dto.request.RequestDto;
 import com.itss.vbas.entity.Account;
 import com.itss.vbas.entity.RequestAssignment;
 import com.itss.vbas.entity.RescueCompany;
-import com.itss.vbas.entity.RescueCompanyBranch;
 import com.itss.vbas.entity.RescueRequest;
 import com.itss.vbas.entity.RescueStaff;
 import com.itss.vbas.entity.RescueVehicle;
@@ -24,7 +23,6 @@ import com.itss.vbas.exception.ResourceNotFoundException;
 import com.itss.vbas.mapper.AppMapper;
 import com.itss.vbas.repository.AccountRepository;
 import com.itss.vbas.repository.RequestAssignmentRepository;
-import com.itss.vbas.repository.RescueCompanyBranchRepository;
 import com.itss.vbas.repository.RescueCompanyRepository;
 import com.itss.vbas.repository.RescueRequestRepository;
 import com.itss.vbas.repository.RescueStaffRepository;
@@ -44,14 +42,12 @@ import org.springframework.transaction.annotation.Transactional;
 public class CompanyServiceImpl implements CompanyService {
 
     private final RescueCompanyRepository rescueCompanyRepository;
-    private final RescueCompanyBranchRepository rescueCompanyBranchRepository;
     private final RescueStaffRepository rescueStaffRepository;
     private final RescueVehicleRepository rescueVehicleRepository;
     private final RescueRequestRepository rescueRequestRepository;
     private final RequestAssignmentRepository requestAssignmentRepository;
     private final AccountRepository accountRepository;
     private final RoleRepository roleRepository;
-    private final AddressService addressService;
     private final RequestSupportService requestSupportService;
     private final AssignmentTimeoutService assignmentTimeoutService;
     private final AuthContext authContext;
@@ -59,28 +55,24 @@ public class CompanyServiceImpl implements CompanyService {
 
     public CompanyServiceImpl(
             RescueCompanyRepository rescueCompanyRepository,
-            RescueCompanyBranchRepository rescueCompanyBranchRepository,
             RescueStaffRepository rescueStaffRepository,
             RescueVehicleRepository rescueVehicleRepository,
             RescueRequestRepository rescueRequestRepository,
             RequestAssignmentRepository requestAssignmentRepository,
             AccountRepository accountRepository,
             RoleRepository roleRepository,
-            AddressService addressService,
             RequestSupportService requestSupportService,
             AssignmentTimeoutService assignmentTimeoutService,
             AuthContext authContext,
             AppMapper appMapper
     ) {
         this.rescueCompanyRepository = rescueCompanyRepository;
-        this.rescueCompanyBranchRepository = rescueCompanyBranchRepository;
         this.rescueStaffRepository = rescueStaffRepository;
         this.rescueVehicleRepository = rescueVehicleRepository;
         this.rescueRequestRepository = rescueRequestRepository;
         this.requestAssignmentRepository = requestAssignmentRepository;
         this.accountRepository = accountRepository;
         this.roleRepository = roleRepository;
-        this.addressService = addressService;
         this.requestSupportService = requestSupportService;
         this.assignmentTimeoutService = assignmentTimeoutService;
         this.authContext = authContext;
@@ -107,57 +99,6 @@ public class CompanyServiceImpl implements CompanyService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<CompanyDto.BranchResponse> getBranches() {
-        RescueCompany company = getCurrentCompany();
-        return rescueCompanyBranchRepository.findByCompanyIdOrderByIdDesc(company.getId())
-                .stream()
-                .map(appMapper::toBranchResponse)
-                .toList();
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public CompanyDto.BranchResponse getBranch(Long id) {
-        RescueCompany company = getCurrentCompany();
-        return appMapper.toBranchResponse(findBranch(id, company.getId()));
-    }
-
-    @Override
-    public CompanyDto.BranchResponse createBranch(CompanyDto.BranchRequest request) {
-        RescueCompany company = getCurrentCompany();
-        RescueCompanyBranch branch = RescueCompanyBranch.builder()
-                .company(company)
-                .branchName(request.branchName())
-                .phone(request.phone())
-                .address(addressService.createAddress(request.address()))
-                .latitude(request.latitude())
-                .longitude(request.longitude())
-                .isMainBranch(request.isMainBranch())
-                .build();
-        return appMapper.toBranchResponse(rescueCompanyBranchRepository.save(branch));
-    }
-
-    @Override
-    public CompanyDto.BranchResponse updateBranch(Long id, CompanyDto.BranchRequest request) {
-        RescueCompany company = getCurrentCompany();
-        RescueCompanyBranch branch = findBranch(id, company.getId());
-        branch.setBranchName(request.branchName());
-        branch.setPhone(request.phone());
-        branch.setAddress(addressService.updateAddress(branch.getAddress(), request.address()));
-        branch.setLatitude(request.latitude());
-        branch.setLongitude(request.longitude());
-        branch.setIsMainBranch(request.isMainBranch());
-        return appMapper.toBranchResponse(rescueCompanyBranchRepository.save(branch));
-    }
-
-    @Override
-    public void deleteBranch(Long id) {
-        RescueCompany company = getCurrentCompany();
-        rescueCompanyBranchRepository.delete(findBranch(id, company.getId()));
-    }
-
-    @Override
-    @Transactional(readOnly = true)
     public List<CompanyDto.StaffResponse> getStaff() {
         RescueCompany company = getCurrentCompany();
         return rescueStaffRepository.findByCompanyIdOrderByIdDesc(company.getId())
@@ -169,10 +110,8 @@ public class CompanyServiceImpl implements CompanyService {
     @Override
     public CompanyDto.StaffResponse createStaff(CompanyDto.StaffRequest request) {
         RescueCompany company = getCurrentCompany();
-        RescueCompanyBranch branch = request.branchId() == null ? null : findBranch(request.branchId(), company.getId());
         RescueStaff staff = RescueStaff.builder()
                 .company(company)
-                .branch(branch)
                 .jobTitle(request.jobTitle())
                 .status(parseStaffStatus(request.status()))
                 .user(resolveStaffAccount(request))
@@ -203,7 +142,6 @@ public class CompanyServiceImpl implements CompanyService {
         }
         accountRepository.save(user);
 
-        staff.setBranch(request.branchId() == null ? null : findBranch(request.branchId(), company.getId()));
         staff.setJobTitle(request.jobTitle());
         staff.setStatus(parseStaffStatus(request.status()));
         return appMapper.toStaffResponse(rescueStaffRepository.save(staff));
@@ -224,7 +162,7 @@ public class CompanyServiceImpl implements CompanyService {
     @Transactional(readOnly = true)
     public List<CompanyDto.VehicleResponse> getVehicles() {
         RescueCompany company = getCurrentCompany();
-        return rescueVehicleRepository.findByBranchCompanyIdOrderByIdDesc(company.getId())
+        return rescueVehicleRepository.findByCompanyIdOrderByIdDesc(company.getId())
                 .stream()
                 .map(appMapper::toRescueVehicleResponse)
                 .toList();
@@ -233,9 +171,8 @@ public class CompanyServiceImpl implements CompanyService {
     @Override
     public CompanyDto.VehicleResponse createVehicle(CompanyDto.VehicleRequest request) {
         RescueCompany company = getCurrentCompany();
-        RescueCompanyBranch branch = findBranch(request.branchId(), company.getId());
         RescueVehicle rescueVehicle = RescueVehicle.builder()
-                .branch(branch)
+                .company(company)
                 .vehicleCode(request.vehicleCode())
                 .vehicleType(request.vehicleType())
                 .plateNumber(request.plateNumber())
@@ -247,9 +184,8 @@ public class CompanyServiceImpl implements CompanyService {
     @Override
     public CompanyDto.VehicleResponse updateVehicle(Long id, CompanyDto.VehicleRequest request) {
         RescueCompany company = getCurrentCompany();
-        RescueVehicle rescueVehicle = rescueVehicleRepository.findByIdAndBranchCompanyId(id, company.getId())
+        RescueVehicle rescueVehicle = rescueVehicleRepository.findByIdAndCompanyId(id, company.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Vehicle not found with id: " + id));
-        rescueVehicle.setBranch(findBranch(request.branchId(), company.getId()));
         rescueVehicle.setVehicleCode(request.vehicleCode());
         rescueVehicle.setVehicleType(request.vehicleType());
         rescueVehicle.setPlateNumber(request.plateNumber());
@@ -260,7 +196,7 @@ public class CompanyServiceImpl implements CompanyService {
     @Override
     public void deleteVehicle(Long id) {
         RescueCompany company = getCurrentCompany();
-        RescueVehicle rescueVehicle = rescueVehicleRepository.findByIdAndBranchCompanyId(id, company.getId())
+        RescueVehicle rescueVehicle = rescueVehicleRepository.findByIdAndCompanyId(id, company.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Vehicle not found with id: " + id));
         rescueVehicleRepository.delete(rescueVehicle);
     }
@@ -293,7 +229,7 @@ public class CompanyServiceImpl implements CompanyService {
 
         RescueStaff staff = rescueStaffRepository.findByIdAndCompanyId(request.staffId(), company.getId())
                 .orElseThrow(() -> new BadRequestException("Selected staff does not belong to your company"));
-        RescueVehicle vehicle = rescueVehicleRepository.findByIdAndBranchCompanyId(request.vehicleId(), company.getId())
+        RescueVehicle vehicle = rescueVehicleRepository.findByIdAndCompanyId(request.vehicleId(), company.getId())
                 .orElseThrow(() -> new BadRequestException("Selected rescue vehicle does not belong to your company"));
 
         RequestAssignment assignment = requestAssignmentRepository.findFirstByRequestIdAndCompanyIdOrderByAssignedAtDesc(requestId, company.getId())
@@ -337,11 +273,6 @@ public class CompanyServiceImpl implements CompanyService {
 
     private RescueCompany getCurrentCompany() {
         return requestSupportService.getCurrentCompany(authContext.getCurrentAccount());
-    }
-
-    private RescueCompanyBranch findBranch(Long branchId, Long companyId) {
-        return rescueCompanyBranchRepository.findByIdAndCompanyId(branchId, companyId)
-                .orElseThrow(() -> new ResourceNotFoundException("Branch not found with id: " + branchId));
     }
 
     private Account resolveStaffAccount(CompanyDto.StaffRequest request) {

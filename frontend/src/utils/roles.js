@@ -37,7 +37,6 @@ export function getMenuItems(roleName) {
         { to: '/company/dashboard', label: 'Dashboard' },
         { to: '/company/profile', label: 'Company Profile' },
         { to: '/company/requests', label: 'Assigned Requests' },
-        { to: '/company/branches', label: 'Branches' },
         { to: '/company/staff', label: 'Staff' },
         { to: '/company/vehicles', label: 'Vehicles' },
         { to: '/profile', label: 'My Profile' },

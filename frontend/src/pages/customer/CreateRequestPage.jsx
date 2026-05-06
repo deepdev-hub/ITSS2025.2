@@ -5,6 +5,7 @@ import { customerApi } from '../../api/customerApi';
 import { requestApi } from '../../api/requestApi';
 import { getApiError } from '../../api/client';
 import PageHeader from '../../components/common/PageHeader';
+import LocationPickerMap from '../../components/common/LocationPickerMap';
 
 const initialForm = {
   vehicleId: '',
@@ -96,6 +97,16 @@ export default function CreateRequestPage() {
       setSubmitting(false);
     }
   };
+  const handleLocationPick = ({ latitude, longitude }) => {
+    setForm((previous) => ({
+      ...previous,
+      location: {
+        ...previous.location,
+        latitude: String(latitude),
+        longitude: String(longitude),
+      },
+    }));
+  };
 
   return (
     <>
@@ -158,6 +169,16 @@ export default function CreateRequestPage() {
         </div>
 
         <h3>Incident Location</h3>
+        <div className="field" style={{ gridColumn: '1 / -1' }}>
+          <label>Map</label>
+          <LocationPickerMap
+            value={{
+              latitude: form.location.latitude,
+              longitude: form.location.longitude,
+            }}
+            onChange={handleLocationPick}
+          />
+        </div>
         <div className="form-grid">
           <div className="field">
             <label>Country</label>
