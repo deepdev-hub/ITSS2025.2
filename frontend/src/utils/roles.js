@@ -26,24 +26,27 @@ export function getMenuItems(roleName) {
         { to: '/admin/dashboard', label: 'Dashboard' },
         { to: '/admin/requests', label: 'Requests' },
         { to: '/admin/accounts', label: 'Accounts' },
+        { to: '/admin/roles', label: 'Roles' },
         { to: '/admin/companies', label: 'Companies' },
         { to: '/admin/company-staff', label: 'Company Staff' },
         { to: '/admin/incident-types', label: 'Incident Types' },
         { to: '/admin/service-types', label: 'Service Types' },
+        { to: '/profile', label: 'My Profile' },
       ];
     case ROLES.RESCUE_COMPANY:
       return [
         { to: '/company/dashboard', label: 'Dashboard' },
         { to: '/company/profile', label: 'Company Profile' },
         { to: '/company/requests', label: 'Assigned Requests' },
-        { to: '/company/branches', label: 'Branches' },
         { to: '/company/staff', label: 'Staff' },
         { to: '/company/vehicles', label: 'Vehicles' },
+        { to: '/profile', label: 'My Profile' },
       ];
     case ROLES.RESCUE_STAFF:
       return [
         { to: '/staff/dashboard', label: 'Dashboard' },
         { to: '/staff/assignments', label: 'My Assignments' },
+        { to: '/profile', label: 'My Profile' },
       ];
     case ROLES.CUSTOMER:
     default:
@@ -51,6 +54,7 @@ export function getMenuItems(roleName) {
         { to: '/customer/requests', label: 'My Requests' },
         { to: '/customer/requests/new', label: 'Create Request' },
         { to: '/customer/vehicles', label: 'My Vehicles' },
+        { to: '/profile', label: 'My Profile' },
       ];
   }
 }

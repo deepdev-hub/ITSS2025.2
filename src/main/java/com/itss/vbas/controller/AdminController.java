@@ -235,4 +235,9 @@ public class AdminController {
     public ResponseEntity<CommonDto.ApiResponse<DashboardDto.AdminDashboardResponse>> getDashboard() {
         return ResponseEntity.ok(CommonDto.ApiResponse.success("Admin dashboard fetched successfully", dashboardService.getAdminDashboard()));
     }
+
+    @PostMapping("/dashboard/refresh")
+    public ResponseEntity<CommonDto.ApiResponse<DashboardDto.AdminDashboardResponse>> refreshDashboard() {
+        return ResponseEntity.ok(CommonDto.ApiResponse.success("Admin dashboard refreshed successfully", dashboardService.refreshAdminDashboard()));
+    }
 }

@@ -100,41 +100,6 @@ public class CompanyController {
     }
 
     @RequiredRoles(RoleName.RESCUE_COMPANY)
-    @GetMapping("/branches")
-    public ResponseEntity<CommonDto.ApiResponse<List<CompanyDto.BranchResponse>>> getBranches() {
-        return ResponseEntity.ok(CommonDto.ApiResponse.success("Branches fetched successfully", companyService.getBranches()));
-    }
-
-    @RequiredRoles(RoleName.RESCUE_COMPANY)
-    @PostMapping("/branches")
-    public ResponseEntity<CommonDto.ApiResponse<CompanyDto.BranchResponse>> createBranch(@Valid @RequestBody CompanyDto.BranchRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(CommonDto.ApiResponse.success("Branch created successfully", companyService.createBranch(request)));
-    }
-
-    @RequiredRoles(RoleName.RESCUE_COMPANY)
-    @GetMapping("/branches/{id}")
-    public ResponseEntity<CommonDto.ApiResponse<CompanyDto.BranchResponse>> getBranch(@PathVariable Long id) {
-        return ResponseEntity.ok(CommonDto.ApiResponse.success("Branch fetched successfully", companyService.getBranch(id)));
-    }
-
-    @RequiredRoles(RoleName.RESCUE_COMPANY)
-    @PutMapping("/branches/{id}")
-    public ResponseEntity<CommonDto.ApiResponse<CompanyDto.BranchResponse>> updateBranch(
-            @PathVariable Long id,
-            @Valid @RequestBody CompanyDto.BranchRequest request
-    ) {
-        return ResponseEntity.ok(CommonDto.ApiResponse.success("Branch updated successfully", companyService.updateBranch(id, request)));
-    }
-
-    @RequiredRoles(RoleName.RESCUE_COMPANY)
-    @DeleteMapping("/branches/{id}")
-    public ResponseEntity<CommonDto.ApiResponse<Void>> deleteBranch(@PathVariable Long id) {
-        companyService.deleteBranch(id);
-        return ResponseEntity.ok(CommonDto.ApiResponse.success("Branch deleted successfully"));
-    }
-
-    @RequiredRoles(RoleName.RESCUE_COMPANY)
     @GetMapping("/staff")
     public ResponseEntity<CommonDto.ApiResponse<List<CompanyDto.StaffResponse>>> getStaff() {
         return ResponseEntity.ok(CommonDto.ApiResponse.success("Staff fetched successfully", companyService.getStaff()));

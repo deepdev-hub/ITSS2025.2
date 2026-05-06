@@ -20,14 +20,15 @@ import AdminCompanyStaffPage from '../pages/admin/AdminCompanyStaffPage';
 import AdminIncidentTypesPage from '../pages/admin/AdminIncidentTypesPage';
 import AdminServiceTypesPage from '../pages/admin/AdminServiceTypesPage';
 import AdminRequestsPage from '../pages/admin/AdminRequestsPage';
+import AdminRolesPage from '../pages/admin/AdminRolesPage';
 import CompanyDashboardPage from '../pages/company/CompanyDashboardPage';
 import CompanyProfilePage from '../pages/company/CompanyProfilePage';
 import CompanyRequestsPage from '../pages/company/CompanyRequestsPage';
-import CompanyBranchesPage from '../pages/company/CompanyBranchesPage';
 import CompanyStaffPage from '../pages/company/CompanyStaffPage';
 import CompanyVehiclesPage from '../pages/company/CompanyVehiclesPage';
 import StaffDashboardPage from '../pages/staff/StaffDashboardPage';
 import StaffAssignmentsPage from '../pages/staff/StaffAssignmentsPage';
+import ProfilePage from '../pages/ProfilePage';
 
 export default function AppRouter() {
   return (
@@ -42,6 +43,7 @@ export default function AppRouter() {
       <Route element={<ProtectedRoute />}>
         <Route element={<AppShell />}>
           <Route path="/app" element={<Navigate to="/" replace />} />
+          <Route path="/profile" element={<ProfilePage />} />
           <Route path="/requests/:id" element={<RequestDetailPage />} />
 
           <Route element={<ProtectedRoute roles={[ROLES.CUSTOMER]} />}>
@@ -53,6 +55,7 @@ export default function AppRouter() {
           <Route element={<ProtectedRoute roles={[ROLES.ADMIN]} />}>
             <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
             <Route path="/admin/accounts" element={<AdminAccountsPage />} />
+            <Route path="/admin/roles" element={<AdminRolesPage />} />
             <Route path="/admin/companies" element={<AdminCompaniesPage />} />
             <Route path="/admin/company-staff" element={<AdminCompanyStaffPage />} />
             <Route path="/admin/incident-types" element={<AdminIncidentTypesPage />} />
@@ -64,7 +67,7 @@ export default function AppRouter() {
             <Route path="/company/dashboard" element={<CompanyDashboardPage />} />
             <Route path="/company/profile" element={<CompanyProfilePage />} />
             <Route path="/company/requests" element={<CompanyRequestsPage />} />
-            <Route path="/company/branches" element={<CompanyBranchesPage />} />
+            <Route path="/company/branches" element={<Navigate to="/company/profile" replace />} />
             <Route path="/company/staff" element={<CompanyStaffPage />} />
             <Route path="/company/vehicles" element={<CompanyVehiclesPage />} />
           </Route>

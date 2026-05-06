@@ -33,9 +33,14 @@ export default function AppShell() {
             <strong>{user?.fullName}</strong>
             <p>{user?.roleName}</p>
           </div>
-          <button className="button button-secondary" type="button" onClick={logout}>
-            Logout
-          </button>
+          <div className="topbar-actions">
+            <NavLink className="button button-secondary" to="/profile">
+              Profile
+            </NavLink>
+            <button className="button button-secondary" type="button" onClick={logout}>
+              Logout
+            </button>
+          </div>
         </header>
 
         <main className="page-container">
