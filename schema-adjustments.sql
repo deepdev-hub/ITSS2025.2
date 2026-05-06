@@ -41,6 +41,46 @@ ALTER TABLE public.service_types
 ALTER TABLE public.payments
     ADD COLUMN IF NOT EXISTS created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL;
 
+ALTER TABLE public.rescue_vehicles
+    ADD COLUMN IF NOT EXISTS company_id bigint;
+
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM information_schema.tables
+        WHERE table_schema = 'public'
+          AND table_name = 'rescue_company_branches'
+    ) THEN
+        UPDATE public.rescue_vehicles rv
+        SET company_id = branch.company_id
+        FROM public.rescue_company_branches branch
+        WHERE rv.company_id IS NULL
+          AND rv.branch_id = branch.id;
+    END IF;
+END $$;
+
+ALTER TABLE public.rescue_staff
+    DROP COLUMN IF EXISTS branch_id;
+
+ALTER TABLE public.rescue_vehicles
+    DROP COLUMN IF EXISTS branch_id;
+
+DROP TABLE IF EXISTS public.rescue_company_branches CASCADE;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'fk_rescue_vehicle_company'
+    ) THEN
+        ALTER TABLE public.rescue_vehicles
+            ADD CONSTRAINT fk_rescue_vehicle_company
+            FOREIGN KEY (company_id) REFERENCES public.rescue_companies(id);
+    END IF;
+END $$;
+
 CREATE UNIQUE INDEX IF NOT EXISTS uq_reviews_request_id
     ON public.reviews(request_id);
 

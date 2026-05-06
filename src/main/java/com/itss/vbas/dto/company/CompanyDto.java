@@ -4,7 +4,6 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 import com.itss.vbas.dto.common.CommonDto;
-import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -43,35 +42,12 @@ public final class CompanyDto {
     ) {
     }
 
-    public record BranchRequest(
-            @NotBlank @Size(max = 255) String branchName,
-            @Size(max = 20) String phone,
-            @Valid @NotNull CommonDto.AddressRequest address,
-            BigDecimal latitude,
-            BigDecimal longitude,
-            @NotNull Boolean isMainBranch
-    ) {
-    }
-
-    public record BranchResponse(
-            Long id,
-            Long companyId,
-            String branchName,
-            String phone,
-            CommonDto.AddressResponse address,
-            BigDecimal latitude,
-            BigDecimal longitude,
-            Boolean isMainBranch
-    ) {
-    }
-
     public record StaffRequest(
             Long userId,
             @Email String email,
             @Size(min = 6, max = 100) String password,
             @Size(max = 255) String fullName,
             @Size(max = 20) String phone,
-            Long branchId,
             @Size(max = 255) String jobTitle,
             @NotBlank String status
     ) {
@@ -81,7 +57,6 @@ public final class CompanyDto {
             Long id,
             Long userId,
             Long companyId,
-            Long branchId,
             String fullName,
             String email,
             String phone,
@@ -99,7 +74,6 @@ public final class CompanyDto {
     }
 
     public record VehicleRequest(
-            @NotNull Long branchId,
             @NotBlank @Size(max = 100) String vehicleCode,
             @NotBlank @Size(max = 100) String vehicleType,
             @NotBlank @Size(max = 50) String plateNumber,
@@ -109,8 +83,7 @@ public final class CompanyDto {
 
     public record VehicleResponse(
             Long id,
-            Long branchId,
-            String branchName,
+            Long companyId,
             String vehicleCode,
             String vehicleType,
             String plateNumber,

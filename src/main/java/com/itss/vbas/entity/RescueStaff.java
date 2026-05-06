@@ -40,10 +40,6 @@ public class RescueStaff {
     @JoinColumn(name = "company_id", nullable = false)
     private RescueCompany company;
 
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "branch_id")
-    private RescueCompanyBranch branch;
-
     @Column(name = "job_title", length = 255)
     private String jobTitle;
 

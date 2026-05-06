@@ -32,8 +32,8 @@ public class RescueVehicle {
     private Long id;
 
     @ManyToOne(fetch = FetchType.EAGER, optional = false)
-    @JoinColumn(name = "branch_id", nullable = false)
-    private RescueCompanyBranch branch;
+    @JoinColumn(name = "company_id", nullable = false)
+    private RescueCompany company;
 
     @Column(name = "vehicle_code", nullable = false, length = 100)
     private String vehicleCode;
