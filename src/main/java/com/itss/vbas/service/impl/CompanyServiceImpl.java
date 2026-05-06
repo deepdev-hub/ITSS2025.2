@@ -3,9 +3,11 @@ package com.itss.vbas.service.impl;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import com.itss.vbas.dto.common.CommonDto;
 import com.itss.vbas.dto.company.CompanyDto;
 import com.itss.vbas.dto.request.RequestDto;
 import com.itss.vbas.entity.Account;
+import com.itss.vbas.entity.Address;
 import com.itss.vbas.entity.RequestAssignment;
 import com.itss.vbas.entity.RescueCompany;
 import com.itss.vbas.entity.RescueCompanyBranch;
@@ -158,9 +160,33 @@ public class CompanyServiceImpl implements CompanyService {
         RescueCompany company = getCurrentCompany();
         return rescueStaffRepository.findByCompanyIdOrderByIdDesc(company.getId())
                 .stream()
-                .map(appMapper::toStaffResponse)
+                .map(staff -> {
+
+                    java.math.BigDecimal lat = null;
+                    java.math.BigDecimal lng = null;
+
+                    if (staff.getUser() != null && staff.getUser().getDefaultAddress() != null) {
+                        lat = staff.getUser().getDefaultAddress().getLatitude();
+                        lng = staff.getUser().getDefaultAddress().getLongitude();
+                    }
+
+                    return new CompanyDto.StaffResponse(
+                        staff.getId(),
+                        staff.getUser() != null ? staff.getUser().getId() : null,
+                        staff.getCompany() != null ? staff.getCompany().getId() : null,
+                        staff.getBranch() != null ? staff.getBranch().getId() : null,
+                        staff.getUser() != null ? staff.getUser().getFullName() : null,
+                        staff.getUser() != null ? staff.getUser().getEmail() : null,
+                        staff.getUser() != null ? staff.getUser().getPhone() : null,
+                        staff.getJobTitle(),
+                        staff.getStatus() != null ? staff.getStatus().name() : null,
+                        lat, 
+                        lng  
+                    );
+                })
                 .toList();
-    }
+            }
+
 
     @Override
     public CompanyDto.StaffResponse createStaff(CompanyDto.StaffRequest request) {
@@ -381,6 +407,44 @@ public class CompanyServiceImpl implements CompanyService {
             return RescueVehicleStatus.valueOf(value.trim().toUpperCase());
         } catch (Exception ex) {
             throw new BadRequestException("Invalid rescue vehicle status: " + value);
+        }
+    }
+
+    @Override
+    public void updateStaffLocation(CompanyDto.LocationUpdateRequest request) {
+        Account account = authContext.getCurrentAccount(); // Lấy account của Staff
+
+        // Lay dia chi mac dinh
+        Address currentAddress = account.getDefaultAddress(); 
+        
+        if(currentAddress == null){
+            CommonDto.AddressRequest newAddressReq = new CommonDto.AddressRequest(
+                null, 
+                null, 
+                null, 
+                null, 
+                null, 
+                null, 
+                request.latitude(), 
+                request.longitude()
+            );
+            Address savedAddress = addressService.createAddress(newAddressReq);
+
+            account.setDefaultAddress(savedAddress);
+            accountRepository.save(account);
+        } else {
+            CommonDto.AddressRequest updateReq = new CommonDto.AddressRequest(
+                currentAddress.getCountry(),
+                currentAddress.getProvince(),
+                currentAddress.getDistrict(),
+                currentAddress.getWard(),
+                currentAddress.getStreet(),
+                currentAddress.getDetail(),
+                request.latitude(),
+                request.longitude()
+            );
+
+            addressService.updateAddress(currentAddress, updateReq);
         }
     }
 }

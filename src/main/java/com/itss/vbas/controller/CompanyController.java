@@ -215,4 +215,13 @@ public class CompanyController {
     public ResponseEntity<CommonDto.ApiResponse<List<RequestDto.AssignmentResponse>>> getMyAssignments() {
         return ResponseEntity.ok(CommonDto.ApiResponse.success("My assignments fetched successfully", companyService.getMyStaffAssignments()));
     }
+
+    @RequiredRoles(RoleName.RESCUE_STAFF)
+    @PutMapping("/staff/me/location")
+    public ResponseEntity<CommonDto.ApiResponse<Void>> updateMyLocation(
+        @Valid @RequestBody CompanyDto.LocationUpdateRequest request
+    ){
+        companyService.updateStaffLocation(request);
+        return ResponseEntity.ok(CommonDto.ApiResponse.success("Location updated successfully"));
+    }
 }

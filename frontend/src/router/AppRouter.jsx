@@ -26,6 +26,7 @@ import CompanyStaffPage from '../pages/company/CompanyStaffPage';
 import CompanyVehiclesPage from '../pages/company/CompanyVehiclesPage';
 import StaffDashboardPage from '../pages/staff/StaffDashboardPage';
 import StaffAssignmentsPage from '../pages/staff/StaffAssignmentsPage';
+import StaffLocationPage from '../pages/staff/StaffLocationPage';
 import ProfilePage from '../pages/ProfilePage';
 
 export default function AppRouter() {
@@ -70,6 +71,7 @@ export default function AppRouter() {
           <Route element={<ProtectedRoute roles={[ROLES.RESCUE_STAFF]} />}>
             <Route path="/staff/dashboard" element={<StaffDashboardPage />} />
             <Route path="/staff/assignments" element={<StaffAssignmentsPage />} />
+            <Route path="/staff/location" element={<StaffLocationPage />} />
           </Route>
         </Route>
       </Route>

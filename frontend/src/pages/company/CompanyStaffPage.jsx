@@ -1,11 +1,53 @@
 import { useEffect, useMemo, useState } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, Tooltip, useMap } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import { companyApi } from '../../api/companyApi';
 import { getApiError } from '../../api/client';
 import Loader from '../../components/common/Loader';
 import PageHeader from '../../components/common/PageHeader';
 import StatusBadge from '../../components/common/StatusBadge';
 
+// Khắc phục lỗi icon mặc định của Leaflet
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+});
+
+// Icon tùy chỉnh cho Kỹ thuật viên
+const mechanicIcon = new L.Icon({
+  iconUrl: 'https://cdn-icons-png.flaticon.com/512/1995/1995562.png', 
+  iconSize: [36, 36], 
+  iconAnchor: [18, 36], 
+  popupAnchor: [0, -36], 
+});
+
+// Component phụ giúp tự động zoom bản đồ để vừa vặn tất cả các marker
+function MapBounds({ staffList }) {
+  const map = useMap();
+  useEffect(() => {
+    const validStaff = staffList.filter(s => s.currentLatitude && s.currentLongitude);
+    if (validStaff.length > 0) {
+      const bounds = L.latLngBounds(validStaff.map(s => [s.currentLatitude, s.currentLongitude]));
+      map.fitBounds(bounds, { padding: [50, 50] });
+    }
+  }, [staffList, map]);
+  return null;
+}
+
 const STAFF_STATUSES = ['ACTIVE', 'OFFLINE', 'BUSY'];
+
+// Hàm hỗ trợ lấy màu sắc chuyên nghiệp theo trạng thái
+function getStatusColor(status) {
+  switch (status) {
+    case 'ACTIVE': return '#10b981'; // Xanh lá (Emerald 500)
+    case 'BUSY': return '#f59e0b'; // Cam (Amber 500)
+    case 'OFFLINE': return '#64748b'; // Xám (Slate 500)
+    default: return '#1e293b'; // Đen nhạt mặc định
+  }
+}
 
 const initialForm = {
   userId: '',
@@ -106,9 +148,10 @@ export default function CompanyStaffPage() {
     });
   }, [branchMap, filters, staff]);
 
-  const loadData = async () => {
-    setLoading(true);
-    setError('');
+  // Hàm tải dữ liệu (hỗ trợ tải ngầm)
+  const loadData = async (silent = false) => {
+    if (!silent) setLoading(true);
+    if (!silent) setError('');
     try {
       const [staffList, branchList] = await Promise.all([
         companyApi.getStaff(),
@@ -118,14 +161,17 @@ export default function CompanyStaffPage() {
       setBranches(branchList);
       setStatusDrafts(Object.fromEntries(staffList.map((item) => [item.id, item.status])));
     } catch (err) {
-      setError(getApiError(err));
+      if (!silent) setError(getApiError(err));
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
   useEffect(() => {
     loadData();
+    // Tự động refresh data ngầm (silent = true) mỗi 10 giây
+    const intervalId = setInterval(() => loadData(true), 10000);
+    return () => clearInterval(intervalId);
   }, []);
 
   const handleChange = (event) => {
@@ -215,227 +261,298 @@ export default function CompanyStaffPage() {
     }
   };
 
+  const staffWithLocations = useMemo(() => {
+    return filteredStaff.filter(s => s.currentLatitude && s.currentLongitude);
+  }, [filteredStaff]);
+
   return (
     <>
-      <PageHeader title="Company Staff" subtitle="Manage rescue staff, search the roster, update branch assignments, and change working status quickly from one screen." />
+      <PageHeader title="Company Staff" subtitle="Manage rescue staff, search the roster, update branch assignments, view real-time locations, and change working status quickly." />
       {notice ? <div className="notice">{notice}</div> : null}
       {error ? <div className="notice error">{error}</div> : null}
 
       {loading ? <Loader label="Loading company staff..." /> : null}
 
       {!loading ? (
-        <div className="grid-two">
-          <form className="card" onSubmit={handleSubmit}>
-            <div className="actions-row" style={{ justifyContent: 'space-between' }}>
-              <h2>{editingId ? 'Update Staff' : 'Create Staff'}</h2>
-              {editingId ? <StatusBadge value={form.status} /> : null}
-            </div>
-
-            <div className="info-grid">
-              <div className="info-item">
-                <span>Total Staff</span>
-                <strong>{summary.total}</strong>
-              </div>
-              <div className="info-item">
-                <span>Active</span>
-                <strong>{summary.active}</strong>
-              </div>
-              <div className="info-item">
-                <span>Offline</span>
-                <strong>{summary.offline}</strong>
-              </div>
-              <div className="info-item">
-                <span>Busy</span>
-                <strong>{summary.busy}</strong>
-              </div>
-            </div>
-
-            {!editingId ? (
-              <div className="field">
-                <label>Create Mode</label>
-                <select value={creationMode} onChange={(event) => setCreationMode(event.target.value)}>
-                  <option value="NEW_ACCOUNT">Create new staff account</option>
-                  <option value="LINK_EXISTING">Link existing RESCUE_STAFF account</option>
-                </select>
-              </div>
-            ) : null}
-
-            {creationMode === 'LINK_EXISTING' && !editingId ? (
-              <div className="field">
-                <label>Existing User Id</label>
-                <input
-                  name="userId"
-                  value={form.userId}
-                  onChange={handleChange}
-                  placeholder="Enter an existing RESCUE_STAFF account id"
-                  required
+        <>
+          {/* BẢN ĐỒ HIỂN THỊ VỊ TRÍ STAFF */}
+          <div className="card" style={{ marginBottom: '2rem' }}>
+            <h2 style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span>📍 Bản đồ định vị nhân viên trực tuyến</span>
+              <span className="status-badge status-active" style={{ textTransform: 'none', fontSize: '14px', fontWeight: 'bold', padding: '6px 12px', borderRadius: '20px' }}>
+                Bán kính hoạt động KTV: 5 km
+              </span>
+            </h2>
+            <p className="muted-line">Theo dõi vị trí hiện tại của các kỹ thuật viên trên thực địa. (Cập nhật tự động mỗi 10 giây)</p>
+            
+            <div style={{ borderRadius: '8px', overflow: 'hidden', border: '1px solid #ddd', marginTop: '1rem' }}>
+              <MapContainer 
+                center={[21.0051, 105.8456]} // Hà Nội default
+                zoom={12} 
+                style={{ height: '450px', width: '100%', zIndex: 1 }}
+              >
+                <TileLayer 
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" 
+                  attribution='&copy; OpenStreetMap contributors'
                 />
-              </div>
-            ) : (
-              <div className="form-grid">
-                <div className="field">
-                  <label>Email</label>
-                  <input name="email" type="email" value={form.email} onChange={handleChange} required={!editingId} />
-                </div>
-                <div className="field">
-                  <label>Password</label>
-                  <input
-                    name="password"
-                    type="password"
-                    value={form.password}
-                    onChange={handleChange}
-                    placeholder={editingId ? 'Leave blank to keep current password' : 'Required for a new account'}
-                    required={!editingId}
-                  />
-                </div>
-                <div className="field">
-                  <label>Full Name</label>
-                  <input name="fullName" value={form.fullName} onChange={handleChange} required={!editingId} />
-                </div>
-                <div className="field">
-                  <label>Phone</label>
-                  <input name="phone" value={form.phone} onChange={handleChange} />
-                </div>
-              </div>
-            )}
+                
+                {staffWithLocations.length > 0 && <MapBounds staffList={staffWithLocations} />}
+                
+                {staffWithLocations.map((item) => (
+                  <Marker 
+                    key={item.id} 
+                    position={[item.currentLatitude, item.currentLongitude]}
+                    icon={mechanicIcon}
+                  >
+                    <Tooltip direction="bottom" offset={[0, 5]} opacity={0.95} permanent>
+                      <div style={{ textAlign: 'center', lineHeight: '1.3' }}>
+                        <strong style={{ fontSize: '13px', color: '#1e293b' }}>{item.fullName}</strong>
+                        <br />
+                        <span style={{ fontSize: '11px', color: '#64748b' }}>Mã: KTV-{item.userId || item.id}</span>
+                        <br />
+                        <span style={{ 
+                          fontSize: '11px', 
+                          fontWeight: 'bold',
+                          color: getStatusColor(item.status) // Gọi hàm lấy màu ở đây
+                        }}>
+                          ● {item.status}
+                        </span>
+                      </div>
+                    </Tooltip>
 
-            <div className="form-grid">
-              <div className="field">
-                <label>Branch</label>
-                <select name="branchId" value={form.branchId} onChange={handleChange}>
-                  <option value="">No branch</option>
-                  {branches.map((branch) => (
-                    <option key={branch.id} value={branch.id}>{branch.branchName}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="field">
-                <label>Job Title</label>
-                <input name="jobTitle" value={form.jobTitle} onChange={handleChange} placeholder="Tow operator, dispatcher, mechanic..." />
-              </div>
-              <div className="field">
-                <label>Status</label>
-                <select name="status" value={form.status} onChange={handleChange}>
-                  {STAFF_STATUSES.map((status) => (
-                    <option key={status} value={status}>{status}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div className="actions-row">
-              <button className="button button-primary" type="submit" disabled={saving}>
-                {saving ? 'Saving...' : (editingId ? 'Save changes' : 'Create staff')}
-              </button>
-              {editingId ? (
-                <button className="button button-secondary" type="button" onClick={resetForm}>
-                  Cancel
-                </button>
-              ) : null}
-            </div>
-          </form>
-
-          <div className="card">
-            <div className="toolbar">
-              <div className="toolbar-title">
-                <h2>Staff List</h2>
-                <p>{filteredStaff.length} staff member(s) matched</p>
-              </div>
-              <div className="toolbar-filters">
-                <input
-                  name="search"
-                  value={filters.search}
-                  onChange={handleFilterChange}
-                  placeholder="Search by name, email, phone, job title"
-                />
-                <select name="status" value={filters.status} onChange={handleFilterChange}>
-                  <option value="ALL">All statuses</option>
-                  {STAFF_STATUSES.map((status) => (
-                    <option key={status} value={status}>{status}</option>
-                  ))}
-                </select>
-                <select name="branchId" value={filters.branchId} onChange={handleFilterChange}>
-                  <option value="ALL">All branches</option>
-                  {branches.map((branch) => (
-                    <option key={branch.id} value={branch.id}>{branch.branchName}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div className="table-wrapper">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Staff</th>
-                    <th>Contact</th>
-                    <th>Branch</th>
-                    <th>Job Title</th>
-                    <th>Status</th>
-                    <th>Quick Status</th>
-                    <th />
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredStaff.length === 0 ? (
-                    <tr>
-                      <td colSpan="7">No staff matched the current filters.</td>
-                    </tr>
-                  ) : (
-                    filteredStaff.map((item) => (
-                      <tr key={item.id}>
-                        <td>
-                          <strong>{item.fullName}</strong>
-                          <div className="muted-line">User #{item.userId}</div>
-                        </td>
-                        <td>
-                          <div>{item.email}</div>
-                          <div className="muted-line">{item.phone || 'No phone'}</div>
-                        </td>
-                        <td>{branchMap[item.branchId]?.branchName || 'Unassigned branch'}</td>
-                        <td>{item.jobTitle || 'N/A'}</td>
-                        <td><StatusBadge value={item.status} /></td>
-                        <td>
-                          <div className="actions-stack">
-                            <select
-                              value={statusDrafts[item.id] || item.status}
-                              onChange={(event) => setStatusDrafts((previous) => ({
-                                ...previous,
-                                [item.id]: event.target.value,
-                              }))}
-                            >
-                              {STAFF_STATUSES.map((status) => (
-                                <option key={status} value={status}>{status}</option>
-                              ))}
-                            </select>
-                            <button
-                              className="button button-secondary"
-                              type="button"
-                              disabled={actionId === item.id || (statusDrafts[item.id] || item.status) === item.status}
-                              onClick={() => handleQuickStatusUpdate(item)}
-                            >
-                              {actionId === item.id ? 'Updating...' : 'Update status'}
-                            </button>
-                          </div>
-                        </td>
-                        <td>
-                          <div className="actions-stack">
-                            <button className="button button-secondary" type="button" onClick={() => handleEdit(item)}>
-                              Open edit
-                            </button>
-                            <button className="button button-danger" type="button" disabled={actionId === item.id} onClick={() => removeStaff(item.id)}>
-                              {actionId === item.id ? 'Deleting...' : 'Delete'}
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
+                    <Popup>
+                      <div style={{ padding: '5px' }}>
+                        <h4 style={{ margin: '0 0 5px 0', borderBottom: '1px solid #eee', paddingBottom: '3px' }}>{item.fullName}</h4>
+                        <p style={{ margin: '5px 0 5px 0' }}>Mã KTV: <strong>KTV-{item.userId || item.id}</strong></p>
+                        <p style={{ margin: '0 0 5px 0' }}>📞 {item.phone || 'Chưa cập nhật'}</p>
+                        <p style={{ margin: 0 }}>
+                          Trạng thái: <strong style={{ color: getStatusColor(item.status) }}>{item.status}</strong>
+                        </p>
+                      </div>
+                    </Popup>
+                  </Marker>
+                ))}
+              </MapContainer>
             </div>
           </div>
-        </div>
+
+          <div className="grid-two">
+            <form className="card" onSubmit={handleSubmit}>
+              <div className="actions-row" style={{ justifyContent: 'space-between' }}>
+                <h2>{editingId ? 'Update Staff' : 'Create Staff'}</h2>
+                {editingId ? <StatusBadge value={form.status} /> : null}
+              </div>
+
+              <div className="info-grid">
+                <div className="info-item">
+                  <span>Total Staff</span>
+                  <strong>{summary.total}</strong>
+                </div>
+                <div className="info-item">
+                  <span>Active</span>
+                  <strong>{summary.active}</strong>
+                </div>
+                <div className="info-item">
+                  <span>Offline</span>
+                  <strong>{summary.offline}</strong>
+                </div>
+                <div className="info-item">
+                  <span>Busy</span>
+                  <strong>{summary.busy}</strong>
+                </div>
+              </div>
+
+              {!editingId ? (
+                <div className="field">
+                  <label>Create Mode</label>
+                  <select value={creationMode} onChange={(event) => setCreationMode(event.target.value)}>
+                    <option value="NEW_ACCOUNT">Create new staff account</option>
+                    <option value="LINK_EXISTING">Link existing RESCUE_STAFF account</option>
+                  </select>
+                </div>
+              ) : null}
+
+              {creationMode === 'LINK_EXISTING' && !editingId ? (
+                <div className="field">
+                  <label>Existing User Id</label>
+                  <input
+                    name="userId"
+                    value={form.userId}
+                    onChange={handleChange}
+                    placeholder="Enter an existing RESCUE_STAFF account id"
+                    required
+                  />
+                </div>
+              ) : (
+                <div className="form-grid">
+                  <div className="field">
+                    <label>Email</label>
+                    <input name="email" type="email" value={form.email} onChange={handleChange} required={!editingId} />
+                  </div>
+                  <div className="field">
+                    <label>Password</label>
+                    <input
+                      name="password"
+                      type="password"
+                      value={form.password}
+                      onChange={handleChange}
+                      placeholder={editingId ? 'Leave blank to keep current password' : 'Required for a new account'}
+                      required={!editingId}
+                    />
+                  </div>
+                  <div className="field">
+                    <label>Full Name</label>
+                    <input name="fullName" value={form.fullName} onChange={handleChange} required={!editingId} />
+                  </div>
+                  <div className="field">
+                    <label>Phone</label>
+                    <input name="phone" value={form.phone} onChange={handleChange} />
+                  </div>
+                </div>
+              )}
+
+              <div className="form-grid">
+                <div className="field">
+                  <label>Branch</label>
+                  <select name="branchId" value={form.branchId} onChange={handleChange}>
+                    <option value="">No branch</option>
+                    {branches.map((branch) => (
+                      <option key={branch.id} value={branch.id}>{branch.branchName}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="field">
+                  <label>Job Title</label>
+                  <input name="jobTitle" value={form.jobTitle} onChange={handleChange} placeholder="Tow operator, dispatcher, mechanic..." />
+                </div>
+                <div className="field">
+                  <label>Status</label>
+                  <select name="status" value={form.status} onChange={handleChange}>
+                    {STAFF_STATUSES.map((status) => (
+                      <option key={status} value={status}>{status}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="actions-row">
+                <button className="button button-primary" type="submit" disabled={saving}>
+                  {saving ? 'Saving...' : (editingId ? 'Save changes' : 'Create staff')}
+                </button>
+                {editingId ? (
+                  <button className="button button-secondary" type="button" onClick={resetForm}>
+                    Cancel
+                  </button>
+                ) : null}
+              </div>
+            </form>
+
+            <div className="card">
+              <div className="toolbar">
+                <div className="toolbar-title">
+                  <h2>Staff List</h2>
+                  <p>{filteredStaff.length} staff member(s) matched</p>
+                </div>
+                <div className="toolbar-filters">
+                  <input
+                    name="search"
+                    value={filters.search}
+                    onChange={handleFilterChange}
+                    placeholder="Search by name, email, phone, job title"
+                  />
+                  <select name="status" value={filters.status} onChange={handleFilterChange}>
+                    <option value="ALL">All statuses</option>
+                    {STAFF_STATUSES.map((status) => (
+                      <option key={status} value={status}>{status}</option>
+                    ))}
+                  </select>
+                  <select name="branchId" value={filters.branchId} onChange={handleFilterChange}>
+                    <option value="ALL">All branches</option>
+                    {branches.map((branch) => (
+                      <option key={branch.id} value={branch.id}>{branch.branchName}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="table-wrapper">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Staff</th>
+                      <th>Location (Lat/Lng)</th>
+                      <th>Branch</th>
+                      <th>Status</th>
+                      <th>Quick Status</th>
+                      <th />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredStaff.length === 0 ? (
+                      <tr>
+                        <td colSpan="6">No staff matched the current filters.</td>
+                      </tr>
+                    ) : (
+                      filteredStaff.map((item) => (
+                        <tr key={item.id}>
+                          <td>
+                            <strong>{item.fullName}</strong>
+                            <div className="muted-line">{item.phone || 'No phone'}</div>
+                          </td>
+                          <td>
+                            {item.currentLatitude && item.currentLongitude ? (
+                              <>
+                                <div>Lat: {Number(item.currentLatitude).toFixed(5)}</div>
+                                <div className="muted-line">Lng: {Number(item.currentLongitude).toFixed(5)}</div>
+                              </>
+                            ) : (
+                              <span className="muted-line">Không có dữ liệu</span>
+                            )}
+                          </td>
+                          <td>{branchMap[item.branchId]?.branchName || 'Unassigned'}</td>
+                          <td><StatusBadge value={item.status} /></td>
+                          <td>
+                            <div className="actions-stack">
+                              <select
+                                value={statusDrafts[item.id] || item.status}
+                                onChange={(event) => setStatusDrafts((previous) => ({
+                                  ...previous,
+                                  [item.id]: event.target.value,
+                                }))}
+                              >
+                                {STAFF_STATUSES.map((status) => (
+                                  <option key={status} value={status}>{status}</option>
+                                ))}
+                              </select>
+                              <button
+                                className="button button-secondary"
+                                type="button"
+                                disabled={actionId === item.id || (statusDrafts[item.id] || item.status) === item.status}
+                                onClick={() => handleQuickStatusUpdate(item)}
+                              >
+                                {actionId === item.id ? 'Updating...' : 'Update status'}
+                              </button>
+                            </div>
+                          </td>
+                          <td>
+                            <div className="actions-stack">
+                              <button className="button button-secondary" type="button" onClick={() => handleEdit(item)}>
+                                Open edit
+                              </button>
+                              <button className="button button-danger" type="button" disabled={actionId === item.id} onClick={() => removeStaff(item.id)}>
+                                {actionId === item.id ? 'Deleting...' : 'Delete'}
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </>
       ) : null}
     </>
   );

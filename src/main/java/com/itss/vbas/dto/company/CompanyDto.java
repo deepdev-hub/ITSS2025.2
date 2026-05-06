@@ -86,8 +86,16 @@ public final class CompanyDto {
             String email,
             String phone,
             String jobTitle,
-            String status
+            String status,
+            BigDecimal currentLatitude,   
+            BigDecimal currentLongitude
     ) {
+    }
+
+    public record LocationUpdateRequest(
+        @NotNull BigDecimal latitude,
+        @NotNull BigDecimal longitude
+    ){
     }
 
     public record VehicleRequest(
