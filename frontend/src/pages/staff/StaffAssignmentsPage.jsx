@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { companyApi } from '../../api/companyApi';
 import { requestApi } from '../../api/requestApi';
 import { getApiError } from '../../api/client';
+import Countdown from '../../components/common/Countdown';
 import Loader from '../../components/common/Loader';
 import PageHeader from '../../components/common/PageHeader';
 import StatusBadge from '../../components/common/StatusBadge';
@@ -129,6 +130,7 @@ export default function StaffAssignmentsPage() {
                     <th>Company</th>
                     <th>Vehicle</th>
                     <th>Status</th>
+                    <th>Countdown</th>
                     <th>Assigned At</th>
                     <th />
                   </tr>
@@ -139,6 +141,9 @@ export default function StaffAssignmentsPage() {
                       <td>{assignment.companyName}</td>
                       <td>{assignment.vehicleCode || 'N/A'}</td>
                       <td><StatusBadge value={assignment.status} /></td>
+                      <td>
+                        <Countdown expiresAt={assignment.expiresAt} status={assignment.status} label="" />
+                      </td>
                       <td>{formatDateTime(assignment.assignedAt)}</td>
                       <td>
                         <button className="button button-secondary" type="button" onClick={() => setActiveAssignmentId(assignment.id)}>
@@ -168,6 +173,7 @@ export default function StaffAssignmentsPage() {
                 <div className="info-item">
                   <span>Assignment Status</span>
                   <strong><StatusBadge value={activeAssignment.status} /></strong>
+                  <Countdown expiresAt={activeAssignment.expiresAt} status={activeAssignment.status} />
                 </div>
                 <div className="info-item">
                   <span>Vehicle</span>

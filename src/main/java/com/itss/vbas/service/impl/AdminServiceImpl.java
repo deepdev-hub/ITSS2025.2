@@ -1,5 +1,6 @@
 package com.itss.vbas.service.impl;
 
+import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
 
@@ -32,6 +33,7 @@ import com.itss.vbas.repository.ServiceTypeRepository;
 import com.itss.vbas.security.AuthContext;
 import com.itss.vbas.service.AddressService;
 import com.itss.vbas.service.AdminService;
+import com.itss.vbas.service.AssignmentTimeoutService;
 import com.itss.vbas.service.RequestSupportService;
 import com.itss.vbas.util.PasswordUtil;
 import org.springframework.stereotype.Service;
@@ -50,6 +52,7 @@ public class AdminServiceImpl implements AdminService {
     private final RequestAssignmentRepository requestAssignmentRepository;
     private final AddressService addressService;
     private final RequestSupportService requestSupportService;
+    private final AssignmentTimeoutService assignmentTimeoutService;
     private final AuthContext authContext;
     private final AppMapper appMapper;
 
@@ -63,6 +66,7 @@ public class AdminServiceImpl implements AdminService {
             RequestAssignmentRepository requestAssignmentRepository,
             AddressService addressService,
             RequestSupportService requestSupportService,
+            AssignmentTimeoutService assignmentTimeoutService,
             AuthContext authContext,
             AppMapper appMapper
     ) {
@@ -75,6 +79,7 @@ public class AdminServiceImpl implements AdminService {
         this.requestAssignmentRepository = requestAssignmentRepository;
         this.addressService = addressService;
         this.requestSupportService = requestSupportService;
+        this.assignmentTimeoutService = assignmentTimeoutService;
         this.authContext = authContext;
         this.appMapper = appMapper;
     }
@@ -334,7 +339,11 @@ public class AdminServiceImpl implements AdminService {
         return rescueRequestRepository.findAll()
                 .stream()
                 .sorted(Comparator.comparing(RescueRequest::getCreatedAt, Comparator.nullsLast(Comparator.reverseOrder())))
-                .map(request -> appMapper.toRequestSummaryResponse(request, requestSupportService.getAssignedCompany(request)))
+                .map(request -> appMapper.toRequestSummaryResponse(
+                        request,
+                        requestSupportService.getAssignedCompany(request),
+                        requestSupportService.getLatestAssignment(request)
+                ))
                 .toList();
     }
 
@@ -346,6 +355,15 @@ public class AdminServiceImpl implements AdminService {
         if (rescueRequest.getStatus() == RescueRequestStatus.COMPLETED || rescueRequest.getStatus() == RescueRequestStatus.CANCELED) {
             throw new BadRequestException("Cannot assign company for a completed or canceled request");
         }
+        RequestAssignment latestAssignment = requestSupportService.getLatestAssignment(rescueRequest);
+        latestAssignment = assignmentTimeoutService.expireIfPendingTimedOut(latestAssignment);
+        if (latestAssignment != null && latestAssignment.getStatus() == AssignmentStatus.PENDING) {
+            throw new BadRequestException("Current assignment is still pending until " + assignmentTimeoutService.getExpiresAt(latestAssignment));
+        }
+        if (latestAssignment != null
+                && (latestAssignment.getStatus() == AssignmentStatus.ACCEPTED || latestAssignment.getStatus() == AssignmentStatus.COMPLETED)) {
+            throw new BadRequestException("Cannot re-assign a request after the company accepted it");
+        }
 
         RescueCompany company = findCompany(request.companyId());
         if (company.getStatus() != CompanyStatus.APPROVED) {
@@ -356,6 +374,7 @@ public class AdminServiceImpl implements AdminService {
                 .request(rescueRequest)
                 .company(company)
                 .assignedByUser(currentAdmin)
+                .assignedAt(LocalDateTime.now())
                 .status(AssignmentStatus.PENDING)
                 .build();
         RequestAssignment savedAssignment = requestAssignmentRepository.save(assignment);

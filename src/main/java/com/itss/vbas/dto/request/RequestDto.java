@@ -38,10 +38,13 @@ public final class RequestDto {
             String serviceTypeName,
             String locationLabel,
             String vehicleLabel,
+            String imageUrl,
             String customerName,
             LocalDateTime createdAt,
             LocalDateTime updatedAt,
-            CommonDto.BasicCompanyResponse assignedCompany
+            CommonDto.BasicCompanyResponse assignedCompany,
+            Integer timeoutSeconds,
+            LocalDateTime expiresAt
     ) {
     }
 
@@ -67,7 +70,9 @@ public final class RequestDto {
             LocalDateTime assignedAt,
             LocalDateTime acceptedAt,
             LocalDateTime rejectedAt,
-            String status
+            String status,
+            Integer timeoutSeconds,
+            LocalDateTime expiresAt
     ) {
     }
 
@@ -165,6 +170,7 @@ public final class RequestDto {
             String status,
             String priorityLevel,
             String description,
+            String imageUrl,
             LocalDateTime createdAt,
             LocalDateTime updatedAt,
             CommonDto.AccountSummaryResponse customer,

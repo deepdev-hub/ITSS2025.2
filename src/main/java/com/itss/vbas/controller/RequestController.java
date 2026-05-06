@@ -22,7 +22,8 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.multipart.MultipartFile;
 @RestController
 @RequestMapping("/api/requests")
 public class RequestController {
@@ -158,5 +159,17 @@ public class RequestController {
     ) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(CommonDto.ApiResponse.success("Review created successfully", reviewService.createReview(id, request)));
+    }
+
+    @RequiredRoles(RoleName.CUSTOMER)
+    @PostMapping("/{id}/upload-image")
+    public ResponseEntity<CommonDto.ApiResponse<CommonDto.FileUploadResponse>> uploadRequestImage(
+            @PathVariable Long id,
+            @RequestParam("file") MultipartFile file
+    ) {
+        return ResponseEntity.ok(CommonDto.ApiResponse.success(
+                "Request image uploaded successfully", 
+                rescueRequestService.uploadRequestImage(id, file)
+        ));
     }
 }

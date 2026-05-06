@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { requestApi } from '../../api/requestApi';
 import { getApiError } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
+import Countdown from '../../components/common/Countdown';
 import Loader from '../../components/common/Loader';
 import PageHeader from '../../components/common/PageHeader';
 import StatusBadge from '../../components/common/StatusBadge';
@@ -442,6 +443,10 @@ export default function RequestDetailPage() {
               <h3>Assigned Staff</h3>
               <p>{detail.currentAssignment?.staffName || 'Not assigned yet'}</p>
               <p className="muted-line">{detail.currentAssignment?.status || 'Pending assignment'}</p>
+              <Countdown
+                expiresAt={detail.currentAssignment?.expiresAt}
+                status={detail.currentAssignment?.status}
+              />
             </div>
             <div className="card card-muted">
               <h3>Rescue Vehicle</h3>
