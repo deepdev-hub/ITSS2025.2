@@ -1,11 +1,29 @@
 package com.itss.vbas.dto.dashboard;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+
 public final class DashboardDto {
 
     private DashboardDto() {
     }
 
     public record AdminDashboardResponse(
+            LocalDate statDate,
+            LocalDateTime calculatedAt,
+            long requestCount,
+            long completedRequestCount,
+            long canceledRequestCount,
+            long inProgressRequestCount,
+            long paidPaymentCount,
+            BigDecimal revenue,
+            long reviewCount,
+            BigDecimal averageRating,
+            long customerCount,
+            long staffCount,
+            long companyCount,
+            long approvedCompanyCount,
             long totalAccounts,
             long totalCustomers,
             long totalCompanies,

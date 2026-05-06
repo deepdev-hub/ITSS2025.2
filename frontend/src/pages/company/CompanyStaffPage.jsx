@@ -13,7 +13,6 @@ const initialForm = {
   password: '',
   fullName: '',
   phone: '',
-  branchId: '',
   jobTitle: '',
   status: 'ACTIVE',
 };
@@ -28,7 +27,6 @@ function toStaffForm(item) {
     password: '',
     fullName: item.fullName || '',
     phone: item.phone || '',
-    branchId: item.branchId ? String(item.branchId) : '',
     jobTitle: item.jobTitle || '',
     status: item.status || 'ACTIVE',
   };
@@ -42,7 +40,6 @@ function buildStaffPayload(form, creationMode, editingId) {
     password: isLinkMode ? null : (form.password || null),
     fullName: isLinkMode ? null : (form.fullName.trim() || null),
     phone: isLinkMode ? null : form.phone.trim(),
-    branchId: form.branchId ? Number(form.branchId) : null,
     jobTitle: form.jobTitle.trim(),
     status: form.status,
   };
@@ -55,7 +52,6 @@ function buildQuickStatusPayload(item, nextStatus) {
     password: null,
     fullName: item.fullName || null,
     phone: item.phone || '',
-    branchId: item.branchId || null,
     jobTitle: item.jobTitle || '',
     status: nextStatus,
   };
@@ -63,8 +59,7 @@ function buildQuickStatusPayload(item, nextStatus) {
 
 export default function CompanyStaffPage() {
   const [staff, setStaff] = useState([]);
-  const [branches, setBranches] = useState([]);
-  const [filters, setFilters] = useState({ search: '', status: 'ALL', branchId: 'ALL' });
+  const [filters, setFilters] = useState({ search: '', status: 'ALL' });
   const [form, setForm] = useState(initialForm);
   const [creationMode, setCreationMode] = useState('NEW_ACCOUNT');
   const [editingId, setEditingId] = useState(null);
@@ -74,11 +69,6 @@ export default function CompanyStaffPage() {
   const [actionId, setActionId] = useState(null);
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
-
-  const branchMap = useMemo(
-    () => Object.fromEntries(branches.map((branch) => [branch.id, branch])),
-    [branches],
-  );
 
   const summary = useMemo(() => ({
     total: staff.length,
@@ -90,32 +80,25 @@ export default function CompanyStaffPage() {
   const filteredStaff = useMemo(() => {
     const keyword = filters.search.trim().toLowerCase();
     return staff.filter((item) => {
-      const branchName = branchMap[item.branchId]?.branchName || '';
       const matchesSearch = keyword === ''
         || [
           item.fullName,
           item.email,
           item.phone,
           item.jobTitle,
-          branchName,
         ].some((value) => value?.toLowerCase().includes(keyword));
 
       const matchesStatus = filters.status === 'ALL' || item.status === filters.status;
-      const matchesBranch = filters.branchId === 'ALL' || String(item.branchId || '') === filters.branchId;
-      return matchesSearch && matchesStatus && matchesBranch;
+      return matchesSearch && matchesStatus;
     });
-  }, [branchMap, filters, staff]);
+  }, [filters, staff]);
 
   const loadData = async () => {
     setLoading(true);
     setError('');
     try {
-      const [staffList, branchList] = await Promise.all([
-        companyApi.getStaff(),
-        companyApi.getBranches(),
-      ]);
+      const staffList = await companyApi.getStaff();
       setStaff(staffList);
-      setBranches(branchList);
       setStatusDrafts(Object.fromEntries(staffList.map((item) => [item.id, item.status])));
     } catch (err) {
       setError(getApiError(err));
@@ -217,7 +200,7 @@ export default function CompanyStaffPage() {
 
   return (
     <>
-      <PageHeader title="Company Staff" subtitle="Manage rescue staff, search the roster, update branch assignments, and change working status quickly from one screen." />
+      <PageHeader title="Company Staff" subtitle="Manage rescue staff, search the roster, and update working status quickly from one screen." />
       {notice ? <div className="notice">{notice}</div> : null}
       {error ? <div className="notice error">{error}</div> : null}
 
@@ -301,15 +284,6 @@ export default function CompanyStaffPage() {
 
             <div className="form-grid">
               <div className="field">
-                <label>Branch</label>
-                <select name="branchId" value={form.branchId} onChange={handleChange}>
-                  <option value="">No branch</option>
-                  {branches.map((branch) => (
-                    <option key={branch.id} value={branch.id}>{branch.branchName}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="field">
                 <label>Job Title</label>
                 <input name="jobTitle" value={form.jobTitle} onChange={handleChange} placeholder="Tow operator, dispatcher, mechanic..." />
               </div>
@@ -354,12 +328,6 @@ export default function CompanyStaffPage() {
                     <option key={status} value={status}>{status}</option>
                   ))}
                 </select>
-                <select name="branchId" value={filters.branchId} onChange={handleFilterChange}>
-                  <option value="ALL">All branches</option>
-                  {branches.map((branch) => (
-                    <option key={branch.id} value={branch.id}>{branch.branchName}</option>
-                  ))}
-                </select>
               </div>
             </div>
 
@@ -369,7 +337,6 @@ export default function CompanyStaffPage() {
                   <tr>
                     <th>Staff</th>
                     <th>Contact</th>
-                    <th>Branch</th>
                     <th>Job Title</th>
                     <th>Status</th>
                     <th>Quick Status</th>
@@ -379,7 +346,7 @@ export default function CompanyStaffPage() {
                 <tbody>
                   {filteredStaff.length === 0 ? (
                     <tr>
-                      <td colSpan="7">No staff matched the current filters.</td>
+                      <td colSpan="6">No staff matched the current filters.</td>
                     </tr>
                   ) : (
                     filteredStaff.map((item) => (
@@ -392,7 +359,6 @@ export default function CompanyStaffPage() {
                           <div>{item.email}</div>
                           <div className="muted-line">{item.phone || 'No phone'}</div>
                         </td>
-                        <td>{branchMap[item.branchId]?.branchName || 'Unassigned branch'}</td>
                         <td>{item.jobTitle || 'N/A'}</td>
                         <td><StatusBadge value={item.status} /></td>
                         <td>

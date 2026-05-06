@@ -8,7 +8,6 @@ import StatusBadge from '../../components/common/StatusBadge';
 const VEHICLE_STATUSES = ['AVAILABLE', 'IN_SERVICE', 'MAINTENANCE'];
 
 const initialForm = {
-  branchId: '',
   vehicleCode: '',
   vehicleType: '',
   plateNumber: '',
@@ -20,7 +19,6 @@ function toVehicleForm(vehicle) {
     return initialForm;
   }
   return {
-    branchId: vehicle.branchId ? String(vehicle.branchId) : '',
     vehicleCode: vehicle.vehicleCode || '',
     vehicleType: vehicle.vehicleType || '',
     plateNumber: vehicle.plateNumber || '',
@@ -30,7 +28,6 @@ function toVehicleForm(vehicle) {
 
 function buildVehiclePayload(form) {
   return {
-    branchId: Number(form.branchId),
     vehicleCode: form.vehicleCode.trim(),
     vehicleType: form.vehicleType.trim(),
     plateNumber: form.plateNumber.trim(),
@@ -40,7 +37,6 @@ function buildVehiclePayload(form) {
 
 function buildQuickVehicleStatusPayload(vehicle, nextStatus) {
   return {
-    branchId: vehicle.branchId,
     vehicleCode: vehicle.vehicleCode,
     vehicleType: vehicle.vehicleType,
     plateNumber: vehicle.plateNumber,
@@ -50,8 +46,7 @@ function buildQuickVehicleStatusPayload(vehicle, nextStatus) {
 
 export default function CompanyVehiclesPage() {
   const [vehicles, setVehicles] = useState([]);
-  const [branches, setBranches] = useState([]);
-  const [filters, setFilters] = useState({ search: '', status: 'ALL', branchId: 'ALL' });
+  const [filters, setFilters] = useState({ search: '', status: 'ALL' });
   const [form, setForm] = useState(initialForm);
   const [editingId, setEditingId] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -74,14 +69,12 @@ export default function CompanyVehiclesPage() {
       const matchesSearch = keyword === ''
         || [
           vehicle.vehicleCode,
-          vehicle.branchName,
           vehicle.plateNumber,
           vehicle.vehicleType,
         ].some((value) => value?.toLowerCase().includes(keyword));
 
       const matchesStatus = filters.status === 'ALL' || vehicle.status === filters.status;
-      const matchesBranch = filters.branchId === 'ALL' || String(vehicle.branchId) === filters.branchId;
-      return matchesSearch && matchesStatus && matchesBranch;
+      return matchesSearch && matchesStatus;
     });
   }, [filters, vehicles]);
 
@@ -89,12 +82,8 @@ export default function CompanyVehiclesPage() {
     setLoading(true);
     setError('');
     try {
-      const [vehicleList, branchList] = await Promise.all([
-        companyApi.getVehicles(),
-        companyApi.getBranches(),
-      ]);
+      const vehicleList = await companyApi.getVehicles();
       setVehicles(vehicleList);
-      setBranches(branchList);
       setStatusDrafts(Object.fromEntries(vehicleList.map((item) => [item.id, item.status])));
     } catch (err) {
       setError(getApiError(err));
@@ -229,15 +218,6 @@ export default function CompanyVehiclesPage() {
 
             <div className="form-grid">
               <div className="field">
-                <label>Branch</label>
-                <select name="branchId" value={form.branchId} onChange={handleChange} required>
-                  <option value="">Select branch</option>
-                  {branches.map((branch) => (
-                    <option key={branch.id} value={branch.id}>{branch.branchName}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="field">
                 <label>Vehicle Code</label>
                 <input name="vehicleCode" value={form.vehicleCode} onChange={handleChange} required />
               </div>
@@ -282,18 +262,12 @@ export default function CompanyVehiclesPage() {
                   name="search"
                   value={filters.search}
                   onChange={handleFilterChange}
-                  placeholder="Search by code, plate, type, branch"
+                  placeholder="Search by code, plate, type"
                 />
                 <select name="status" value={filters.status} onChange={handleFilterChange}>
                   <option value="ALL">All statuses</option>
                   {VEHICLE_STATUSES.map((status) => (
                     <option key={status} value={status}>{status}</option>
-                  ))}
-                </select>
-                <select name="branchId" value={filters.branchId} onChange={handleFilterChange}>
-                  <option value="ALL">All branches</option>
-                  {branches.map((branch) => (
-                    <option key={branch.id} value={branch.id}>{branch.branchName}</option>
                   ))}
                 </select>
               </div>
@@ -304,7 +278,6 @@ export default function CompanyVehiclesPage() {
                 <thead>
                   <tr>
                     <th>Vehicle</th>
-                    <th>Branch</th>
                     <th>Plate</th>
                     <th>Type</th>
                     <th>Status</th>
@@ -315,7 +288,7 @@ export default function CompanyVehiclesPage() {
                 <tbody>
                   {filteredVehicles.length === 0 ? (
                     <tr>
-                      <td colSpan="7">No vehicles matched the current filters.</td>
+                      <td colSpan="6">No vehicles matched the current filters.</td>
                     </tr>
                   ) : (
                     filteredVehicles.map((vehicle) => (
@@ -324,7 +297,6 @@ export default function CompanyVehiclesPage() {
                           <strong>{vehicle.vehicleCode}</strong>
                           <div className="muted-line">Vehicle #{vehicle.id}</div>
                         </td>
-                        <td>{vehicle.branchName}</td>
                         <td>{vehicle.plateNumber}</td>
                         <td>{vehicle.vehicleType}</td>
                         <td><StatusBadge value={vehicle.status} /></td>
