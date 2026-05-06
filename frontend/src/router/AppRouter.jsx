@@ -21,7 +21,6 @@ import AdminRolesPage from '../pages/admin/AdminRolesPage';
 import CompanyDashboardPage from '../pages/company/CompanyDashboardPage';
 import CompanyProfilePage from '../pages/company/CompanyProfilePage';
 import CompanyRequestsPage from '../pages/company/CompanyRequestsPage';
-import CompanyBranchesPage from '../pages/company/CompanyBranchesPage';
 import CompanyStaffPage from '../pages/company/CompanyStaffPage';
 import CompanyVehiclesPage from '../pages/company/CompanyVehiclesPage';
 import StaffDashboardPage from '../pages/staff/StaffDashboardPage';
@@ -62,7 +61,7 @@ export default function AppRouter() {
             <Route path="/company/dashboard" element={<CompanyDashboardPage />} />
             <Route path="/company/profile" element={<CompanyProfilePage />} />
             <Route path="/company/requests" element={<CompanyRequestsPage />} />
-            <Route path="/company/branches" element={<CompanyBranchesPage />} />
+            <Route path="/company/branches" element={<Navigate to="/company/profile" replace />} />
             <Route path="/company/staff" element={<CompanyStaffPage />} />
             <Route path="/company/vehicles" element={<CompanyVehiclesPage />} />
           </Route>

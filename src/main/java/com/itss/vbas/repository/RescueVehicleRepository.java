@@ -7,9 +7,9 @@ import com.itss.vbas.entity.RescueVehicle;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface RescueVehicleRepository extends JpaRepository<RescueVehicle, Long> {
-    List<RescueVehicle> findByBranchCompanyIdOrderByIdDesc(Long companyId);
+    List<RescueVehicle> findByCompanyIdOrderByIdDesc(Long companyId);
 
-    Optional<RescueVehicle> findByIdAndBranchCompanyId(Long id, Long companyId);
+    Optional<RescueVehicle> findByIdAndCompanyId(Long id, Long companyId);
 
-    long countByBranchCompanyId(Long companyId);
+    long countByCompanyId(Long companyId);
 }
