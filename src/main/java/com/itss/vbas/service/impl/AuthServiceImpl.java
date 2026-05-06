@@ -5,6 +5,7 @@ import java.util.List;
 import com.itss.vbas.dto.auth.AuthDto;
 import com.itss.vbas.dto.common.CommonDto;
 import com.itss.vbas.entity.Account;
+import com.itss.vbas.entity.PasswordResetToken;
 import com.itss.vbas.entity.Role;
 import com.itss.vbas.enums.AccountStatus;
 import com.itss.vbas.enums.RoleName;
@@ -12,6 +13,7 @@ import com.itss.vbas.exception.BadRequestException;
 import com.itss.vbas.exception.UnauthorizedException;
 import com.itss.vbas.mapper.AppMapper;
 import com.itss.vbas.repository.AccountRepository;
+import com.itss.vbas.repository.PasswordResetTokenRepository;
 import com.itss.vbas.repository.IncidentTypeRepository;
 import com.itss.vbas.repository.RescueCompanyRepository;
 import com.itss.vbas.repository.RescueStaffRepository;
@@ -22,6 +24,7 @@ import com.itss.vbas.security.CurrentUser;
 import com.itss.vbas.security.JwtUtil;
 import com.itss.vbas.service.AddressService;
 import com.itss.vbas.service.AuthService;
+import com.itss.vbas.service.EmailService;
 import com.itss.vbas.util.PasswordUtil;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,7 +32,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Transactional
 public class AuthServiceImpl implements AuthService {
-
+    private final EmailService emailService;
+    private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final AccountRepository accountRepository;
     private final RoleRepository roleRepository;
     private final IncidentTypeRepository incidentTypeRepository;
@@ -42,6 +46,7 @@ public class AuthServiceImpl implements AuthService {
     private final AuthContext authContext;
 
     public AuthServiceImpl(
+            EmailService emailService,
             AccountRepository accountRepository,
             RoleRepository roleRepository,
             IncidentTypeRepository incidentTypeRepository,
@@ -51,8 +56,10 @@ public class AuthServiceImpl implements AuthService {
             AddressService addressService,
             AppMapper appMapper,
             JwtUtil jwtUtil,
-            AuthContext authContext
+            AuthContext authContext,
+            PasswordResetTokenRepository passwordResetTokenRepository
     ) {
+        this.emailService = emailService;
         this.accountRepository = accountRepository;
         this.roleRepository = roleRepository;
         this.incidentTypeRepository = incidentTypeRepository;
@@ -63,6 +70,7 @@ public class AuthServiceImpl implements AuthService {
         this.appMapper = appMapper;
         this.jwtUtil = jwtUtil;
         this.authContext = authContext;
+        this.passwordResetTokenRepository = passwordResetTokenRepository;
     }
 
     @Override
@@ -81,7 +89,11 @@ public class AuthServiceImpl implements AuthService {
                 .dateOfBirth(request.dateOfBirth())
                 .gender(request.gender())
                 .cccd(request.cccd())
-                .defaultAddress(addressService.createAddress(request.defaultAddress()))
+                .defaultAddress(
+                        request.defaultAddress() != null
+                                ? addressService.createAddress(request.defaultAddress())
+                                : null
+                )
                 .build();
 
         Account savedAccount = accountRepository.save(account);
@@ -179,5 +191,46 @@ public class AuthServiceImpl implements AuthService {
     private Role getOrCreateRole(RoleName roleName) {
         return roleRepository.findByRoleName(roleName)
                 .orElseGet(() -> roleRepository.save(Role.builder().roleName(roleName).build()));
+    }
+    @Override
+    public void forgotPassword(String email) {
+        Account account = accountRepository.findByEmailIgnoreCase(email)
+                .orElseThrow(() -> new BadRequestException("Email không tồn tại"));
+
+        String token = java.util.UUID.randomUUID().toString();
+
+        PasswordResetToken resetToken = PasswordResetToken.builder()
+                .user(account)
+                .token(token)
+                .expiresAt(java.time.LocalDateTime.now().plusMinutes(15))
+                .build();
+
+        passwordResetTokenRepository.save(resetToken);
+
+        String link = "http://localhost:5173/reset-password?token=" + token;
+
+        // ✅ Gửi email thật
+        emailService.sendResetPasswordEmail(account.getEmail(), link);
+    }
+    @Override // KHI NGƯỜI DÙNG TRUY CẬP VÀO LINK RESET MẬT KHẨU VÀ NHẬP MẬT KHẨU MỚI VÀ KIỂM TRA TOKEN CÓ HỢP LỆ, CHƯA SỬ DỤNG, CHƯA HẾT HẠN KHÔNG RỒI MỚI CHO PHÉP ĐỔI MẬT KHẨU
+    public void resetPassword(String token, String newPassword) {
+
+        PasswordResetToken resetToken = passwordResetTokenRepository.findByToken(token)
+                .orElseThrow(() -> new BadRequestException("Token không hợp lệ"));
+
+        if (resetToken.getUsedAt() != null) {
+            throw new BadRequestException("Token đã được sử dụng");
+        }
+
+        if (resetToken.getExpiresAt().isBefore(java.time.LocalDateTime.now())) {
+            throw new BadRequestException("Token đã hết hạn");
+        }
+
+        Account account = resetToken.getUser();
+        account.setPasswordHash(PasswordUtil.hash(newPassword));
+        accountRepository.save(account);
+
+        resetToken.setUsedAt(java.time.LocalDateTime.now());
+        passwordResetTokenRepository.save(resetToken);
     }
 }

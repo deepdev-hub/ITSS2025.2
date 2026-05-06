@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.RequestParam;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -64,5 +65,20 @@ public class AuthController {
     @GetMapping("/lookups/service-types")
     public ResponseEntity<CommonDto.ApiResponse<List<CommonDto.LookupResponse>>> getServiceLookups() {
         return ResponseEntity.ok(CommonDto.ApiResponse.success("Service types fetched successfully", authService.getServiceLookups()));
+    }
+
+    @PostMapping("/forgot-password")
+    public String forgotPassword(@RequestParam String email) {
+        authService.forgotPassword(email);
+        return "Đã gửi link reset password";
+    }
+
+    @PostMapping("/reset-password")
+    public String resetPassword(
+            @RequestParam String token,
+            @RequestParam String newPassword
+    ) {
+        authService.resetPassword(token, newPassword);
+        return "Đổi mật khẩu thành công";
     }
 }

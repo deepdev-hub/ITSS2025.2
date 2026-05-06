@@ -98,6 +98,26 @@ export default function AdminAccountsPage() {
     }
   };
 
+  const handleBlockToggle = async (account) => {
+    const isBlocked = account.status === 'BANNED';
+    const message = isBlocked ? 'Unblock this account?' : 'Block this account?';
+    if (!window.confirm(message)) {
+      return;
+    }
+    try {
+      if (isBlocked) {
+        await adminApi.unblockAccount(account.id);
+        setNotice('Account unblocked successfully');
+      } else {
+        await adminApi.blockAccount(account.id);
+        setNotice('Account blocked successfully');
+      }
+      await loadData();
+    } catch (err) {
+      setError(getApiError(err));
+    }
+  };
+
   return (
     <>
       <PageHeader title="Accounts" subtitle="Admin can create, update, and deactivate accounts by role." />
@@ -178,6 +198,9 @@ export default function AdminAccountsPage() {
                       <div className="actions-row">
                         <button className="button button-secondary" type="button" onClick={() => handleEdit(account)}>
                           Edit
+                        </button>
+                        <button className="button button-secondary" type="button" onClick={() => handleBlockToggle(account)}>
+                          {account.status === 'BANNED' ? 'Unblock' : 'Block'}
                         </button>
                         <button className="button button-danger" type="button" onClick={() => handleDelete(account.id)}>
                           Deactivate

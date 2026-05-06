@@ -18,6 +18,10 @@ public interface AdminService {
 
     void deleteAccount(Long id);
 
+    AdminDto.AccountResponse blockAccount(Long id);
+
+    AdminDto.AccountResponse unblockAccount(Long id);
+
     List<CommonDto.RoleResponse> getRoles();
 
     CommonDto.RoleResponse createRole(AdminDto.RoleRequest request);
@@ -51,6 +55,16 @@ public interface AdminService {
     CompanyDto.CompanyResponse updateCompany(Long id, CompanyDto.CompanyRequest request);
 
     void deleteCompany(Long id);
+
+    List<CompanyDto.BranchResponse> getCompanyBranches(Long companyId);
+
+    List<CompanyDto.StaffResponse> getCompanyStaff(Long companyId);
+
+    CompanyDto.StaffResponse createCompanyStaff(Long companyId, CompanyDto.StaffRequest request);
+
+    CompanyDto.StaffResponse updateCompanyStaff(Long companyId, Long staffId, CompanyDto.StaffRequest request);
+
+    void deleteCompanyStaff(Long companyId, Long staffId);
 
     List<RequestDto.RequestSummaryResponse> getAllRequests();
 

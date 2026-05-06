@@ -19,4 +19,7 @@ public interface AuthService {
     List<CommonDto.LookupResponse> getIncidentLookups();
 
     List<CommonDto.LookupResponse> getServiceLookups();
+
+    void forgotPassword(String email);
+    void resetPassword(String token, String newPassword);
 }

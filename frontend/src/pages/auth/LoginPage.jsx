@@ -59,6 +59,9 @@ export default function LoginPage() {
           </button>
           <Link className="button button-secondary" to="/register">Create customer account</Link>
         </div>
+        <p style={{ marginTop: '16px' }}>
+          <Link to="/forgot-password">Forgot your password?</Link>
+        </p>
       </form>
     </div>
   );

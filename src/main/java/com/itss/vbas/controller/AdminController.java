@@ -66,6 +66,16 @@ public class AdminController {
         return ResponseEntity.ok(CommonDto.ApiResponse.success("Account deactivated successfully"));
     }
 
+    @PutMapping("/accounts/{id}/block")
+    public ResponseEntity<CommonDto.ApiResponse<AdminDto.AccountResponse>> blockAccount(@PathVariable Long id) {
+        return ResponseEntity.ok(CommonDto.ApiResponse.success("Account blocked successfully", adminService.blockAccount(id)));
+    }
+
+    @PutMapping("/accounts/{id}/unblock")
+    public ResponseEntity<CommonDto.ApiResponse<AdminDto.AccountResponse>> unblockAccount(@PathVariable Long id) {
+        return ResponseEntity.ok(CommonDto.ApiResponse.success("Account unblocked successfully", adminService.unblockAccount(id)));
+    }
+
     @GetMapping("/roles")
     public ResponseEntity<CommonDto.ApiResponse<List<CommonDto.RoleResponse>>> getRoles() {
         return ResponseEntity.ok(CommonDto.ApiResponse.success("Roles fetched successfully", adminService.getRoles()));
@@ -169,6 +179,43 @@ public class AdminController {
     public ResponseEntity<CommonDto.ApiResponse<Void>> deleteCompany(@PathVariable Long id) {
         adminService.deleteCompany(id);
         return ResponseEntity.ok(CommonDto.ApiResponse.success("Company suspended successfully"));
+    }
+
+    @GetMapping("/companies/{companyId}/branches")
+    public ResponseEntity<CommonDto.ApiResponse<List<CompanyDto.BranchResponse>>> getCompanyBranches(@PathVariable Long companyId) {
+        return ResponseEntity.ok(CommonDto.ApiResponse.success("Company branches fetched successfully", adminService.getCompanyBranches(companyId)));
+    }
+
+    @GetMapping("/companies/{companyId}/staff")
+    public ResponseEntity<CommonDto.ApiResponse<List<CompanyDto.StaffResponse>>> getCompanyStaff(@PathVariable Long companyId) {
+        return ResponseEntity.ok(CommonDto.ApiResponse.success("Company staff fetched successfully", adminService.getCompanyStaff(companyId)));
+    }
+
+    @PostMapping("/companies/{companyId}/staff")
+    public ResponseEntity<CommonDto.ApiResponse<CompanyDto.StaffResponse>> createCompanyStaff(
+            @PathVariable Long companyId,
+            @Valid @RequestBody CompanyDto.StaffRequest request
+    ) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(CommonDto.ApiResponse.success("Company staff created successfully", adminService.createCompanyStaff(companyId, request)));
+    }
+
+    @PutMapping("/companies/{companyId}/staff/{staffId}")
+    public ResponseEntity<CommonDto.ApiResponse<CompanyDto.StaffResponse>> updateCompanyStaff(
+            @PathVariable Long companyId,
+            @PathVariable Long staffId,
+            @Valid @RequestBody CompanyDto.StaffRequest request
+    ) {
+        return ResponseEntity.ok(CommonDto.ApiResponse.success("Company staff updated successfully", adminService.updateCompanyStaff(companyId, staffId, request)));
+    }
+
+    @DeleteMapping("/companies/{companyId}/staff/{staffId}")
+    public ResponseEntity<CommonDto.ApiResponse<Void>> deleteCompanyStaff(
+            @PathVariable Long companyId,
+            @PathVariable Long staffId
+    ) {
+        adminService.deleteCompanyStaff(companyId, staffId);
+        return ResponseEntity.ok(CommonDto.ApiResponse.success("Company staff deleted successfully"));
     }
 
     @GetMapping("/requests")

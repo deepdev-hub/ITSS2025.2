@@ -7,6 +7,8 @@ import ForbiddenPage from '../pages/ForbiddenPage';
 import NotFoundPage from '../pages/NotFoundPage';
 import LoginPage from '../pages/auth/LoginPage';
 import RegisterPage from '../pages/auth/RegisterPage';
+import ForgotPasswordPage from '../pages/auth/ForgotPasswordPage';
+import ResetPasswordPage from '../pages/auth/ResetPasswordPage';
 import CustomerVehiclesPage from '../pages/customer/CustomerVehiclesPage';
 import CreateRequestPage from '../pages/customer/CreateRequestPage';
 import MyRequestsPage from '../pages/customer/MyRequestsPage';
@@ -14,6 +16,7 @@ import RequestDetailPage from '../pages/customer/RequestDetailPage';
 import AdminDashboardPage from '../pages/admin/AdminDashboardPage';
 import AdminAccountsPage from '../pages/admin/AdminAccountsPage';
 import AdminCompaniesPage from '../pages/admin/AdminCompaniesPage';
+import AdminCompanyStaffPage from '../pages/admin/AdminCompanyStaffPage';
 import AdminIncidentTypesPage from '../pages/admin/AdminIncidentTypesPage';
 import AdminServiceTypesPage from '../pages/admin/AdminServiceTypesPage';
 import AdminRequestsPage from '../pages/admin/AdminRequestsPage';
@@ -32,6 +35,8 @@ export default function AppRouter() {
       <Route path="/" element={<HomePage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/403" element={<ForbiddenPage />} />
 
       <Route element={<ProtectedRoute />}>
@@ -49,6 +54,7 @@ export default function AppRouter() {
             <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
             <Route path="/admin/accounts" element={<AdminAccountsPage />} />
             <Route path="/admin/companies" element={<AdminCompaniesPage />} />
+            <Route path="/admin/company-staff" element={<AdminCompanyStaffPage />} />
             <Route path="/admin/incident-types" element={<AdminIncidentTypesPage />} />
             <Route path="/admin/service-types" element={<AdminServiceTypesPage />} />
             <Route path="/admin/requests" element={<AdminRequestsPage />} />

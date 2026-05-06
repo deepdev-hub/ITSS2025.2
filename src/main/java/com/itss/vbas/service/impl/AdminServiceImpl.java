@@ -11,7 +11,9 @@ import com.itss.vbas.entity.Account;
 import com.itss.vbas.entity.IncidentType;
 import com.itss.vbas.entity.RequestAssignment;
 import com.itss.vbas.entity.RescueCompany;
+import com.itss.vbas.entity.RescueCompanyBranch;
 import com.itss.vbas.entity.RescueRequest;
+import com.itss.vbas.entity.RescueStaff;
 import com.itss.vbas.entity.Role;
 import com.itss.vbas.entity.ServiceType;
 import com.itss.vbas.enums.AccountStatus;
@@ -19,14 +21,17 @@ import com.itss.vbas.enums.AssignmentStatus;
 import com.itss.vbas.enums.CompanyStatus;
 import com.itss.vbas.enums.RescueRequestStatus;
 import com.itss.vbas.enums.RoleName;
+import com.itss.vbas.enums.StaffStatus;
 import com.itss.vbas.exception.BadRequestException;
 import com.itss.vbas.exception.ResourceNotFoundException;
 import com.itss.vbas.mapper.AppMapper;
 import com.itss.vbas.repository.AccountRepository;
 import com.itss.vbas.repository.IncidentTypeRepository;
 import com.itss.vbas.repository.RequestAssignmentRepository;
+import com.itss.vbas.repository.RescueCompanyBranchRepository;
 import com.itss.vbas.repository.RescueCompanyRepository;
 import com.itss.vbas.repository.RescueRequestRepository;
+import com.itss.vbas.repository.RescueStaffRepository;
 import com.itss.vbas.repository.RoleRepository;
 import com.itss.vbas.repository.ServiceTypeRepository;
 import com.itss.vbas.security.AuthContext;
@@ -46,6 +51,8 @@ public class AdminServiceImpl implements AdminService {
     private final IncidentTypeRepository incidentTypeRepository;
     private final ServiceTypeRepository serviceTypeRepository;
     private final RescueCompanyRepository rescueCompanyRepository;
+    private final RescueCompanyBranchRepository rescueCompanyBranchRepository;
+    private final RescueStaffRepository rescueStaffRepository;
     private final RescueRequestRepository rescueRequestRepository;
     private final RequestAssignmentRepository requestAssignmentRepository;
     private final AddressService addressService;
@@ -59,6 +66,8 @@ public class AdminServiceImpl implements AdminService {
             IncidentTypeRepository incidentTypeRepository,
             ServiceTypeRepository serviceTypeRepository,
             RescueCompanyRepository rescueCompanyRepository,
+            RescueCompanyBranchRepository rescueCompanyBranchRepository,
+            RescueStaffRepository rescueStaffRepository,
             RescueRequestRepository rescueRequestRepository,
             RequestAssignmentRepository requestAssignmentRepository,
             AddressService addressService,
@@ -71,6 +80,8 @@ public class AdminServiceImpl implements AdminService {
         this.incidentTypeRepository = incidentTypeRepository;
         this.serviceTypeRepository = serviceTypeRepository;
         this.rescueCompanyRepository = rescueCompanyRepository;
+        this.rescueCompanyBranchRepository = rescueCompanyBranchRepository;
+        this.rescueStaffRepository = rescueStaffRepository;
         this.rescueRequestRepository = rescueRequestRepository;
         this.requestAssignmentRepository = requestAssignmentRepository;
         this.addressService = addressService;
@@ -151,6 +162,23 @@ public class AdminServiceImpl implements AdminService {
         Account account = findAccount(id);
         account.setStatus(AccountStatus.INACTIVE);
         accountRepository.save(account);
+    }
+
+    @Override
+    public AdminDto.AccountResponse blockAccount(Long id) {
+        Account account = findAccount(id);
+        if (account.getId().equals(authContext.getCurrentAccount().getId())) {
+            throw new BadRequestException("You cannot block your own account");
+        }
+        account.setStatus(AccountStatus.BANNED);
+        return appMapper.toAdminAccountResponse(accountRepository.save(account));
+    }
+
+    @Override
+    public AdminDto.AccountResponse unblockAccount(Long id) {
+        Account account = findAccount(id);
+        account.setStatus(AccountStatus.ACTIVE);
+        return appMapper.toAdminAccountResponse(accountRepository.save(account));
     }
 
     @Override
@@ -330,6 +358,82 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     @Transactional(readOnly = true)
+    public List<CompanyDto.BranchResponse> getCompanyBranches(Long companyId) {
+        findCompany(companyId);
+        return rescueCompanyBranchRepository.findByCompanyIdOrderByIdDesc(companyId)
+                .stream()
+                .map(appMapper::toBranchResponse)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<CompanyDto.StaffResponse> getCompanyStaff(Long companyId) {
+        findCompany(companyId);
+        return rescueStaffRepository.findByCompanyIdOrderByIdDesc(companyId)
+                .stream()
+                .map(appMapper::toStaffResponse)
+                .toList();
+    }
+
+    @Override
+    public CompanyDto.StaffResponse createCompanyStaff(Long companyId, CompanyDto.StaffRequest request) {
+        RescueCompany company = findCompany(companyId);
+        RescueCompanyBranch branch = request.branchId() == null ? null : findBranch(request.branchId(), companyId);
+        RescueStaff staff = RescueStaff.builder()
+                .company(company)
+                .branch(branch)
+                .jobTitle(request.jobTitle())
+                .status(parseStaffStatus(request.status()))
+                .user(resolveStaffAccount(request))
+                .build();
+        return appMapper.toStaffResponse(rescueStaffRepository.save(staff));
+    }
+
+    @Override
+    public CompanyDto.StaffResponse updateCompanyStaff(Long companyId, Long staffId, CompanyDto.StaffRequest request) {
+        findCompany(companyId);
+        RescueStaff staff = rescueStaffRepository.findByIdAndCompanyId(staffId, companyId)
+                .orElseThrow(() -> new ResourceNotFoundException("Staff not found with id: " + staffId));
+        Account user = staff.getUser();
+
+        if (request.email() != null && !request.email().isBlank()
+                && !request.email().equalsIgnoreCase(user.getEmail())
+                && accountRepository.existsByEmailIgnoreCase(request.email())) {
+            throw new BadRequestException("Email is already in use");
+        }
+
+        if (request.email() != null && !request.email().isBlank()) {
+            user.setEmail(request.email().trim().toLowerCase());
+        }
+        if (request.fullName() != null && !request.fullName().isBlank()) {
+            user.setFullName(request.fullName());
+        }
+        user.setPhone(request.phone());
+        if (request.password() != null && !request.password().isBlank()) {
+            user.setPasswordHash(PasswordUtil.hash(request.password()));
+        }
+        accountRepository.save(user);
+
+        staff.setBranch(request.branchId() == null ? null : findBranch(request.branchId(), companyId));
+        staff.setJobTitle(request.jobTitle());
+        staff.setStatus(parseStaffStatus(request.status()));
+        return appMapper.toStaffResponse(rescueStaffRepository.save(staff));
+    }
+
+    @Override
+    public void deleteCompanyStaff(Long companyId, Long staffId) {
+        findCompany(companyId);
+        RescueStaff staff = rescueStaffRepository.findByIdAndCompanyId(staffId, companyId)
+                .orElseThrow(() -> new ResourceNotFoundException("Staff not found with id: " + staffId));
+        Account user = staff.getUser();
+        user.setStatus(AccountStatus.INACTIVE);
+        accountRepository.save(user);
+        rescueStaffRepository.delete(staff);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<RequestDto.RequestSummaryResponse> getAllRequests() {
         return rescueRequestRepository.findAll()
                 .stream()
@@ -373,6 +477,11 @@ public class AdminServiceImpl implements AdminService {
                 .orElseThrow(() -> new ResourceNotFoundException("Rescue company not found with id: " + id));
     }
 
+    private RescueCompanyBranch findBranch(Long branchId, Long companyId) {
+        return rescueCompanyBranchRepository.findByIdAndCompanyId(branchId, companyId)
+                .orElseThrow(() -> new ResourceNotFoundException("Branch not found with id: " + branchId));
+    }
+
     private Role getOrCreateRole(RoleName roleName) {
         return roleRepository.findByRoleName(roleName)
                 .orElseGet(() -> roleRepository.save(Role.builder().roleName(roleName).build()));
@@ -387,6 +496,38 @@ public class AdminServiceImpl implements AdminService {
             throw new BadRequestException("Owner account must have role RESCUE_COMPANY");
         }
         return ownerAccount;
+    }
+
+    private Account resolveStaffAccount(CompanyDto.StaffRequest request) {
+        if (request.userId() != null) {
+            Account existingAccount = findAccount(request.userId());
+            if (existingAccount.getRole().getRoleName() != RoleName.RESCUE_STAFF) {
+                throw new BadRequestException("Existing account must have role RESCUE_STAFF");
+            }
+            if (rescueStaffRepository.findByUserId(existingAccount.getId()).isPresent()) {
+                throw new BadRequestException("This account is already linked to another rescue staff profile");
+            }
+            existingAccount.setStatus(AccountStatus.ACTIVE);
+            return existingAccount;
+        }
+
+        if (request.email() == null || request.email().isBlank()
+                || request.password() == null || request.password().isBlank()
+                || request.fullName() == null || request.fullName().isBlank()) {
+            throw new BadRequestException("email, password, and fullName are required when creating a new staff account");
+        }
+        if (accountRepository.existsByEmailIgnoreCase(request.email())) {
+            throw new BadRequestException("Email is already in use");
+        }
+
+        return accountRepository.save(Account.builder()
+                .email(request.email().trim().toLowerCase())
+                .passwordHash(PasswordUtil.hash(request.password()))
+                .fullName(request.fullName())
+                .phone(request.phone())
+                .status(AccountStatus.ACTIVE)
+                .role(getOrCreateRole(RoleName.RESCUE_STAFF))
+                .build());
     }
 
     private RoleName parseRoleName(String value) {
@@ -410,6 +551,14 @@ public class AdminServiceImpl implements AdminService {
             return CompanyStatus.valueOf(value.trim().toUpperCase());
         } catch (Exception ex) {
             throw new BadRequestException("Invalid company status: " + value);
+        }
+    }
+
+    private StaffStatus parseStaffStatus(String value) {
+        try {
+            return StaffStatus.valueOf(value.trim().toUpperCase());
+        } catch (Exception ex) {
+            throw new BadRequestException("Invalid staff status: " + value);
         }
     }
 
