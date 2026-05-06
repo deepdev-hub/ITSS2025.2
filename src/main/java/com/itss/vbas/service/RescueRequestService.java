@@ -4,6 +4,7 @@ import java.util.List;
 
 import com.itss.vbas.dto.common.CommonDto;
 import com.itss.vbas.dto.request.RequestDto;
+import org.springframework.web.multipart.MultipartFile;
 
 public interface RescueRequestService {
     RequestDto.RequestDetailResponse createRequest(RequestDto.CreateRequest request);
@@ -17,4 +18,6 @@ public interface RescueRequestService {
     RequestDto.RequestDetailResponse updateRequestStatus(Long requestId, CommonDto.StatusUpdateRequest request);
 
     List<RequestDto.StatusHistoryResponse> getStatusHistory(Long requestId);
+
+    CommonDto.FileUploadResponse uploadRequestImage(Long requestId, MultipartFile file);
 }

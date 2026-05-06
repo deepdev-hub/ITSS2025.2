@@ -62,6 +62,9 @@ public class RescueRequest {
     @Column(columnDefinition = "TEXT")
     private String description;
 
+    @Column(name = "image_url", columnDefinition = "TEXT")
+    private String imageUrl;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "priority_level", nullable = false, length = 20)
     private RequestPriority priorityLevel;

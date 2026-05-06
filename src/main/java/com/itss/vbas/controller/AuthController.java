@@ -15,6 +15,8 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -64,5 +66,16 @@ public class AuthController {
     @GetMapping("/lookups/service-types")
     public ResponseEntity<CommonDto.ApiResponse<List<CommonDto.LookupResponse>>> getServiceLookups() {
         return ResponseEntity.ok(CommonDto.ApiResponse.success("Service types fetched successfully", authService.getServiceLookups()));
+    }
+
+    @RequireAuth
+    @PostMapping("/upload-avatar")
+    public ResponseEntity<CommonDto.ApiResponse<CommonDto.FileUploadResponse>> uploadAvatar(
+            @RequestParam("file") MultipartFile file
+    ) {
+        return ResponseEntity.ok(CommonDto.ApiResponse.success(
+                "Avatar uploaded successfully", 
+                authService.uploadAvatar(file)
+        ));
     }
 }

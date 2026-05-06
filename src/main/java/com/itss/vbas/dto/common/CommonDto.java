@@ -107,6 +107,11 @@ public final class CommonDto {
     ) {
     }
 
+    public record FileUploadResponse(
+            String url
+    ) {
+    }
+
     public record IdentityRequest(
             @NotBlank
             @Pattern(regexp = "^[A-Z0-9_]+$", message = "Code must contain only uppercase letters, numbers, and underscore")

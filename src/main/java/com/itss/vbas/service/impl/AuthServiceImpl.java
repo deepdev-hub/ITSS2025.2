@@ -23,9 +23,10 @@ import com.itss.vbas.security.JwtUtil;
 import com.itss.vbas.service.AddressService;
 import com.itss.vbas.service.AuthService;
 import com.itss.vbas.util.PasswordUtil;
+import com.itss.vbas.service.FileStorageService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
+import org.springframework.web.multipart.MultipartFile;
 @Service
 @Transactional
 public class AuthServiceImpl implements AuthService {
@@ -40,6 +41,7 @@ public class AuthServiceImpl implements AuthService {
     private final AppMapper appMapper;
     private final JwtUtil jwtUtil;
     private final AuthContext authContext;
+    private final FileStorageService fileStorageService;
 
     public AuthServiceImpl(
             AccountRepository accountRepository,
@@ -51,7 +53,8 @@ public class AuthServiceImpl implements AuthService {
             AddressService addressService,
             AppMapper appMapper,
             JwtUtil jwtUtil,
-            AuthContext authContext
+            AuthContext authContext,
+            FileStorageService fileStorageService
     ) {
         this.accountRepository = accountRepository;
         this.roleRepository = roleRepository;
@@ -63,6 +66,7 @@ public class AuthServiceImpl implements AuthService {
         this.appMapper = appMapper;
         this.jwtUtil = jwtUtil;
         this.authContext = authContext;
+        this.fileStorageService = fileStorageService;
     }
 
     @Override
@@ -179,5 +183,14 @@ public class AuthServiceImpl implements AuthService {
     private Role getOrCreateRole(RoleName roleName) {
         return roleRepository.findByRoleName(roleName)
                 .orElseGet(() -> roleRepository.save(Role.builder().roleName(roleName).build()));
+    }
+
+    @Override
+    public CommonDto.FileUploadResponse uploadAvatar(MultipartFile file) {
+        Account account = authContext.getCurrentAccount();
+        String imageUrl = fileStorageService.storeAvatar(file);
+        account.setAvatarUrl(imageUrl);
+        accountRepository.save(account);
+        return new CommonDto.FileUploadResponse(imageUrl);
     }
 }
