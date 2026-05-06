@@ -36,6 +36,8 @@ import com.itss.vbas.service.AddressService;
 import com.itss.vbas.service.RequestSupportService;
 import com.itss.vbas.service.RescueRequestService;
 import com.itss.vbas.util.CodeGenerator;
+import com.itss.vbas.service.FileStorageService;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -56,6 +58,7 @@ public class RescueRequestServiceImpl implements RescueRequestService {
     private final RequestSupportService requestSupportService;
     private final AuthContext authContext;
     private final AppMapper appMapper;
+    private final FileStorageService fileStorageService;
 
     public RescueRequestServiceImpl(
             RescueRequestRepository rescueRequestRepository,
@@ -70,7 +73,8 @@ public class RescueRequestServiceImpl implements RescueRequestService {
             AddressService addressService,
             RequestSupportService requestSupportService,
             AuthContext authContext,
-            AppMapper appMapper
+            AppMapper appMapper,
+            FileStorageService fileStorageService
     ) {
         this.rescueRequestRepository = rescueRequestRepository;
         this.customerVehicleRepository = customerVehicleRepository;
@@ -85,6 +89,7 @@ public class RescueRequestServiceImpl implements RescueRequestService {
         this.requestSupportService = requestSupportService;
         this.authContext = authContext;
         this.appMapper = appMapper;
+        this.fileStorageService = fileStorageService;
     }
 
     @Override
@@ -131,7 +136,11 @@ public class RescueRequestServiceImpl implements RescueRequestService {
         Account customer = authContext.getCurrentAccount();
         return rescueRequestRepository.findByCustomerIdOrderByCreatedAtDesc(customer.getId())
                 .stream()
-                .map(request -> appMapper.toRequestSummaryResponse(request, requestSupportService.getAssignedCompany(request)))
+                .map(request -> appMapper.toRequestSummaryResponse(
+                        request,
+                        requestSupportService.getAssignedCompany(request),
+                        requestSupportService.getLatestAssignment(request)
+                ))
                 .toList();
     }
 
@@ -244,5 +253,21 @@ public class RescueRequestServiceImpl implements RescueRequestService {
         } catch (Exception ex) {
             throw new BadRequestException("Invalid request status: " + value);
         }
+    }
+
+    @Override
+    public CommonDto.FileUploadResponse uploadRequestImage(Long requestId, MultipartFile file) {
+        Account customer = authContext.getCurrentAccount();
+        RescueRequest rescueRequest = findRequest(requestId);
+        
+        if (!rescueRequest.getCustomer().getId().equals(customer.getId())) {
+            throw new ForbiddenException("You can only upload images for your own requests");
+        }
+        
+        String imageUrl = fileStorageService.storeRequestImage(file);
+        rescueRequest.setImageUrl(imageUrl);
+        rescueRequestRepository.save(rescueRequest);
+        
+        return new CommonDto.FileUploadResponse(imageUrl);
     }
 }

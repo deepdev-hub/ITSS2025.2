@@ -29,6 +29,8 @@ import com.itss.vbas.repository.RescueStaffRepository;
 import com.itss.vbas.repository.RescueVehicleRepository;
 import com.itss.vbas.repository.RoleRepository;
 import com.itss.vbas.security.AuthContext;
+import com.itss.vbas.service.AddressService;
+import com.itss.vbas.service.AssignmentTimeoutService;
 import com.itss.vbas.service.CompanyService;
 import com.itss.vbas.service.RequestSupportService;
 import com.itss.vbas.util.PasswordUtil;
@@ -47,6 +49,7 @@ public class CompanyServiceImpl implements CompanyService {
     private final AccountRepository accountRepository;
     private final RoleRepository roleRepository;
     private final RequestSupportService requestSupportService;
+    private final AssignmentTimeoutService assignmentTimeoutService;
     private final AuthContext authContext;
     private final AppMapper appMapper;
 
@@ -59,6 +62,7 @@ public class CompanyServiceImpl implements CompanyService {
             AccountRepository accountRepository,
             RoleRepository roleRepository,
             RequestSupportService requestSupportService,
+            AssignmentTimeoutService assignmentTimeoutService,
             AuthContext authContext,
             AppMapper appMapper
     ) {
@@ -70,6 +74,7 @@ public class CompanyServiceImpl implements CompanyService {
         this.accountRepository = accountRepository;
         this.roleRepository = roleRepository;
         this.requestSupportService = requestSupportService;
+        this.assignmentTimeoutService = assignmentTimeoutService;
         this.authContext = authContext;
         this.appMapper = appMapper;
     }
@@ -202,7 +207,11 @@ public class CompanyServiceImpl implements CompanyService {
         RescueCompany company = getCurrentCompany();
         return rescueRequestRepository.findAssignedRequestsByCompanyId(company.getId())
                 .stream()
-                .map(request -> appMapper.toRequestSummaryResponse(request, company))
+                .map(request -> appMapper.toRequestSummaryResponse(
+                        request,
+                        company,
+                        requestSupportService.getLatestAssignment(request)
+                ))
                 .toList();
     }
 
@@ -228,8 +237,13 @@ public class CompanyServiceImpl implements CompanyService {
                         .request(rescueRequest)
                         .company(company)
                         .assignedByUser(account)
+                        .assignedAt(LocalDateTime.now())
                         .status(AssignmentStatus.PENDING)
                         .build());
+        assignment = assignmentTimeoutService.expireIfPendingTimedOut(assignment);
+        if (assignment.getStatus() == AssignmentStatus.REJECTED) {
+            throw new BadRequestException("This assignment has timed out and can no longer be accepted");
+        }
 
         assignment.setAssignedByUser(account);
         assignment.setStaff(staff);

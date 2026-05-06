@@ -644,6 +644,25 @@ th {
   margin-top: 0.45rem;
 }
 
+.countdown {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--warning);
+  font-size: 0.9rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.countdown-label {
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.countdown-expired {
+  color: var(--danger);
+}
+
 @keyframes spin {
   to {
     transform: rotate(360deg);
