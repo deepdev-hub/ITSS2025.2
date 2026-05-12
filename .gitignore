@@ -1,4 +1,6 @@
 HELP.md
+backend.md
+frontend.md
 target/
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
@@ -33,3 +35,6 @@ build/
 
 ### VS Code ###
 .vscode/
+
+uploads/avatars/
+uploads/request-images/

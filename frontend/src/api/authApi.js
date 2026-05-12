@@ -8,4 +8,9 @@ export const authApi = {
   changePassword: (payload) => unwrap(apiClient.put('/api/auth/change-password', payload)),
   getIncidentTypes: () => unwrap(apiClient.get('/api/auth/lookups/incident-types')),
   getServiceTypes: () => unwrap(apiClient.get('/api/auth/lookups/service-types')),
+  uploadAvatar: (formData) => unwrap(apiClient.post('/api/auth/upload-avatar', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  })),
 };

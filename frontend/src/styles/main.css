@@ -138,6 +138,52 @@ textarea {
   backdrop-filter: blur(8px);
 }
 
+/* ── Topbar user block ────────────────────────────────── */
+.topbar-user {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.topbar-user-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  line-height: 1.2;
+}
+
+.topbar-user-info strong {
+  font-size: 0.97rem;
+}
+
+.topbar-user-info p {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+/* Shared circular avatar base */
+.topbar-avatar {
+  width: 46px;
+  height: 46px;
+  border-radius: 999px;
+  object-fit: cover;
+  border: 2px solid var(--border);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: var(--secondary);
+  font-weight: 700;
+  color: var(--primary);
+  letter-spacing: 0.04em;
+}
+
+.topbar-avatar-initials {
+  font-size: 1rem;
+}
+
+/* ── Topbar actions ───────────────────────────────────── */
 .topbar-actions {
   display: flex;
   flex-wrap: wrap;
@@ -663,6 +709,82 @@ th {
   color: var(--danger);
 }
 
+/* ── Avatar upload block (ProfilePage) ──────────────────── */
+.avatar-upload-block {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  padding: 1rem 1.1rem;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  margin-bottom: 0.25rem;
+}
+
+.avatar-preview-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.avatar-preview {
+  width: 80px;
+  height: 80px;
+  border-radius: 999px;
+  object-fit: cover;
+  border: 3px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--secondary);
+}
+
+.avatar-initials-lg {
+  width: 80px;
+  height: 80px;
+  border-radius: 999px;
+  border: 3px solid var(--border);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--secondary);
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--primary);
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+}
+
+.avatar-overlay {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.avatar-spinner {
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 999px;
+  border: 3px solid rgba(167, 61, 47, 0.25);
+  border-top-color: var(--primary);
+  animation: spin 0.85s linear infinite;
+}
+
+.avatar-upload-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.avatar-upload-hint {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
 @keyframes spin {
   to {
     transform: rotate(360deg);
@@ -708,5 +830,9 @@ th {
   .page-header {
     align-items: start;
     flex-direction: column;
+  }
+
+  .topbar-user-info strong {
+    font-size: 0.9rem;
   }
 }

@@ -1,9 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { authApi } from '../api/authApi';
 import { getApiError } from '../api/client';
 import Loader from '../components/common/Loader';
 import PageHeader from '../components/common/PageHeader';
 import { useAuth } from '../context/AuthContext';
+import { addAvatarCacheKey, getAvatarUrl, resolveAvatarUrl } from '../utils/avatar';
+
+const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+const MAX_FILE_SIZE_MB = 5;
 
 const initialProfileForm = {
   fullName: '',
@@ -28,11 +32,26 @@ const initialPasswordForm = {
   confirmPassword: '',
 };
 
+function getInitials(fullName) {
+  if (typeof fullName !== 'string') return '?';
+
+  const initials = fullName
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((word) => word?.charAt(0)?.toUpperCase())
+    .filter(Boolean)
+    .join('');
+
+  return initials || '?';
+}
+
 function mapUserToForm(user) {
   return {
     fullName: user?.fullName || '',
     phone: user?.phone || '',
-    avatarUrl: user?.avatarUrl || '',
+    avatarUrl: getAvatarUrl(user),
     dateOfBirth: user?.dateOfBirth || '',
     gender: user?.gender || '',
     cccd: user?.cccd || '',
@@ -45,6 +64,123 @@ function mapUserToForm(user) {
       detail: user?.defaultAddress?.detail || '',
     },
   };
+}
+
+function AvatarUpload({ user, onUploadSuccess, onError }) {
+  const { uploadAvatar } = useAuth();
+  const fileInputRef = useRef(null);
+  const [uploading, setUploading] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState(null);
+  const [imageError, setImageError] = useState(false);
+
+  const rawAvatar = previewUrl || getAvatarUrl(user);
+  const initials = getInitials(user?.fullName);
+  const resolvedDisplayUrl = resolveAvatarUrl(rawAvatar);
+  const displayUrl = imageError ? null : addAvatarCacheKey(resolvedDisplayUrl, user?.avatarUpdatedAt);
+
+  useEffect(() => {
+    setImageError(false);
+  }, [rawAvatar]);
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl?.startsWith('blob:')) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
+
+  const handleFileChange = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
+      onError('Please select a valid image file (JPEG, PNG, WebP, or GIF).');
+      event.target.value = '';
+      return;
+    }
+
+    if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
+      onError(`Image must be smaller than ${MAX_FILE_SIZE_MB}MB.`);
+      event.target.value = '';
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(file);
+    setPreviewUrl((previous) => {
+      if (previous?.startsWith('blob:')) {
+        URL.revokeObjectURL(previous);
+      }
+      return objectUrl;
+    });
+    setImageError(false);
+
+    setUploading(true);
+    onError('');
+    try {
+      const updatedUser = await uploadAvatar(file);
+      setPreviewUrl((previous) => {
+        if (previous?.startsWith('blob:')) {
+          URL.revokeObjectURL(previous);
+        }
+        return null;
+      });
+      onUploadSuccess('Avatar updated successfully.', updatedUser);
+    } catch (err) {
+      setPreviewUrl((previous) => {
+        if (previous?.startsWith('blob:')) {
+          URL.revokeObjectURL(previous);
+        }
+        return null;
+      });
+      onError(getApiError(err));
+    } finally {
+      setUploading(false);
+      event.target.value = '';
+    }
+  };
+
+  return (
+    <div className="avatar-upload-block">
+      <div className="avatar-preview-wrap">
+        {displayUrl ? (
+          <img
+            src={displayUrl}
+            alt="Avatar"
+            className="avatar-preview"
+            onError={() => setImageError(true)}
+          />
+        ) : (
+          <span className="avatar-preview avatar-initials-lg">{initials}</span>
+        )}
+        {uploading && (
+          <div className="avatar-overlay">
+            <div className="avatar-spinner" />
+          </div>
+        )}
+      </div>
+      <div className="avatar-upload-info">
+        <p className="avatar-upload-hint">
+          JPEG, PNG, WebP or GIF - Max {MAX_FILE_SIZE_MB}MB
+        </p>
+        <button
+          type="button"
+          className="button button-secondary"
+          disabled={uploading}
+          onClick={() => fileInputRef.current?.click()}
+        >
+          {uploading ? 'Uploading...' : 'Change avatar'}
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept={ACCEPTED_IMAGE_TYPES.join(',')}
+          style={{ display: 'none' }}
+          onChange={handleFileChange}
+        />
+      </div>
+    </div>
+  );
 }
 
 export default function ProfilePage() {
@@ -73,6 +209,13 @@ export default function ProfilePage() {
     }
     bootstrap();
   }, []);
+
+  useEffect(() => {
+    setProfileForm((previous) => ({
+      ...previous,
+      avatarUrl: getAvatarUrl(user),
+    }));
+  }, [user?.avatarUrl, user?.avatarUpdatedAt]);
 
   const handleProfileChange = (event) => {
     const { name, value } = event.target;
@@ -150,7 +293,21 @@ export default function ProfilePage() {
       <div className="grid-two">
         <form className="card" onSubmit={submitProfile}>
           <h2>Profile Information</h2>
-          <div className="form-grid">
+
+          <AvatarUpload
+            user={user}
+            onUploadSuccess={(msg, updatedUser) => {
+              setProfileForm((previous) => ({
+                ...previous,
+                avatarUrl: getAvatarUrl(updatedUser) || previous.avatarUrl,
+              }));
+              setNotice(msg);
+              setError('');
+            }}
+            onError={(msg) => { setError(msg); setNotice(''); }}
+          />
+
+          <div className="form-grid" style={{ marginTop: '1.25rem' }}>
             <div className="field">
               <label>Email</label>
               <input value={user?.email || ''} disabled />
@@ -166,10 +323,6 @@ export default function ProfilePage() {
             <div className="field">
               <label>Phone</label>
               <input name="phone" value={profileForm.phone} onChange={handleProfileChange} />
-            </div>
-            <div className="field">
-              <label>Avatar URL</label>
-              <input name="avatarUrl" value={profileForm.avatarUrl} onChange={handleProfileChange} />
             </div>
             <div className="field">
               <label>Date of Birth</label>
@@ -223,35 +376,15 @@ export default function ProfilePage() {
           <h2>Change Password</h2>
           <div className="field">
             <label>Current Password</label>
-            <input
-              name="currentPassword"
-              type="password"
-              value={passwordForm.currentPassword}
-              onChange={handlePasswordChange}
-              required
-            />
+            <input name="currentPassword" type="password" value={passwordForm.currentPassword} onChange={handlePasswordChange} required />
           </div>
           <div className="field">
             <label>New Password</label>
-            <input
-              name="newPassword"
-              type="password"
-              value={passwordForm.newPassword}
-              onChange={handlePasswordChange}
-              minLength="6"
-              required
-            />
+            <input name="newPassword" type="password" value={passwordForm.newPassword} onChange={handlePasswordChange} minLength="6" required />
           </div>
           <div className="field">
             <label>Confirm New Password</label>
-            <input
-              name="confirmPassword"
-              type="password"
-              value={passwordForm.confirmPassword}
-              onChange={handlePasswordChange}
-              minLength="6"
-              required
-            />
+            <input name="confirmPassword" type="password" value={passwordForm.confirmPassword} onChange={handlePasswordChange} minLength="6" required />
           </div>
 
           <div className="card card-muted">
