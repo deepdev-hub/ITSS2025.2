@@ -13,10 +13,18 @@ import {
   formatDateTime,
   getAllowedStatusOptions,
 } from '../../utils/requestUi';
+import {
+  resolveRequestImageUrl,
+  addRequestImageCacheKey,
+  getRequestImageUrlFromUploadResponse,
+} from '../../utils/requestImage';
 
 const ACTIVE_POLL_INTERVAL = 5000;
 const STABLE_POLL_INTERVAL = 10000;
 const BACKGROUND_POLL_INTERVAL = 15000;
+
+const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+const MAX_FILE_SIZE_MB = 5;
 
 const defaultPaymentForm = {
   amount: '',
@@ -71,6 +79,154 @@ function SectionHeader({ title, subtitle, aside }) {
         {subtitle ? <p>{subtitle}</p> : null}
       </div>
       {aside}
+    </div>
+  );
+}
+
+// Displays the request image with broken-image fallback and cache busting
+function RequestImage({ imageUrl, updatedAt }) {
+  const [imageError, setImageError] = useState(false);
+
+  const resolvedUrl = resolveRequestImageUrl(imageUrl || '');
+  const displayUrl = imageError ? null : addRequestImageCacheKey(resolvedUrl, updatedAt);
+
+  useEffect(() => {
+    setImageError(false);
+  }, [imageUrl]);
+
+  if (!imageUrl) {
+    return (
+      <div className="request-image-empty">
+        <p className="muted-line">No image has been attached to this request.</p>
+      </div>
+    );
+  }
+
+  if (!displayUrl) {
+    return (
+      <div className="request-image-empty">
+        <p className="muted-line">Image could not be loaded.</p>
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={displayUrl}
+      alt="Request"
+      className="request-image-display"
+      onError={() => setImageError(true)}
+    />
+  );
+}
+
+// Upload widget for customers to attach/change image on existing request
+function RequestImageUpload({ requestId, currentImageUrl, onUploadSuccess, onError }) {
+  const fileInputRef = useRef(null);
+  const [uploading, setUploading] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState(null);
+  const [imageError, setImageError] = useState(false);
+
+  const rawUrl = previewUrl || currentImageUrl || '';
+  const resolvedUrl = resolveRequestImageUrl(rawUrl);
+  const displayUrl = imageError ? null : resolvedUrl;
+
+  useEffect(() => {
+    setImageError(false);
+  }, [rawUrl]);
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl?.startsWith('blob:')) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
+
+  const handleFileChange = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
+      onError('Please select a valid image file (JPEG, PNG, WebP, or GIF).');
+      event.target.value = '';
+      return;
+    }
+
+    if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
+      onError(`Image must be smaller than ${MAX_FILE_SIZE_MB}MB.`);
+      event.target.value = '';
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(file);
+    setPreviewUrl((previous) => {
+      if (previous?.startsWith('blob:')) URL.revokeObjectURL(previous);
+      return objectUrl;
+    });
+    setImageError(false);
+    onError('');
+
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const result = await requestApi.uploadRequestImage(requestId, formData);
+      const newUrl = getRequestImageUrlFromUploadResponse(result);
+      setPreviewUrl((previous) => {
+        if (previous?.startsWith('blob:')) URL.revokeObjectURL(previous);
+        return null;
+      });
+      onUploadSuccess('Request image updated successfully.', newUrl);
+    } catch (err) {
+      setPreviewUrl((previous) => {
+        if (previous?.startsWith('blob:')) URL.revokeObjectURL(previous);
+        return null;
+      });
+      onError(getApiError(err));
+    } finally {
+      setUploading(false);
+      event.target.value = '';
+    }
+  };
+
+  return (
+    <div className="avatar-upload-block" style={{ marginTop: '1rem' }}>
+      <div className="avatar-preview-wrap">
+        {displayUrl ? (
+          <img
+            src={displayUrl}
+            alt="Request"
+            className="request-image-thumb"
+            onError={() => setImageError(true)}
+          />
+        ) : (
+          <span className="avatar-preview avatar-initials-lg" style={{ fontSize: '1.2rem' }}>📷</span>
+        )}
+        {uploading && (
+          <div className="avatar-overlay">
+            <div className="avatar-spinner" />
+          </div>
+        )}
+      </div>
+      <div className="avatar-upload-info">
+        <p className="avatar-upload-hint">
+          JPEG, PNG, WebP or GIF — Max {MAX_FILE_SIZE_MB}MB
+        </p>
+        <button
+          type="button"
+          className="button button-secondary"
+          disabled={uploading}
+          onClick={() => fileInputRef.current?.click()}
+        >
+          {uploading ? 'Uploading...' : (currentImageUrl ? 'Change image' : 'Upload image')}
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept={ACCEPTED_IMAGE_TYPES.join(',')}
+          style={{ display: 'none' }}
+          onChange={handleFileChange}
+        />
+      </div>
     </div>
   );
 }
@@ -431,6 +587,24 @@ export default function RequestDetailPage() {
               }
               disabled
             />
+          </div>
+
+          {/* ── Request Image ─────────────────────────────── */}
+          <div className="card card-muted" style={{ marginTop: '1rem' }}>
+            <h3>Incident Image</h3>
+            <RequestImage imageUrl={detail.imageUrl} updatedAt={detail.updatedAt} />
+            {isCustomer && (
+              <RequestImageUpload
+                requestId={id}
+                currentImageUrl={detail.imageUrl}
+                onUploadSuccess={(msg) => {
+                  setNotice(msg);
+                  setError('');
+                  refreshData({ silent: true, force: true });
+                }}
+                onError={(msg) => { setError(msg); setNotice(''); }}
+              />
+            )}
           </div>
 
           <div className="grid-three" style={{ marginTop: '1rem' }}>

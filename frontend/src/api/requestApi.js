@@ -16,5 +16,9 @@ export const requestApi = {
   createPayment: (id, payload) => unwrap(apiClient.post(`/api/requests/${id}/payments`, payload)),
   pay: (paymentId, payload) => unwrap(apiClient.put(`/api/requests/payments/${paymentId}/pay`, payload)),
   createReview: (id, payload) => unwrap(apiClient.post(`/api/requests/${id}/reviews`, payload)),
-  
+  uploadRequestImage: (id, formData) => unwrap(apiClient.post(`/api/requests/${id}/upload-image`, formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  })),
 };
