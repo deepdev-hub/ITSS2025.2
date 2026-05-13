@@ -14,8 +14,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -68,17 +69,28 @@ public class AuthController {
     }
 
     @PostMapping("/forgot-password")
-    public String forgotPassword(@RequestParam String email) {
+    public ResponseEntity<CommonDto.ApiResponse<Void>> forgotPassword(@RequestParam String email) {
         authService.forgotPassword(email);
-        return "Đã gửi link reset password";
+        return ResponseEntity.ok(CommonDto.ApiResponse.success("Reset password link sent successfully"));
     }
 
     @PostMapping("/reset-password")
-    public String resetPassword(
+    public ResponseEntity<CommonDto.ApiResponse<Void>> resetPassword(
             @RequestParam String token,
             @RequestParam String newPassword
     ) {
         authService.resetPassword(token, newPassword);
-        return "Đổi mật khẩu thành công";
+        return ResponseEntity.ok(CommonDto.ApiResponse.success("Password reset successfully"));
+    }
+
+    @RequireAuth
+    @PostMapping("/upload-avatar")
+    public ResponseEntity<CommonDto.ApiResponse<CommonDto.FileUploadResponse>> uploadAvatar(
+            @RequestParam("file") MultipartFile file
+    ) {
+        return ResponseEntity.ok(CommonDto.ApiResponse.success(
+                "Avatar uploaded successfully",
+                authService.uploadAvatar(file)
+        ));
     }
 }

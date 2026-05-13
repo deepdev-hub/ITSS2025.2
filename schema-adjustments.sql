@@ -98,3 +98,10 @@ CREATE INDEX IF NOT EXISTS idx_messages_request_sent_at
 
 CREATE INDEX IF NOT EXISTS idx_payments_request_created_at
     ON public.payments(request_id, created_at DESC);
+
+-- Image upload support
+ALTER TABLE public.account
+    ADD COLUMN IF NOT EXISTS avatar_url text;
+
+ALTER TABLE public.rescue_requests
+    ADD COLUMN IF NOT EXISTS image_url text;

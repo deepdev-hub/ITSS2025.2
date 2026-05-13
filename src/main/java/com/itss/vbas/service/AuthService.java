@@ -4,6 +4,7 @@ import java.util.List;
 
 import com.itss.vbas.dto.auth.AuthDto;
 import com.itss.vbas.dto.common.CommonDto;
+import org.springframework.web.multipart.MultipartFile;
 
 public interface AuthService {
     AuthDto.AuthResponse registerCustomer(AuthDto.RegisterRequest request);
@@ -21,5 +22,8 @@ public interface AuthService {
     List<CommonDto.LookupResponse> getServiceLookups();
 
     void forgotPassword(String email);
+
     void resetPassword(String token, String newPassword);
+
+    CommonDto.FileUploadResponse uploadAvatar(MultipartFile file);
 }

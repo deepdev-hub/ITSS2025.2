@@ -24,10 +24,17 @@ import com.itss.vbas.entity.RescueStaff;
 import com.itss.vbas.entity.RescueVehicle;
 import com.itss.vbas.entity.Review;
 import com.itss.vbas.entity.ServiceType;
+import com.itss.vbas.service.AssignmentTimeoutService;
 import org.springframework.stereotype.Component;
 
 @Component
 public class AppMapper {
+
+    private final AssignmentTimeoutService assignmentTimeoutService;
+
+    public AppMapper(AssignmentTimeoutService assignmentTimeoutService) {
+        this.assignmentTimeoutService = assignmentTimeoutService;
+    }
 
     public CommonDto.AddressResponse toAddressResponse(Address address) {
         if (address == null) {
@@ -221,7 +228,9 @@ public class AppMapper {
                 assignment.getAssignedAt(),
                 assignment.getAcceptedAt(),
                 assignment.getRejectedAt(),
-                assignment.getStatus().name()
+                assignment.getStatus().name(),
+                assignmentTimeoutService.getTimeoutSeconds(assignment),
+                assignmentTimeoutService.getExpiresAt(assignment)
         );
     }
 
@@ -299,7 +308,11 @@ public class AppMapper {
         );
     }
 
-    public RequestDto.RequestSummaryResponse toRequestSummaryResponse(RescueRequest request, RescueCompany assignedCompany) {
+    public RequestDto.RequestSummaryResponse toRequestSummaryResponse(
+            RescueRequest request,
+            RescueCompany assignedCompany,
+            RequestAssignment currentAssignment
+    ) {
         return new RequestDto.RequestSummaryResponse(
                 request.getId(),
                 request.getRequestCode(),
@@ -310,10 +323,13 @@ public class AppMapper {
                 request.getServiceType() == null ? null : request.getServiceType().getServiceName(),
                 request.getLocation() == null ? null : buildFullAddress(request.getLocation()),
                 request.getVehicle() == null ? null : request.getVehicle().getBrand() + " " + request.getVehicle().getModel() + " - " + request.getVehicle().getPlateNumber(),
+                request.getImageUrl(),
                 request.getCustomer().getFullName(),
                 request.getCreatedAt(),
                 request.getUpdatedAt(),
-                toBasicCompanyResponse(assignedCompany)
+                toBasicCompanyResponse(assignedCompany),
+                currentAssignment == null ? null : assignmentTimeoutService.getTimeoutSeconds(currentAssignment),
+                currentAssignment == null ? null : assignmentTimeoutService.getExpiresAt(currentAssignment)
         );
     }
 
@@ -332,6 +348,7 @@ public class AppMapper {
                 request.getStatus().name(),
                 request.getPriorityLevel().name(),
                 request.getDescription(),
+                request.getImageUrl(),
                 request.getCreatedAt(),
                 request.getUpdatedAt(),
                 toAccountSummary(request.getCustomer()),

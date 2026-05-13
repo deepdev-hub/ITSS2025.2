@@ -1,11 +1,13 @@
 package com.itss.vbas.service.impl;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
 import com.itss.vbas.dto.common.CommonDto;
 import com.itss.vbas.dto.request.RequestDto;
 import com.itss.vbas.entity.Account;
+import com.itss.vbas.entity.Address;
 import com.itss.vbas.entity.CustomerVehicle;
 import com.itss.vbas.entity.IncidentType;
 import com.itss.vbas.entity.RequestAssignment;
@@ -13,6 +15,7 @@ import com.itss.vbas.entity.RequestStatusHistory;
 import com.itss.vbas.entity.RescueCompany;
 import com.itss.vbas.entity.RescueRequest;
 import com.itss.vbas.entity.RescueStaff;
+import com.itss.vbas.entity.RescueVehicle;
 import com.itss.vbas.entity.ServiceType;
 import com.itss.vbas.enums.AssignmentStatus;
 import com.itss.vbas.enums.RequestPriority;
@@ -36,6 +39,8 @@ import com.itss.vbas.service.AddressService;
 import com.itss.vbas.service.RequestSupportService;
 import com.itss.vbas.service.RescueRequestService;
 import com.itss.vbas.util.CodeGenerator;
+import com.itss.vbas.service.FileStorageService;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -56,6 +61,7 @@ public class RescueRequestServiceImpl implements RescueRequestService {
     private final RequestSupportService requestSupportService;
     private final AuthContext authContext;
     private final AppMapper appMapper;
+    private final FileStorageService fileStorageService;
 
     public RescueRequestServiceImpl(
             RescueRequestRepository rescueRequestRepository,
@@ -70,7 +76,8 @@ public class RescueRequestServiceImpl implements RescueRequestService {
             AddressService addressService,
             RequestSupportService requestSupportService,
             AuthContext authContext,
-            AppMapper appMapper
+            AppMapper appMapper,
+            FileStorageService fileStorageService
     ) {
         this.rescueRequestRepository = rescueRequestRepository;
         this.customerVehicleRepository = customerVehicleRepository;
@@ -85,6 +92,7 @@ public class RescueRequestServiceImpl implements RescueRequestService {
         this.requestSupportService = requestSupportService;
         this.authContext = authContext;
         this.appMapper = appMapper;
+        this.fileStorageService = fileStorageService;
     }
 
     @Override
@@ -131,7 +139,11 @@ public class RescueRequestServiceImpl implements RescueRequestService {
         Account customer = authContext.getCurrentAccount();
         return rescueRequestRepository.findByCustomerIdOrderByCreatedAtDesc(customer.getId())
                 .stream()
-                .map(request -> appMapper.toRequestSummaryResponse(request, requestSupportService.getAssignedCompany(request)))
+                .map(request -> appMapper.toRequestSummaryResponse(
+                        request,
+                        requestSupportService.getAssignedCompany(request),
+                        requestSupportService.getLatestAssignment(request)
+                ))
                 .toList();
     }
 
@@ -142,6 +154,72 @@ public class RescueRequestServiceImpl implements RescueRequestService {
         RescueRequest rescueRequest = findRequest(requestId);
         requestSupportService.assertRequestParticipant(account, rescueRequest);
         return buildDetail(rescueRequest);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public RequestDto.TrackingResponse getRequestTracking(Long requestId) {
+        Account account = authContext.getCurrentAccount();
+        RescueRequest rescueRequest = findRequest(requestId);
+        requestSupportService.assertRequestParticipant(account, rescueRequest);
+
+        RequestDto.TrackingPointResponse destination = toTrackingPoint(rescueRequest.getLocation(), "Customer destination");
+        RequestAssignment assignment = requestSupportService.getLatestAssignment(rescueRequest);
+        boolean assigned = assignment != null
+                && assignment.getStatus() != AssignmentStatus.REJECTED
+                && assignment.getStaff() != null;
+
+        if (!assigned) {
+            return new RequestDto.TrackingResponse(
+                    rescueRequest.getId(),
+                    rescueRequest.getStatus().name(),
+                    false,
+                    destination != null,
+                    destination,
+                    null,
+                    null,
+                    List.of(),
+                    null,
+                    null,
+                    LocalDateTime.now()
+            );
+        }
+
+        RescueStaff staff = assignment.getStaff();
+        RescueVehicle vehicle = assignment.getVehicle();
+        RequestDto.TrackingPointResponse staffLocation = resolveStaffLocation(staff, destination, rescueRequest.getStatus());
+        Double distanceKm = calculateDistanceKm(staffLocation, destination);
+        String movementStatus = resolveMovementStatus(rescueRequest.getStatus(), distanceKm);
+        Integer etaMinutes = estimateEtaMinutes(movementStatus, distanceKm);
+        List<RequestDto.TrackingPointResponse> route = staffLocation != null && destination != null
+                ? List.of(staffLocation, destination)
+                : List.of();
+
+        return new RequestDto.TrackingResponse(
+                rescueRequest.getId(),
+                rescueRequest.getStatus().name(),
+                true,
+                destination != null,
+                destination,
+                new RequestDto.TrackingStaffResponse(
+                        staff.getId(),
+                        staff.getUser().getFullName(),
+                        staff.getUser().getPhone(),
+                        staff.getJobTitle(),
+                        reviewRepository.findAverageRatingByStaffId(staff.getId()),
+                        staffLocation
+                ),
+                vehicle == null ? null : new RequestDto.TrackingVehicleResponse(
+                        vehicle.getId(),
+                        vehicle.getVehicleCode(),
+                        vehicle.getVehicleType(),
+                        vehicle.getPlateNumber()
+                ),
+                route,
+                movementStatus,
+                etaMinutes,
+                LocalDateTime.now()
+        );
     }
 
     @Override
@@ -230,6 +308,80 @@ public class RescueRequestServiceImpl implements RescueRequestService {
         );
     }
 
+    private RequestDto.TrackingPointResponse toTrackingPoint(Address address, String label) {
+        if (address == null || address.getLatitude() == null || address.getLongitude() == null) {
+            return null;
+        }
+        return new RequestDto.TrackingPointResponse(address.getLatitude(), address.getLongitude(), label);
+    }
+
+    private RequestDto.TrackingPointResponse resolveStaffLocation(
+            RescueStaff staff,
+            RequestDto.TrackingPointResponse destination,
+            RescueRequestStatus requestStatus
+    ) {
+        RequestDto.TrackingPointResponse staffAddressLocation = toTrackingPoint(staff.getUser().getDefaultAddress(), staff.getUser().getFullName());
+        if (staffAddressLocation != null) {
+            return staffAddressLocation;
+        }
+        if (destination == null) {
+            return null;
+        }
+
+        if (requestStatus == RescueRequestStatus.IN_PROGRESS || requestStatus == RescueRequestStatus.COMPLETED) {
+            return new RequestDto.TrackingPointResponse(
+                    destination.latitude(),
+                    destination.longitude(),
+                    staff.getUser().getFullName()
+            );
+        }
+
+        // Until live staff GPS is stored, keep assigned staff visible near the customer destination.
+        return new RequestDto.TrackingPointResponse(
+                destination.latitude().add(BigDecimal.valueOf(0.012)),
+                destination.longitude().add(BigDecimal.valueOf(0.018)),
+                staff.getUser().getFullName()
+        );
+    }
+
+    private Double calculateDistanceKm(RequestDto.TrackingPointResponse from, RequestDto.TrackingPointResponse to) {
+        if (from == null || to == null) {
+            return null;
+        }
+
+        double earthRadiusKm = 6371.0;
+        double fromLat = Math.toRadians(from.latitude().doubleValue());
+        double toLat = Math.toRadians(to.latitude().doubleValue());
+        double deltaLat = Math.toRadians(to.latitude().doubleValue() - from.latitude().doubleValue());
+        double deltaLng = Math.toRadians(to.longitude().doubleValue() - from.longitude().doubleValue());
+        double a = Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2)
+                + Math.cos(fromLat) * Math.cos(toLat)
+                * Math.sin(deltaLng / 2) * Math.sin(deltaLng / 2);
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return earthRadiusKm * c;
+    }
+
+    private String resolveMovementStatus(RescueRequestStatus requestStatus, Double distanceKm) {
+        if (requestStatus == RescueRequestStatus.IN_PROGRESS || requestStatus == RescueRequestStatus.COMPLETED) {
+            return "ARRIVED";
+        }
+        if (distanceKm != null && distanceKm < 0.3) {
+            return "NEARBY";
+        }
+        return "APPROACHING";
+    }
+
+    private Integer estimateEtaMinutes(String movementStatus, Double distanceKm) {
+        if ("ARRIVED".equals(movementStatus)) {
+            return 0;
+        }
+        if (distanceKm == null) {
+            return null;
+        }
+        int minutes = (int) Math.ceil((distanceKm / 35.0) * 60.0);
+        return Math.max(minutes, 3);
+    }
+
     private RequestPriority parsePriority(String value) {
         try {
             return RequestPriority.valueOf(value.trim().toUpperCase());
@@ -244,5 +396,21 @@ public class RescueRequestServiceImpl implements RescueRequestService {
         } catch (Exception ex) {
             throw new BadRequestException("Invalid request status: " + value);
         }
+    }
+
+    @Override
+    public CommonDto.FileUploadResponse uploadRequestImage(Long requestId, MultipartFile file) {
+        Account customer = authContext.getCurrentAccount();
+        RescueRequest rescueRequest = findRequest(requestId);
+        
+        if (!rescueRequest.getCustomer().getId().equals(customer.getId())) {
+            throw new ForbiddenException("You can only upload images for your own requests");
+        }
+        
+        String imageUrl = fileStorageService.storeRequestImage(file);
+        rescueRequest.setImageUrl(imageUrl);
+        rescueRequestRepository.save(rescueRequest);
+        
+        return new CommonDto.FileUploadResponse(imageUrl);
     }
 }

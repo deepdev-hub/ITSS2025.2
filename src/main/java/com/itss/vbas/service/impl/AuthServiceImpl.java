@@ -1,6 +1,8 @@
 package com.itss.vbas.service.impl;
 
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 
 import com.itss.vbas.dto.auth.AuthDto;
 import com.itss.vbas.dto.common.CommonDto;
@@ -13,8 +15,8 @@ import com.itss.vbas.exception.BadRequestException;
 import com.itss.vbas.exception.UnauthorizedException;
 import com.itss.vbas.mapper.AppMapper;
 import com.itss.vbas.repository.AccountRepository;
-import com.itss.vbas.repository.PasswordResetTokenRepository;
 import com.itss.vbas.repository.IncidentTypeRepository;
+import com.itss.vbas.repository.PasswordResetTokenRepository;
 import com.itss.vbas.repository.RescueCompanyRepository;
 import com.itss.vbas.repository.RescueStaffRepository;
 import com.itss.vbas.repository.RoleRepository;
@@ -25,13 +27,16 @@ import com.itss.vbas.security.JwtUtil;
 import com.itss.vbas.service.AddressService;
 import com.itss.vbas.service.AuthService;
 import com.itss.vbas.service.EmailService;
+import com.itss.vbas.service.FileStorageService;
 import com.itss.vbas.util.PasswordUtil;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 @Service
 @Transactional
 public class AuthServiceImpl implements AuthService {
+
     private final EmailService emailService;
     private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final AccountRepository accountRepository;
@@ -44,9 +49,11 @@ public class AuthServiceImpl implements AuthService {
     private final AppMapper appMapper;
     private final JwtUtil jwtUtil;
     private final AuthContext authContext;
+    private final FileStorageService fileStorageService;
 
     public AuthServiceImpl(
             EmailService emailService,
+            PasswordResetTokenRepository passwordResetTokenRepository,
             AccountRepository accountRepository,
             RoleRepository roleRepository,
             IncidentTypeRepository incidentTypeRepository,
@@ -57,9 +64,10 @@ public class AuthServiceImpl implements AuthService {
             AppMapper appMapper,
             JwtUtil jwtUtil,
             AuthContext authContext,
-            PasswordResetTokenRepository passwordResetTokenRepository
+            FileStorageService fileStorageService
     ) {
         this.emailService = emailService;
+        this.passwordResetTokenRepository = passwordResetTokenRepository;
         this.accountRepository = accountRepository;
         this.roleRepository = roleRepository;
         this.incidentTypeRepository = incidentTypeRepository;
@@ -70,7 +78,7 @@ public class AuthServiceImpl implements AuthService {
         this.appMapper = appMapper;
         this.jwtUtil = jwtUtil;
         this.authContext = authContext;
-        this.passwordResetTokenRepository = passwordResetTokenRepository;
+        this.fileStorageService = fileStorageService;
     }
 
     @Override
@@ -169,6 +177,52 @@ public class AuthServiceImpl implements AuthService {
                 .toList();
     }
 
+    @Override
+    public void forgotPassword(String email) {
+        Account account = accountRepository.findByEmailIgnoreCase(email)
+                .orElseThrow(() -> new BadRequestException("Email does not exist"));
+
+        PasswordResetToken resetToken = PasswordResetToken.builder()
+                .user(account)
+                .token(UUID.randomUUID().toString())
+                .expiresAt(LocalDateTime.now().plusMinutes(15))
+                .build();
+
+        passwordResetTokenRepository.save(resetToken);
+        String link = "http://localhost:5173/reset-password?token=" + resetToken.getToken();
+        emailService.sendResetPasswordEmail(account.getEmail(), link);
+    }
+
+    @Override
+    public void resetPassword(String token, String newPassword) {
+        PasswordResetToken resetToken = passwordResetTokenRepository.findByToken(token)
+                .orElseThrow(() -> new BadRequestException("Invalid token"));
+
+        if (resetToken.getUsedAt() != null) {
+            throw new BadRequestException("Token has already been used");
+        }
+
+        if (resetToken.getExpiresAt().isBefore(LocalDateTime.now())) {
+            throw new BadRequestException("Token has expired");
+        }
+
+        Account account = resetToken.getUser();
+        account.setPasswordHash(PasswordUtil.hash(newPassword));
+        accountRepository.save(account);
+
+        resetToken.setUsedAt(LocalDateTime.now());
+        passwordResetTokenRepository.save(resetToken);
+    }
+
+    @Override
+    public CommonDto.FileUploadResponse uploadAvatar(MultipartFile file) {
+        Account account = authContext.getCurrentAccount();
+        String imageUrl = fileStorageService.storeAvatar(file);
+        account.setAvatarUrl(imageUrl);
+        accountRepository.save(account);
+        return new CommonDto.FileUploadResponse(imageUrl);
+    }
+
     private AuthDto.AuthResponse buildAuthResponse(Account account) {
         Long companyId = resolveCompanyId(account);
         Long staffId = resolveStaffId(account);
@@ -191,46 +245,5 @@ public class AuthServiceImpl implements AuthService {
     private Role getOrCreateRole(RoleName roleName) {
         return roleRepository.findByRoleName(roleName)
                 .orElseGet(() -> roleRepository.save(Role.builder().roleName(roleName).build()));
-    }
-    @Override
-    public void forgotPassword(String email) {
-        Account account = accountRepository.findByEmailIgnoreCase(email)
-                .orElseThrow(() -> new BadRequestException("Email không tồn tại"));
-
-        String token = java.util.UUID.randomUUID().toString();
-
-        PasswordResetToken resetToken = PasswordResetToken.builder()
-                .user(account)
-                .token(token)
-                .expiresAt(java.time.LocalDateTime.now().plusMinutes(15))
-                .build();
-
-        passwordResetTokenRepository.save(resetToken);
-
-        String link = "http://localhost:5173/reset-password?token=" + token;
-
-        // ✅ Gửi email thật
-        emailService.sendResetPasswordEmail(account.getEmail(), link);
-    }
-    @Override // KHI NGƯỜI DÙNG TRUY CẬP VÀO LINK RESET MẬT KHẨU VÀ NHẬP MẬT KHẨU MỚI VÀ KIỂM TRA TOKEN CÓ HỢP LỆ, CHƯA SỬ DỤNG, CHƯA HẾT HẠN KHÔNG RỒI MỚI CHO PHÉP ĐỔI MẬT KHẨU
-    public void resetPassword(String token, String newPassword) {
-
-        PasswordResetToken resetToken = passwordResetTokenRepository.findByToken(token)
-                .orElseThrow(() -> new BadRequestException("Token không hợp lệ"));
-
-        if (resetToken.getUsedAt() != null) {
-            throw new BadRequestException("Token đã được sử dụng");
-        }
-
-        if (resetToken.getExpiresAt().isBefore(java.time.LocalDateTime.now())) {
-            throw new BadRequestException("Token đã hết hạn");
-        }
-
-        Account account = resetToken.getUser();
-        account.setPasswordHash(PasswordUtil.hash(newPassword));
-        accountRepository.save(account);
-
-        resetToken.setUsedAt(java.time.LocalDateTime.now());
-        passwordResetTokenRepository.save(resetToken);
     }
 }

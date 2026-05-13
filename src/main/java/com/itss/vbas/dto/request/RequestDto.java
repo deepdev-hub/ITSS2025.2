@@ -38,10 +38,13 @@ public final class RequestDto {
             String serviceTypeName,
             String locationLabel,
             String vehicleLabel,
+            String imageUrl,
             String customerName,
             LocalDateTime createdAt,
             LocalDateTime updatedAt,
-            CommonDto.BasicCompanyResponse assignedCompany
+            CommonDto.BasicCompanyResponse assignedCompany,
+            Integer timeoutSeconds,
+            LocalDateTime expiresAt
     ) {
     }
 
@@ -67,7 +70,9 @@ public final class RequestDto {
             LocalDateTime assignedAt,
             LocalDateTime acceptedAt,
             LocalDateTime rejectedAt,
-            String status
+            String status,
+            Integer timeoutSeconds,
+            LocalDateTime expiresAt
     ) {
     }
 
@@ -159,12 +164,53 @@ public final class RequestDto {
     ) {
     }
 
+    public record TrackingPointResponse(
+            BigDecimal latitude,
+            BigDecimal longitude,
+            String label
+    ) {
+    }
+
+    public record TrackingStaffResponse(
+            Long id,
+            String name,
+            String phone,
+            String jobTitle,
+            Double rating,
+            TrackingPointResponse location
+    ) {
+    }
+
+    public record TrackingVehicleResponse(
+            Long id,
+            String vehicleCode,
+            String vehicleType,
+            String plateNumber
+    ) {
+    }
+
+    public record TrackingResponse(
+            Long requestId,
+            String requestStatus,
+            boolean assigned,
+            boolean hasDestination,
+            TrackingPointResponse destination,
+            TrackingStaffResponse staff,
+            TrackingVehicleResponse vehicle,
+            List<TrackingPointResponse> route,
+            String movementStatus,
+            Integer etaMinutes,
+            LocalDateTime updatedAt
+    ) {
+    }
+
     public record RequestDetailResponse(
             Long id,
             String requestCode,
             String status,
             String priorityLevel,
             String description,
+            String imageUrl,
             LocalDateTime createdAt,
             LocalDateTime updatedAt,
             CommonDto.AccountSummaryResponse customer,

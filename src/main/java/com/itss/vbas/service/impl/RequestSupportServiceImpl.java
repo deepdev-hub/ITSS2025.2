@@ -6,6 +6,7 @@ import com.itss.vbas.entity.RequestStatusHistory;
 import com.itss.vbas.entity.RescueCompany;
 import com.itss.vbas.entity.RescueRequest;
 import com.itss.vbas.entity.RescueStaff;
+import com.itss.vbas.enums.AssignmentStatus;
 import com.itss.vbas.enums.RescueRequestStatus;
 import com.itss.vbas.enums.RoleName;
 import com.itss.vbas.exception.ForbiddenException;
@@ -67,7 +68,7 @@ public class RequestSupportServiceImpl implements RequestSupportService {
     @Transactional(readOnly = true)
     public RescueCompany getAssignedCompany(RescueRequest request) {
         RequestAssignment assignment = getLatestAssignment(request);
-        return assignment == null ? null : assignment.getCompany();
+        return assignment == null || assignment.getStatus() == AssignmentStatus.REJECTED ? null : assignment.getCompany();
     }
 
     @Override
