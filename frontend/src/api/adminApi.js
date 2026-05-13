@@ -27,4 +27,7 @@ export const adminApi = {
   createCompany: (payload) => unwrap(apiClient.post('/api/admin/companies', payload)),
   updateCompany: (id, payload) => unwrap(apiClient.put(`/api/admin/companies/${id}`, payload)),
   deleteCompany: (id) => unwrap(apiClient.delete(`/api/admin/companies/${id}`)),
+
+  assignStaff: (requestId, payload) => unwrap(apiClient.put(`/api/admin/requests/${requestId}/assign-staff`, payload)),
+  getActiveStaff: () => unwrap(apiClient.get('/api/admin/staff/active-locations')),
 };

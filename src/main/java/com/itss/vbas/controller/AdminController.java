@@ -36,6 +36,7 @@ public class AdminController {
         this.dashboardService = dashboardService;
     }
 
+    // Quản lý tài khoản
     @GetMapping("/accounts")
     public ResponseEntity<CommonDto.ApiResponse<List<AdminDto.AccountResponse>>> getAccounts() {
         return ResponseEntity.ok(CommonDto.ApiResponse.success("Accounts fetched successfully", adminService.getAccounts()));
@@ -66,6 +67,7 @@ public class AdminController {
         return ResponseEntity.ok(CommonDto.ApiResponse.success("Account deactivated successfully"));
     }
 
+    //Quản lý vai trò
     @GetMapping("/roles")
     public ResponseEntity<CommonDto.ApiResponse<List<CommonDto.RoleResponse>>> getRoles() {
         return ResponseEntity.ok(CommonDto.ApiResponse.success("Roles fetched successfully", adminService.getRoles()));
@@ -90,7 +92,7 @@ public class AdminController {
         adminService.deleteRole(id);
         return ResponseEntity.ok(CommonDto.ApiResponse.success("Role deleted successfully"));
     }
-
+    //Quản lý loại sự cố
     @GetMapping("/incident-types")
     public ResponseEntity<CommonDto.ApiResponse<List<AdminDto.IncidentTypeResponse>>> getIncidentTypes() {
         return ResponseEntity.ok(CommonDto.ApiResponse.success("Incident types fetched successfully", adminService.getIncidentTypes()));
@@ -115,7 +117,7 @@ public class AdminController {
         adminService.deleteIncidentType(id);
         return ResponseEntity.ok(CommonDto.ApiResponse.success("Incident type deleted successfully"));
     }
-
+    //Quản lý dịch vụ
     @GetMapping("/service-types")
     public ResponseEntity<CommonDto.ApiResponse<List<AdminDto.ServiceTypeResponse>>> getServiceTypes() {
         return ResponseEntity.ok(CommonDto.ApiResponse.success("Service types fetched successfully", adminService.getServiceTypes()));
@@ -140,7 +142,7 @@ public class AdminController {
         adminService.deleteServiceType(id);
         return ResponseEntity.ok(CommonDto.ApiResponse.success("Service type deleted successfully"));
     }
-
+    //Quản lý công ty cứu hộ
     @GetMapping("/companies")
     public ResponseEntity<CommonDto.ApiResponse<List<CompanyDto.CompanyResponse>>> getCompanies() {
         return ResponseEntity.ok(CommonDto.ApiResponse.success("Companies fetched successfully", adminService.getCompanies()));
@@ -176,12 +178,17 @@ public class AdminController {
         return ResponseEntity.ok(CommonDto.ApiResponse.success("Requests fetched successfully", adminService.getAllRequests()));
     }
 
-    @PutMapping("/requests/{id}/assign-company")
-    public ResponseEntity<CommonDto.ApiResponse<RequestDto.AssignmentResponse>> assignCompany(
+    @PutMapping("/requests/{id}/assign-staff")
+    public ResponseEntity<CommonDto.ApiResponse<RequestDto.AssignmentResponse>> assignStaff(
             @PathVariable Long id,
-            @Valid @RequestBody AdminDto.AssignCompanyRequest request
+            @Valid @RequestBody AdminDto.AssignStaffRequest request
     ) {
-        return ResponseEntity.ok(CommonDto.ApiResponse.success("Company assigned successfully", adminService.assignCompany(id, request)));
+        return ResponseEntity.ok(CommonDto.ApiResponse.success("Staff assigned successfully", adminService.assignStaff(id, request)));
+    }
+
+    @GetMapping("/staff/active-locations")
+    public ResponseEntity<CommonDto.ApiResponse<List<CompanyDto.StaffResponse>>> getActiveStaffLocations() {
+        return ResponseEntity.ok(CommonDto.ApiResponse.success("Active staff locations fetched", adminService.getActiveStaffLocations()));
     }
 
     @GetMapping("/dashboard")

@@ -81,8 +81,8 @@ public final class AdminDto {
     ) {
     }
 
-    public record AssignCompanyRequest(
-            @NotNull Long companyId,
+    public record AssignStaffRequest(
+            @NotNull Long staffId,
             @Size(max = 500) String note
     ) {
     }
