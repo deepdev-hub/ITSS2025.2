@@ -13,6 +13,8 @@ public interface RescueRequestService {
 
     RequestDto.RequestDetailResponse getRequestDetail(Long requestId);
 
+    RequestDto.TrackingResponse getRequestTracking(Long requestId);
+
     void cancelRequest(Long requestId, String note);
 
     RequestDto.RequestDetailResponse updateRequestStatus(Long requestId, CommonDto.StatusUpdateRequest request);
