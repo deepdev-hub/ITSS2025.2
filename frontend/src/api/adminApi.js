@@ -10,6 +10,8 @@ export const adminApi = {
   createAccount: (payload) => unwrap(apiClient.post('/api/admin/accounts', payload)),
   updateAccount: (id, payload) => unwrap(apiClient.put(`/api/admin/accounts/${id}`, payload)),
   deleteAccount: (id) => unwrap(apiClient.delete(`/api/admin/accounts/${id}`)),
+  blockAccount: (id) => unwrap(apiClient.put(`/api/admin/accounts/${id}/block`)),
+  unblockAccount: (id) => unwrap(apiClient.put(`/api/admin/accounts/${id}/unblock`)),
   getRoles: () => unwrap(apiClient.get('/api/admin/roles')),
   createRole: (payload) => unwrap(apiClient.post('/api/admin/roles', payload)),
   updateRole: (id, payload) => unwrap(apiClient.put(`/api/admin/roles/${id}`, payload)),
@@ -29,5 +31,11 @@ export const adminApi = {
   deleteCompany: (id) => unwrap(apiClient.delete(`/api/admin/companies/${id}`)),
 
   assignStaff: (requestId, payload) => unwrap(apiClient.put(`/api/admin/requests/${requestId}/assign-staff`, payload)),
-  getActiveStaff: () => unwrap(apiClient.get('/api/admin/staff/active-locations')),
+  getActiveStaffLocations: () => unwrap(apiClient.get('/api/admin/staff/active-locations')),  
+  autoAssign: (requestId) => unwrap(apiClient.post(`/api/admin/requests/${requestId}/auto-assign`)),
+
+  getCompanyStaff: (companyId) => unwrap(apiClient.get(`/api/admin/companies/${companyId}/staff`)),
+  createCompanyStaff: (companyId, payload) => unwrap(apiClient.post(`/api/admin/companies/${companyId}/staff`, payload)),
+  updateCompanyStaff: (companyId, staffId, payload) => unwrap(apiClient.put(`/api/admin/companies/${companyId}/staff/${staffId}`, payload)),
+  deleteCompanyStaff: (companyId, staffId) => unwrap(apiClient.delete(`/api/admin/companies/${companyId}/staff/${staffId}`)),
 };

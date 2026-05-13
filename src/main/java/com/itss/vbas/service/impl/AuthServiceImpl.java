@@ -1,10 +1,13 @@
 package com.itss.vbas.service.impl;
 
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 
 import com.itss.vbas.dto.auth.AuthDto;
 import com.itss.vbas.dto.common.CommonDto;
 import com.itss.vbas.entity.Account;
+import com.itss.vbas.entity.PasswordResetToken;
 import com.itss.vbas.entity.Role;
 import com.itss.vbas.enums.AccountStatus;
 import com.itss.vbas.enums.RoleName;
@@ -13,6 +16,7 @@ import com.itss.vbas.exception.UnauthorizedException;
 import com.itss.vbas.mapper.AppMapper;
 import com.itss.vbas.repository.AccountRepository;
 import com.itss.vbas.repository.IncidentTypeRepository;
+import com.itss.vbas.repository.PasswordResetTokenRepository;
 import com.itss.vbas.repository.RescueCompanyRepository;
 import com.itss.vbas.repository.RescueStaffRepository;
 import com.itss.vbas.repository.RoleRepository;
@@ -22,15 +26,19 @@ import com.itss.vbas.security.CurrentUser;
 import com.itss.vbas.security.JwtUtil;
 import com.itss.vbas.service.AddressService;
 import com.itss.vbas.service.AuthService;
-import com.itss.vbas.util.PasswordUtil;
+import com.itss.vbas.service.EmailService;
 import com.itss.vbas.service.FileStorageService;
+import com.itss.vbas.util.PasswordUtil;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+
 @Service
 @Transactional
 public class AuthServiceImpl implements AuthService {
 
+    private final EmailService emailService;
+    private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final AccountRepository accountRepository;
     private final RoleRepository roleRepository;
     private final IncidentTypeRepository incidentTypeRepository;
@@ -44,6 +52,8 @@ public class AuthServiceImpl implements AuthService {
     private final FileStorageService fileStorageService;
 
     public AuthServiceImpl(
+            EmailService emailService,
+            PasswordResetTokenRepository passwordResetTokenRepository,
             AccountRepository accountRepository,
             RoleRepository roleRepository,
             IncidentTypeRepository incidentTypeRepository,
@@ -56,6 +66,8 @@ public class AuthServiceImpl implements AuthService {
             AuthContext authContext,
             FileStorageService fileStorageService
     ) {
+        this.emailService = emailService;
+        this.passwordResetTokenRepository = passwordResetTokenRepository;
         this.accountRepository = accountRepository;
         this.roleRepository = roleRepository;
         this.incidentTypeRepository = incidentTypeRepository;
@@ -85,7 +97,11 @@ public class AuthServiceImpl implements AuthService {
                 .dateOfBirth(request.dateOfBirth())
                 .gender(request.gender())
                 .cccd(request.cccd())
-                .defaultAddress(addressService.createAddress(request.defaultAddress()))
+                .defaultAddress(
+                        request.defaultAddress() != null
+                                ? addressService.createAddress(request.defaultAddress())
+                                : null
+                )
                 .build();
 
         Account savedAccount = accountRepository.save(account);
@@ -161,6 +177,52 @@ public class AuthServiceImpl implements AuthService {
                 .toList();
     }
 
+    @Override
+    public void forgotPassword(String email) {
+        Account account = accountRepository.findByEmailIgnoreCase(email)
+                .orElseThrow(() -> new BadRequestException("Email does not exist"));
+
+        PasswordResetToken resetToken = PasswordResetToken.builder()
+                .user(account)
+                .token(UUID.randomUUID().toString())
+                .expiresAt(LocalDateTime.now().plusMinutes(15))
+                .build();
+
+        passwordResetTokenRepository.save(resetToken);
+        String link = "http://localhost:5173/reset-password?token=" + resetToken.getToken();
+        emailService.sendResetPasswordEmail(account.getEmail(), link);
+    }
+
+    @Override
+    public void resetPassword(String token, String newPassword) {
+        PasswordResetToken resetToken = passwordResetTokenRepository.findByToken(token)
+                .orElseThrow(() -> new BadRequestException("Invalid token"));
+
+        if (resetToken.getUsedAt() != null) {
+            throw new BadRequestException("Token has already been used");
+        }
+
+        if (resetToken.getExpiresAt().isBefore(LocalDateTime.now())) {
+            throw new BadRequestException("Token has expired");
+        }
+
+        Account account = resetToken.getUser();
+        account.setPasswordHash(PasswordUtil.hash(newPassword));
+        accountRepository.save(account);
+
+        resetToken.setUsedAt(LocalDateTime.now());
+        passwordResetTokenRepository.save(resetToken);
+    }
+
+    @Override
+    public CommonDto.FileUploadResponse uploadAvatar(MultipartFile file) {
+        Account account = authContext.getCurrentAccount();
+        String imageUrl = fileStorageService.storeAvatar(file);
+        account.setAvatarUrl(imageUrl);
+        accountRepository.save(account);
+        return new CommonDto.FileUploadResponse(imageUrl);
+    }
+
     private AuthDto.AuthResponse buildAuthResponse(Account account) {
         Long companyId = resolveCompanyId(account);
         Long staffId = resolveStaffId(account);
@@ -183,14 +245,5 @@ public class AuthServiceImpl implements AuthService {
     private Role getOrCreateRole(RoleName roleName) {
         return roleRepository.findByRoleName(roleName)
                 .orElseGet(() -> roleRepository.save(Role.builder().roleName(roleName).build()));
-    }
-
-    @Override
-    public CommonDto.FileUploadResponse uploadAvatar(MultipartFile file) {
-        Account account = authContext.getCurrentAccount();
-        String imageUrl = fileStorageService.storeAvatar(file);
-        account.setAvatarUrl(imageUrl);
-        accountRepository.save(account);
-        return new CommonDto.FileUploadResponse(imageUrl);
     }
 }

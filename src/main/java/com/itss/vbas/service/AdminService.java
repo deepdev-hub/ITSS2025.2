@@ -15,7 +15,10 @@ public interface AdminService {
     AdminDto.AccountResponse updateAccount(Long id, AdminDto.AccountRequest request);
     void deleteAccount(Long id);
 
-    // Quản lý vai trò
+    AdminDto.AccountResponse blockAccount(Long id);
+
+    AdminDto.AccountResponse unblockAccount(Long id);
+
     List<CommonDto.RoleResponse> getRoles();
     CommonDto.RoleResponse createRole(AdminDto.RoleRequest request);
     CommonDto.RoleResponse updateRole(Long id, AdminDto.RoleRequest request);
@@ -40,8 +43,19 @@ public interface AdminService {
     CompanyDto.CompanyResponse updateCompany(Long id, CompanyDto.CompanyRequest request);
     void deleteCompany(Long id);
 
+    List<CompanyDto.StaffResponse> getCompanyStaff(Long companyId);
+
+    CompanyDto.StaffResponse createCompanyStaff(Long companyId, CompanyDto.StaffRequest request);
+
+    CompanyDto.StaffResponse updateCompanyStaff(Long companyId, Long staffId, CompanyDto.StaffRequest request);
+
+    void deleteCompanyStaff(Long companyId, Long staffId);
 
     List<RequestDto.RequestSummaryResponse> getAllRequests();
+
     RequestDto.AssignmentResponse assignStaff(Long requestId, AdminDto.AssignStaffRequest request);
+
     List<CompanyDto.StaffResponse> getActiveStaffLocations();
+    
+    RequestDto.AssignmentResponse autoAssignNearestStaff(Long requestId);
 }

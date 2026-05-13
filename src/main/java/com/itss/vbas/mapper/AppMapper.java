@@ -334,6 +334,7 @@ public class AppMapper {
                 request.getIncidentType().getIncidentName(),
                 request.getServiceType() == null ? null : request.getServiceType().getServiceName(),
                 request.getLocation() == null ? null : buildFullAddress(request.getLocation()),
+                toAddressResponse(request.getLocation()), // location (AddressResponse)
                 request.getVehicle() == null ? null : request.getVehicle().getBrand() + " " + request.getVehicle().getModel() + " - " + request.getVehicle().getPlateNumber(),
                 request.getImageUrl(),
                 request.getCustomer().getFullName(),

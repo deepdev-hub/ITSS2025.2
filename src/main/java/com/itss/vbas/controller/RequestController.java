@@ -1,12 +1,23 @@
+// Thay thế toàn bộ RequestController.java
+
 package com.itss.vbas.controller;
 
 import java.util.List;
+import java.time.LocalDateTime; 
 
 import com.itss.vbas.dto.common.CommonDto;
 import com.itss.vbas.dto.request.RequestDto;
+import com.itss.vbas.entity.RequestAssignment; 
+import com.itss.vbas.entity.RescueRequest; 
+import com.itss.vbas.enums.AssignmentStatus; 
+import com.itss.vbas.enums.RescueRequestStatus; 
 import com.itss.vbas.enums.RoleName;
+import com.itss.vbas.exception.ResourceNotFoundException; 
+import com.itss.vbas.repository.RequestAssignmentRepository; 
+import com.itss.vbas.repository.RescueRequestRepository; 
 import com.itss.vbas.security.RequireAuth;
 import com.itss.vbas.security.RequiredRoles;
+import com.itss.vbas.service.AdminService; 
 import com.itss.vbas.service.MessageService;
 import com.itss.vbas.service.PaymentService;
 import com.itss.vbas.service.QuoteService;
@@ -15,15 +26,9 @@ import com.itss.vbas.service.ReviewService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+
 @RestController
 @RequestMapping("/api/requests")
 public class RequestController {
@@ -33,21 +38,33 @@ public class RequestController {
     private final QuoteService quoteService;
     private final PaymentService paymentService;
     private final ReviewService reviewService;
+    
+    // --- BỔ SUNG DEPENDENCIES CHO AUTO DISPATCH ---
+    private final RequestAssignmentRepository requestAssignmentRepository;
+    private final RescueRequestRepository rescueRequestRepository;
+    private final AdminService adminService;
 
     public RequestController(
             RescueRequestService rescueRequestService,
             MessageService messageService,
             QuoteService quoteService,
             PaymentService paymentService,
-            ReviewService reviewService
+            ReviewService reviewService,
+            RequestAssignmentRepository requestAssignmentRepository,
+            RescueRequestRepository rescueRequestRepository,
+            AdminService adminService
     ) {
         this.rescueRequestService = rescueRequestService;
         this.messageService = messageService;
         this.quoteService = quoteService;
         this.paymentService = paymentService;
         this.reviewService = reviewService;
+        this.requestAssignmentRepository = requestAssignmentRepository;
+        this.rescueRequestRepository = rescueRequestRepository;
+        this.adminService = adminService;
     }
 
+    // ... [CÁC HÀM GET, POST, PUT CŨ GIỮ NGUYÊN HOÀN TOÀN TỪ ĐÂY ĐẾN HẾT FILE CŨ] ...
     @RequiredRoles(RoleName.CUSTOMER)
     @PostMapping
     public ResponseEntity<CommonDto.ApiResponse<RequestDto.RequestDetailResponse>> createRequest(@Valid @RequestBody RequestDto.CreateRequest request) {
@@ -65,6 +82,12 @@ public class RequestController {
     @GetMapping("/{id}")
     public ResponseEntity<CommonDto.ApiResponse<RequestDto.RequestDetailResponse>> getRequestDetail(@PathVariable Long id) {
         return ResponseEntity.ok(CommonDto.ApiResponse.success("Request detail fetched successfully", rescueRequestService.getRequestDetail(id)));
+    }
+
+    @RequireAuth
+    @GetMapping("/{id}/tracking")
+    public ResponseEntity<CommonDto.ApiResponse<RequestDto.TrackingResponse>> getRequestTracking(@PathVariable Long id) {
+        return ResponseEntity.ok(CommonDto.ApiResponse.success("Request tracking fetched successfully", rescueRequestService.getRequestTracking(id)));
     }
 
     @RequiredRoles(RoleName.CUSTOMER)
@@ -171,5 +194,43 @@ public class RequestController {
                 "Request image uploaded successfully", 
                 rescueRequestService.uploadRequestImage(id, file)
         ));
+    }
+
+    // --- BỔ SUNG 2 ENDPOINTS MỚI DÀNH RIÊNG CHO CHỨC NĂNG XÁC NHẬN/TỪ CHỐI CA ---
+    @RequiredRoles(RoleName.RESCUE_STAFF)
+    @PutMapping("/assignments/{assignmentId}/accept")
+    public ResponseEntity<CommonDto.ApiResponse<Void>> acceptAssignment(@PathVariable Long assignmentId) {
+        RequestAssignment assignment = requestAssignmentRepository.findById(assignmentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Assignment not found"));
+        
+        assignment.setStatus(AssignmentStatus.ACCEPTED);
+        assignment.setAcceptedAt(LocalDateTime.now());
+        requestAssignmentRepository.save(assignment);
+
+        RescueRequest request = assignment.getRequest();
+        request.setStatus(RescueRequestStatus.ACCEPTED);
+        rescueRequestRepository.save(request);
+
+        return ResponseEntity.ok(CommonDto.ApiResponse.success("Assignment accepted successfully"));
+    }
+
+    @RequiredRoles(RoleName.RESCUE_STAFF)
+    @PutMapping("/assignments/{assignmentId}/reject")
+    public ResponseEntity<CommonDto.ApiResponse<Void>> rejectAssignment(@PathVariable Long assignmentId) {
+        RequestAssignment assignment = requestAssignmentRepository.findById(assignmentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Assignment not found"));
+        
+        assignment.setStatus(AssignmentStatus.REJECTED);
+        assignment.setRejectedAt(LocalDateTime.now());
+        requestAssignmentRepository.save(assignment);
+
+        RescueRequest request = assignment.getRequest();
+        request.setStatus(RescueRequestStatus.SEARCHING);
+        rescueRequestRepository.save(request);
+
+        // Chạy Auto Dispatch để tự động tìm người gần nhất tiếp theo
+        adminService.autoAssignNearestStaff(request.getId());
+
+        return ResponseEntity.ok(CommonDto.ApiResponse.success("Assignment rejected successfully"));
     }
 }

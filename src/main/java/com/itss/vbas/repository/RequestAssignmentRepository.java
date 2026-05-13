@@ -25,4 +25,7 @@ public interface RequestAssignmentRepository extends JpaRepository<RequestAssign
     long countByStaffId(Long staffId);
 
     long countByStaffIdAndStatus(Long staffId, AssignmentStatus status);
+
+    List<RequestAssignment> findByRequestId(Long requestId);
+    
 }

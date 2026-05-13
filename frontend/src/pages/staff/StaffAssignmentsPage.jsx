@@ -77,9 +77,7 @@ export default function StaffAssignmentsPage() {
   }, [activeAssignment?.requestId]);
 
   useEffect(() => {
-    if (!requestDetail) {
-      return;
-    }
+    if (!requestDetail) return;
     const nextStatusOptions = getAllowedStatusOptions('RESCUE_STAFF', requestDetail.status);
     setStatusForm((previous) => ({
       status: nextStatusOptions.includes(previous.status) ? previous.status : (nextStatusOptions[0] || previous.status),
@@ -87,17 +85,24 @@ export default function StaffAssignmentsPage() {
     }));
   }, [requestDetail]);
 
-  const handleStatusUpdate = async (event) => {
-    event.preventDefault();
-    if (!activeAssignment?.requestId) {
-      return;
-    }
-    setBusyAction('status');
+  // --- QUICK ACTION LOGIC (ACCEPT / REJECT) ---
+  const handleQuickAction = async (statusAction) => {
+    // SỬ DỤNG ID CỦA ASSIGNMENT ĐỂ TRÁNH LỖI PHÂN QUYỀN
+    if (!activeAssignment?.id) return;
+    setBusyAction('quick');
     setNotice('');
     setError('');
     try {
-      await requestApi.updateStatus(activeAssignment.requestId, statusForm);
-      setNotice('Task progress updated successfully.');
+      if (statusAction === 'ACCEPTED') {
+        // Gọi API Accept dành riêng cho Assignment
+        await companyApi.acceptAssignment(activeAssignment.id);
+        setNotice('✅ Request accepted successfully! Please proceed to the location.');
+      } else {
+        // Gọi API Reject dành riêng cho Assignment
+        await companyApi.rejectAssignment(activeAssignment.id);
+        setNotice('❌ You have rejected the request.');
+      }
+      
       await loadAssignments();
       await loadRequestDetail(activeAssignment.requestId);
     } catch (err) {
@@ -107,46 +112,66 @@ export default function StaffAssignmentsPage() {
     }
   };
 
-  if (loading) {
-    return <Loader label="Loading your assignments..." />;
-  }
+  // --- REGULAR STATUS UPDATE LOGIC ---
+  const handleStatusUpdate = async (event) => {
+    event.preventDefault();
+    if (!activeAssignment?.requestId) return;
+    setBusyAction('status');
+    setNotice('');
+    setError('');
+    try {
+      await requestApi.updateStatus(activeAssignment.requestId, statusForm);
+      setNotice('Status updated successfully.');
+      await loadAssignments();
+      await loadRequestDetail(activeAssignment.requestId);
+    } catch (err) {
+      setError(getApiError(err));
+    } finally {
+      setBusyAction('');
+    }
+  };
+
+  if (loading) return <Loader label="Loading your assignments..." />;
 
   return (
     <>
-      <PageHeader title="My Assignments" subtitle="Review assigned jobs, update field progress, and jump to the request detail for full chat and history." />
-      {notice ? <div className="notice">{notice}</div> : null}
-      {error ? <div className="notice error">{error}</div> : null}
+      <PageHeader title="My Assignments" subtitle="Check assigned requests, confirm attendance, and update rescue progress." />
+      
+      {notice && <div className="notice success">{notice}</div>}
+      {error && <div className="notice error">{error}</div>}
 
       <div className="grid-two">
+        {/* LEFT COLUMN: ASSIGNMENT LIST */}
         <div className="card">
-          <h2>Assigned Tasks</h2>
+          <h2>Assigned Requests</h2>
           {assignments.length === 0 ? (
-            <p>No assignments available.</p>
+            <p className="muted-line">You have no assigned rescue requests at the moment.</p>
           ) : (
             <div className="table-wrapper">
               <table>
                 <thead>
                   <tr>
-                    <th>Company</th>
                     <th>Vehicle</th>
                     <th>Status</th>
-                    <th>Countdown</th>
+                    <th>Timeout</th>
                     <th>Assigned At</th>
                     <th />
                   </tr>
                 </thead>
                 <tbody>
                   {assignments.map((assignment) => (
-                    <tr key={assignment.id}>
-                      <td>{assignment.companyName}</td>
-                      <td>{assignment.vehicleCode || 'N/A'}</td>
+                    <tr key={assignment.id} style={{ background: assignment.status === 'PENDING' ? '#fff9e6' : 'transparent' }}>
+                      <td><strong>{assignment.vehicleCode || 'Rescue Vehicle'}</strong></td>
                       <td><StatusBadge value={assignment.status} /></td>
                       <td>
                         <Countdown expiresAt={assignment.expiresAt} status={assignment.status} label="" />
                       </td>
                       <td>{formatDateTime(assignment.assignedAt)}</td>
                       <td>
-                        <button className="button button-secondary" type="button" onClick={() => setActiveAssignmentId(assignment.id)}>
+                        <button 
+                          className={`button ${activeAssignmentId === assignment.id ? 'button-primary' : 'button-secondary'}`} 
+                          onClick={() => setActiveAssignmentId(assignment.id)}
+                        >
                           {activeAssignmentId === assignment.id ? 'Selected' : 'Select'}
                         </button>
                       </td>
@@ -158,57 +183,79 @@ export default function StaffAssignmentsPage() {
           )}
         </div>
 
+        {/* RIGHT COLUMN: DETAILS & ACTIONS */}
         <div className="card">
-          <h2>Task Detail</h2>
-          {detailLoading ? <Loader label="Loading task detail..." /> : null}
-          {!detailLoading && !activeAssignment ? <p>Select an assignment to continue.</p> : null}
+          <h2>Request Detail</h2>
+          {detailLoading ? <Loader label="Loading details..." /> : null}
+          {!detailLoading && !activeAssignment ? <p className="muted-line">Please select an assignment from the left to view details.</p> : null}
 
-          {!detailLoading && activeAssignment ? (
+          {!detailLoading && activeAssignment && requestDetail ? (
             <>
-              <div className="info-grid">
+              {/* ALERT BOX FOR PENDING ASSIGNMENTS */}
+              {activeAssignment.status === 'PENDING' && (
+                <div className="alert-box">
+                  <h3>🚨 NEW RESCUE DISPATCH</h3>
+                  <p>You have been assigned a new rescue request. Please confirm before the timer runs out, otherwise it will be automatically reassigned to another staff.</p>
+                  <div className="countdown-highlight">
+                    <Countdown expiresAt={activeAssignment.expiresAt} status={activeAssignment.status} />
+                  </div>
+                  <div className="actions-row" style={{ marginTop: '15px' }}>
+                    <button 
+                      className="button button-primary" 
+                      style={{ flex: 1, padding: '12px', fontSize: '1.1rem' }}
+                      disabled={busyAction === 'quick'}
+                      onClick={() => handleQuickAction('ACCEPTED')}
+                    >
+                      {busyAction === 'quick' ? 'Processing...' : '✅ Accept Request'}
+                    </button>
+                    <button 
+                      className="button button-danger" 
+                      disabled={busyAction === 'quick'}
+                      onClick={() => handleQuickAction('REJECTED')}
+                    >
+                      ❌ Reject
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* GENERAL INFO */}
+              <div className="info-grid" style={{ marginTop: '20px' }}>
                 <div className="info-item">
-                  <span>Company</span>
-                  <strong>{activeAssignment.companyName}</strong>
+                  <span>Customer</span>
+                  <strong>{requestDetail.customer?.fullName || 'N/A'}</strong>
                 </div>
                 <div className="info-item">
-                  <span>Assignment Status</span>
+                  <span>Status</span>
                   <strong><StatusBadge value={activeAssignment.status} /></strong>
-                  <Countdown expiresAt={activeAssignment.expiresAt} status={activeAssignment.status} />
                 </div>
                 <div className="info-item">
-                  <span>Vehicle</span>
-                  <strong>{activeAssignment.vehicleCode || 'N/A'}</strong>
+                  <span>Incident Type</span>
+                  <strong>{requestDetail.incidentType?.name || 'N/A'}</strong>
                 </div>
                 <div className="info-item">
                   <span>Plate Number</span>
-                  <strong>{activeAssignment.vehiclePlateNumber || 'N/A'}</strong>
+                  <strong>{activeAssignment.vehiclePlateNumber || requestDetail.vehicle?.plateNumber || 'N/A'}</strong>
                 </div>
               </div>
 
-              {requestDetail ? (
-                <>
-                  <div className="field">
-                    <label>Request Code</label>
-                    <input value={requestDetail.requestCode} disabled />
-                  </div>
-                  <div className="field">
-                    <label>Current Request Status</label>
-                    <input value={requestDetail.status} disabled />
-                  </div>
-                  <div className="field">
-                    <label>Breakdown Location</label>
-                    <textarea value={requestDetail.location?.fullAddress || 'No location available.'} disabled />
-                  </div>
+              <div className="field">
+                <label>Incident Location</label>
+                <textarea value={requestDetail.location?.fullAddress || 'No location data provided.'} disabled rows={2} />
+              </div>
 
+              {/* PROGRESS UPDATE FORM (HIDDEN IF PENDING) */}
+              {activeAssignment.status !== 'PENDING' && (
+                <>
                   {statusOptions.length > 0 ? (
                     <form className="card card-muted" onSubmit={handleStatusUpdate}>
-                      <h3>Update Task Progress</h3>
+                      <h3>Update Progress</h3>
                       <div className="form-grid">
                         <div className="field">
-                          <label>Status</label>
+                          <label>Update Status</label>
                           <select
                             value={statusForm.status}
-                            onChange={(event) => setStatusForm((previous) => ({ ...previous, status: event.target.value }))}
+                            onChange={(e) => setStatusForm({ ...statusForm, status: e.target.value })}
                           >
                             {statusOptions.map((option) => (
                               <option key={option} value={option}>{option}</option>
@@ -219,7 +266,7 @@ export default function StaffAssignmentsPage() {
                           <label>Note</label>
                           <input
                             value={statusForm.note}
-                            onChange={(event) => setStatusForm((previous) => ({ ...previous, note: event.target.value }))}
+                            onChange={(e) => setStatusForm({ ...statusForm, note: e.target.value })}
                             placeholder="Optional field update"
                           />
                         </div>
@@ -231,19 +278,35 @@ export default function StaffAssignmentsPage() {
                   ) : (
                     <p className="muted-line">This request is already finalized, so no further status change is available.</p>
                   )}
-
-                  <div className="actions-row" style={{ marginTop: '1rem' }}>
-                    <Link className="button button-secondary" to={`/requests/${activeAssignment.requestId}`}>
-                      Open request detail
-                    </Link>
-                    <span className="muted-line">Use request detail for chat, quote, payment, and full history.</span>
-                  </div>
                 </>
-              ) : null}
+              )}
+
+              <div className="actions-row" style={{ marginTop: '1rem', borderTop: '1px solid #eee', paddingTop: '15px' }}>
+                <Link className="button button-secondary" to={`/requests/${activeAssignment.requestId}`}>
+                  Open request detail
+                </Link>
+                <span className="muted-line">Use request detail for chat, quote, payment, and full history.</span>
+              </div>
             </>
           ) : null}
         </div>
       </div>
+
+      <style>{`
+        .alert-box {
+          background: #fff3cd;
+          border-left: 5px solid #ffc107;
+          padding: 20px;
+          border-radius: 8px;
+          margin-bottom: 20px;
+        }
+        .alert-box h3 { margin-top: 0; color: #856404; font-size: 1.2rem; }
+        .alert-box p { color: #664d03; margin-bottom: 10px; font-size: 0.95rem; line-height: 1.5; }
+        .countdown-highlight { font-size: 1.2rem; font-weight: bold; color: #dc3545; background: white; padding: 5px 10px; border-radius: 4px; display: inline-block;}
+        .button-danger { background-color: #dc3545; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;}
+        .button-danger:hover { background-color: #c82333; }
+        .button-danger:disabled { opacity: 0.6; cursor: not-allowed; }
+      `}</style>
     </>
   );
 }

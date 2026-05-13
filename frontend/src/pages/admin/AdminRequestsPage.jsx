@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { MapContainer, TileLayer, Marker, Popup, Circle, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -9,90 +9,78 @@ import { getApiError } from '../../api/client';
 import Loader from '../../components/common/Loader';
 import PageHeader from '../../components/common/PageHeader';
 import StatusBadge from '../../components/common/StatusBadge';
-import { formatDateTime, getRequestLocationLabel } from '../../utils/requestUi';
 
-// Fix lỗi icon mặc định của Leaflet
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
-  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+// --- CONFIG ICONS BY STATUS ---
+const createIcon = (url) => new L.Icon({
+  iconUrl: url,
+  iconSize: [38, 38],
+  iconAnchor: [19, 38],
+  popupAnchor: [0, -38],
 });
 
-// Icon tùy chỉnh cho Nhân viên cứu hộ (Màu xanh/Vàng)
-const staffIcon = new L.Icon({
-  iconUrl: 'https://cdn-icons-png.flaticon.com/512/1995/1995562.png', 
-  iconSize: [32, 32],
-  iconAnchor: [16, 32],
-  popupAnchor: [0, -32],
-});
-
-// Component hỗ trợ di chuyển bản đồ đến tọa độ sự cố khi click chọn request
-function MapRecenter({ center }) {
-  const map = useMap();
-  useEffect(() => {
-    if (center) map.flyTo(center, 14);
-  }, [center, map]);
-  return null;
-}
+const icons = {
+  STAFF: new L.Icon({
+    iconUrl: 'https://cdn-icons-png.flaticon.com/512/1995/1995562.png',
+    iconSize: [32, 32], iconAnchor: [16, 32], popupAnchor: [0, -32],
+  }),
+  // ⚠️ Mới tạo/Đang tìm thợ (Hazard Warning)
+  CREATED: createIcon('https://cdn-icons-png.flaticon.com/512/179/179386.png'),
+  SEARCHING: createIcon('https://cdn-icons-png.flaticon.com/512/179/179386.png'),
+  // ⏳ Đã gán, chờ thợ bấm nút (Clock/Pending)
+  MATCHED: createIcon('https://cdn-icons-png.flaticon.com/512/3582/3582012.png'),
+  // ✅ Thợ đã nhận (Handshake/Accepted)
+  ACCEPTED: createIcon('https://cdn-icons-png.flaticon.com/512/11529/11529555.png'),
+  // 🛠️ Đang sửa chữa (Tools/In Progress)
+  IN_PROGRESS: createIcon('https://cdn-icons-png.flaticon.com/512/1013/1013374.png'),
+};
 
 export default function AdminRequestsPage() {
   const [requests, setRequests] = useState([]);
-  const [activeStaff, setActiveStaff] = useState([]); // Chứa tọa độ các Staff đang ACTIVE
+  const [activeStaff, setActiveStaff] = useState([]);
+  const [hoveredStaff, setHoveredStaff] = useState(null);
+  const [hoveredRequest, setHoveredRequest] = useState(null);
   const [filters, setFilters] = useState({ search: '', status: 'ALL' });
   const [loading, setLoading] = useState(true);
   const [assigningId, setAssigningId] = useState(null);
-  const [selectedRequest, setSelectedRequest] = useState(null); // Request đang được xem để gán
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
 
-  const loadData = async (silent = false) => {
-    if (!silent) setLoading(true);
-    setError('');
+  const loadData = useCallback(async () => {
+    setLoading(true);
     try {
-      // Gọi song song danh sách request và tọa độ staff
       const [requestList, staffList] = await Promise.all([
         adminApi.getRequests(),
-        adminApi.getActiveStaff(), // API mới bạn cần thêm vào adminApi.js
+        adminApi.getActiveStaffLocations(),
       ]);
       setRequests(requestList);
-      setActiveStaff(staffList);
+      setActiveStaff(staffList.filter(s => s.currentLatitude && s.currentLongitude));
     } catch (err) {
       setError(getApiError(err));
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     loadData();
-    // Auto refresh vị trí staff mỗi 30 giây
-    const timer = setInterval(() => loadData(true), 30000);
-    return () => clearInterval(timer);
-  }, []);
+    const interval = setInterval(loadData, 30000);
+    return () => clearInterval(interval);
+  }, [loadData]);
 
   const filteredRequests = useMemo(() => {
-    return requests.filter((r) => {
-      const matchesSearch =
-        r.requestCode.toLowerCase().includes(filters.search.toLowerCase()) ||
-        r.customerName?.toLowerCase().includes(filters.search.toLowerCase());
-      const matchesStatus = filters.status === 'ALL' || r.status === filters.status;
-      return matchesSearch && matchesStatus;
-    });
-  }, [requests, filters]);
+    const kw = filters.search.trim().toLowerCase();
+    return requests.filter(r => 
+      (kw === '' || r.requestCode.toLowerCase().includes(kw) || r.customerName.toLowerCase().includes(kw)) &&
+      (filters.status === 'ALL' || r.status === filters.status)
+    );
+  }, [filters, requests]);
 
-  const handleAssignDirectly = async (staffId) => {
-    if (!selectedRequest) return;
-    
-    setAssigningId(selectedRequest.id);
-    setError('');
-    setNotice('');
+  const handleAutoDispatch = async (requestId) => {
+    setAssigningId(requestId);
     try {
-      // API mới: PUT /api/admin/requests/{id}/assign-staff
-      await adminApi.assignStaff(selectedRequest.id, { staffId });
-      setNotice(`Đã gán yêu cầu ${selectedRequest.requestCode} cho nhân viên thành công!`);
-      setSelectedRequest(null);
-      await loadData(true);
+      await adminApi.autoAssign(requestId);
+      setNotice(`Chế độ điều phối chuỗi đã kích hoạt cho: ${requestId}`);
+      await loadData();
     } catch (err) {
       setError(getApiError(err));
     } finally {
@@ -100,150 +88,149 @@ export default function AdminRequestsPage() {
     }
   };
 
-  if (loading) return <Loader label="Đang tải dữ liệu điều phối..." />;
+  if (loading && requests.length === 0) return <Loader label="Loading Command Center..." />;
 
   return (
-    <>
-      <PageHeader 
-        title="Điều phối Cứu hộ" 
-        subtitle="Quản lý yêu cầu và theo dõi vị trí nhân viên real-time trên bản đồ"
-      />
-
-      {notice ? <div className="notice success">{notice}</div> : null}
-      {error ? <div className="notice error">{error}</div> : null}
-
-      <div className="admin-dispatch-layout" style={{ display: 'flex', gap: '20px', height: 'calc(100vh - 200px)' }}>
-        
-        {/* CỘT TRÁI: DANH SÁCH REQUEST */}
-        <div className="request-sidebar card" style={{ width: '400px', display: 'flex', flexDirection: 'column' }}>
-          <div style={{ marginBottom: '15px' }}>
-            <input
-              type="text"
-              placeholder="Tìm mã request, khách hàng..."
-              value={filters.search}
-              onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-              style={{ width: '100%', padding: '8px', marginBottom: '10px' }}
-            />
-            <select
-              value={filters.status}
-              onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-              style={{ width: '100%', padding: '8px' }}
-            >
-              <option value="ALL">Tất cả trạng thái</option>
-              <option value="CREATED">Mới tạo (Chờ gán)</option>
-              <option value="SEARCHING">Đang tìm (Timeout gán)</option>
-              <option value="MATCHED">Đã gán (Chờ Staff xác nhận)</option>
-              <option value="IN_PROGRESS">Đang thực hiện</option>
-            </select>
-          </div>
-
-          <div className="request-items-scroll" style={{ flex: 1, overflowY: 'auto' }}>
-            {filteredRequests.length === 0 ? (
-              <p className="muted-line">Không tìm thấy yêu cầu nào.</p>
-            ) : (
-              filteredRequests.map((req) => (
-                <div 
+    <div className="admin-command-center">
+      <section style={{ height: '75vh', position: 'relative' }}>
+        <MapContainer center={[21.0285, 105.8542]} zoom={13} style={{ height: '100%', width: '100%' }}>
+          <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+          
+          {requests
+            .filter(r => r.status !== 'COMPLETED' && r.status !== 'CANCELED')
+            .map(req => (
+              req.location?.latitude && (
+                <Marker 
                   key={req.id} 
-                  className={`dispatch-item ${selectedRequest?.id === req.id ? 'active' : ''}`}
-                  onClick={() => setSelectedRequest(req)}
-                  style={{
-                    padding: '12px',
-                    borderBottom: '1px solid var(--border)',
-                    cursor: 'pointer',
-                    borderRadius: '8px',
-                    marginBottom: '8px',
-                    background: selectedRequest?.id === req.id ? 'var(--secondary)' : 'transparent'
+                  position={[req.location.latitude, req.location.longitude]} 
+                  icon={icons[req.status] || icons.CREATED}
+                  eventHandlers={{
+                    mouseover: () => setHoveredRequest(req),
+                    mouseout: () => setHoveredRequest(null)
                   }}
                 >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
-                    <strong>{req.requestCode}</strong>
-                    <StatusBadge value={req.status} />
-                  </div>
-                  <div className="muted-line" style={{ fontSize: '0.85rem' }}>
-                    👤 {req.customerName} | 🚗 {req.vehicleLabel}
-                  </div>
-                  <div className="muted-line" style={{ fontSize: '0.85rem' }}>
-                    📍 {getRequestLocationLabel(req)}
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-
-        {/* CỘT PHẢI: BẢN ĐỒ ĐIỀU PHỐI */}
-        <div className="map-container card" style={{ flex: 1, padding: '0', overflow: 'hidden', position: 'relative' }}>
-          <MapContainer center={[21.0285, 105.8542]} zoom={13} style={{ height: '100%', width: '100%' }}>
-            <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-            
-            {/* Tự động chuyển vùng bản đồ khi chọn Request */}
-            {selectedRequest && selectedRequest.location?.latitude && (
-              <MapRecenter center={[selectedRequest.location.latitude, selectedRequest.location.longitude]} />
-            )}
-
-            {/* Hiển thị Marker sự cố (Màu đỏ) */}
-            {selectedRequest && selectedRequest.location?.latitude && (
-              <Marker position={[selectedRequest.location.latitude, selectedRequest.location.longitude]}>
-                <Popup>
-                  <strong>Sự cố: {selectedRequest.requestCode}</strong> <br />
-                  Loại: {selectedRequest.incidentTypeName} <br />
-                  Ưu tiên: {selectedRequest.priorityLevel}
-                </Popup>
-                {/* Vẽ vòng tròn bán kính 5km xung quanh sự cố */}
-                <Circle 
-                  center={[selectedRequest.location.latitude, selectedRequest.location.longitude]} 
-                  radius={5000} 
-                  pathOptions={{ color: 'red', fillColor: 'red', fillOpacity: 0.1 }} 
-                />
-              </Marker>
-            )}
-
-            {/* Hiển thị tất cả Staff đang ACTIVE trên bản đồ */}
-            {activeStaff.map((staff) => (
-              <Marker 
-                key={staff.id} 
-                position={[staff.currentLatitude, staff.currentLongitude]} 
-                icon={staffIcon}
-              >
-                <Popup>
-                  <div style={{ minWidth: '150px' }}>
-                    <strong>{staff.fullName}</strong> <br />
-                    <span className="muted-line">{staff.jobTitle || 'Kỹ thuật viên'}</span> <br />
-                    SĐT: {staff.phone} <br />
-                    {selectedRequest && ['CREATED', 'SEARCHING'].includes(selectedRequest.status) && (
-                      <button 
-                        className="button button-primary" 
-                        style={{ marginTop: '10px', width: '100%' }}
-                        disabled={assigningId === selectedRequest.id}
-                        onClick={() => handleAssignDirectly(staff.id)}
-                      >
-                        {assigningId === selectedRequest.id ? 'Đang gán...' : 'Gán ca này'}
+                  <Popup>
+                    <strong>{req.requestCode}</strong><br/>
+                    <small>Note: {req.description || 'N/A'}</small><br/>
+                    {['CREATED', 'SEARCHING'].includes(req.status) && (
+                      <button className="button button-primary btn-sm" style={{marginTop: '8px'}} onClick={() => handleAutoDispatch(req.id)}>
+                        Auto Dispatch
                       </button>
                     )}
-                  </div>
-                </Popup>
-              </Marker>
+                  </Popup>
+                </Marker>
+              )
             ))}
-          </MapContainer>
 
-          {/* Overlay hiển thị thông tin request đang chọn */}
-          {selectedRequest && (
-            <div style={{ 
-              position: 'absolute', bottom: '20px', left: '20px', right: '20px', 
-              zIndex: 1000, background: 'white', padding: '15px', borderRadius: '10px',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.15)', display: 'flex', justifyContent: 'space-between', alignItems: 'center'
-            }}>
-              <div>
-                <h3 style={{ margin: 0 }}>Đang điều phối: {selectedRequest.requestCode}</h3>
-                <p style={{ margin: '5px 0 0', color: 'var(--muted)' }}>
-                  Hãy chọn một nhân viên (icon thợ sửa xe) trên bản đồ để gán việc.
-                </p>
-              </div>
-              <button className="button button-secondary" onClick={() => setSelectedRequest(null)}>Hủy chọn</button>
-            </div>
-          )}
+          {activeStaff.map(staff => (
+            <Marker key={staff.id} position={[staff.currentLatitude, staff.currentLongitude]} icon={icons.STAFF}
+              eventHandlers={{ mouseover: () => setHoveredStaff(staff), mouseout: () => setHoveredStaff(null) }}
+            >
+              <Popup><strong>{staff.fullName}</strong></Popup>
+            </Marker>
+          ))}
+        </MapContainer>
+
+        {/* HOVER CARDS */}
+        {hoveredStaff && (
+          <div className="hover-card staff-side">
+            <h4>{hoveredStaff.fullName}</h4>
+            <p className="staff-id">Staff ID: {hoveredStaff.id}</p>
+            <p><strong>JobTitle:</strong> {hoveredStaff.jobTitle}</p>
+            <p className="status">● ACTIVE</p>
+          </div>
+        )}
+
+        {hoveredRequest && (
+          <div className="hover-card request-side">
+            <h4>{hoveredRequest.requestCode}</h4>
+            <p><StatusBadge value={hoveredRequest.status} /></p>
+            <p><strong>Customer:</strong> {hoveredRequest.customerName}</p>
+            <p className="note-text"><strong>Note:</strong> {hoveredRequest.description || 'N/A'}</p>
+            {hoveredRequest.status === 'MATCHED' && <p className="timer">⏳ Timeout: {hoveredRequest.timeoutSeconds}s</p>}
+          </div>
+        )}
+      </section>
+
+      {/* --- EXPLANATION LEGEND (OUTSIDE MAP) --- */}
+      <div className="map-legend">
+        <div className="legend-item">
+          <img src="https://cdn-icons-png.flaticon.com/512/179/179386.png" alt="new" />
+          <span>New/Searching</span>
+        </div>
+        <div className="legend-item">
+          <img src="https://cdn-icons-png.flaticon.com/512/3582/3582012.png" alt="matched" />
+          <span>Pending Staff Response</span>
+        </div>
+        <div className="legend-item">
+          <img src="https://cdn-icons-png.flaticon.com/512/11529/11529555.png" alt="accepted" />
+          <span>Staff Accepted</span>
+        </div>
+        <div className="legend-item">
+          <img src="https://cdn-icons-png.flaticon.com/512/1013/1013374.png" alt="progress" />
+          <span>Rescue In Progress</span>
+        </div>
+        <div className="legend-item">
+          <img src="https://cdn-icons-png.flaticon.com/512/1995/1995562.png" alt="staff" />
+          <span>Available Staff</span>
         </div>
       </div>
-    </>
+
+      <section style={{ padding: '20px', background: '#fff' }}>
+        <PageHeader title="Dispatcher Command Center" subtitle="Real-time monitoring and chaining dispatch." />
+        {notice && <div className="notice success">{notice}</div>}
+        {error && <div className="notice error">{error}</div>}
+        
+        <div className="card">
+          <div className="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Code</th><th>Customer</th><th>Incident</th><th>Note</th><th>Status</th><th>Action</th><th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredRequests.map((request) => (
+                  <tr key={request.id}>
+                    <td><strong>{request.requestCode}</strong></td>
+                    <td>{request.customerName}</td>
+                    <td>{request.incidentTypeName}</td>
+                    <td className="note-cell">{request.description || 'N/A'}</td>
+                    <td><StatusBadge value={request.status} /></td>
+                    <td>
+                      {['CREATED', 'SEARCHING'].includes(request.status) ? (
+                        <button className="button button-primary btn-sm" onClick={() => handleAutoDispatch(request.id)}>Auto</button>
+                      ) : <span className="muted-line italic">{request.status === 'MATCHED' ? `Wait(${request.timeoutSeconds}s)` : 'Assigned'}</span>}
+                    </td>
+                    <td><Link className="button button-secondary" to={`/requests/${request.id}`}>View</Link></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <style>{`
+        .map-legend {
+          display: flex; justify-content: center; gap: 25px; 
+          padding: 15px; background: #f8f9fa; border-bottom: 1px solid #ddd;
+        }
+        .legend-item { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; font-weight: 500; color: #444; }
+        .legend-item img { width: 22px; height: 22px; }
+        
+        .hover-card {
+          position: absolute; z-index: 1000; background: white; padding: 15px;
+          border-radius: 10px; box-shadow: 0 5px 20px rgba(0,0,0,0.15); width: 240px;
+        }
+        .staff-side { top: 20px; right: 20px; border-top: 4px solid #3498db; }
+        .request-side { top: 20px; left: 20px; border-top: 4px solid #f1c40f; }
+        
+        .status { color: #2ecc71; font-weight: bold; font-size: 0.75rem; }
+        .timer { color: #e67e22; font-weight: bold; }
+        .note-cell { max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.8rem; color: #666; }
+        .btn-sm { padding: 4px 10px; font-size: 0.8rem; }
+      `}</style>
+    </div>
   );
 }

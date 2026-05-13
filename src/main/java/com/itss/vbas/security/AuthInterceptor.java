@@ -27,11 +27,23 @@ public class AuthInterceptor implements HandlerInterceptor {
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
+
+        String path = request.getRequestURI();
+
+        // Cho phép các API public
+        if (path.startsWith("/api/auth/login") ||
+                path.startsWith("/api/auth/register") ||
+                path.startsWith("/api/auth/forgot-password") ||
+                path.startsWith("/api/auth/reset-password")) {
+            return true;
+        }
+
         if (!"OPTIONS".equalsIgnoreCase(request.getMethod())) {
             CurrentUser currentUser = resolveCurrentUser(request);
             CurrentUserHolder.set(currentUser);
             enforceAuthorization(handler, currentUser);
         }
+
         return true;
     }
 

@@ -37,6 +37,7 @@ public final class RequestDto {
             String incidentTypeName,
             String serviceTypeName,
             String locationLabel,
+            CommonDto.AddressResponse location,
             String vehicleLabel,
             String imageUrl,
             String customerName,
@@ -161,6 +162,46 @@ public final class RequestDto {
             Integer ratingScore,
             String comment,
             LocalDateTime createdAt
+    ) {
+    }
+
+    public record TrackingPointResponse(
+            BigDecimal latitude,
+            BigDecimal longitude,
+            String label
+    ) {
+    }
+
+    public record TrackingStaffResponse(
+            Long id,
+            String name,
+            String phone,
+            String jobTitle,
+            Double rating,
+            TrackingPointResponse location
+    ) {
+    }
+
+    public record TrackingVehicleResponse(
+            Long id,
+            String vehicleCode,
+            String vehicleType,
+            String plateNumber
+    ) {
+    }
+
+    public record TrackingResponse(
+            Long requestId,
+            String requestStatus,
+            boolean assigned,
+            boolean hasDestination,
+            TrackingPointResponse destination,
+            TrackingStaffResponse staff,
+            TrackingVehicleResponse vehicle,
+            List<TrackingPointResponse> route,
+            String movementStatus,
+            Integer etaMinutes,
+            LocalDateTime updatedAt
     ) {
     }
 

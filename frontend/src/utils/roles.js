@@ -28,6 +28,7 @@ export function getMenuItems(roleName) {
         { to: '/admin/accounts', label: 'Accounts' },
         { to: '/admin/roles', label: 'Roles' },
         { to: '/admin/companies', label: 'Companies' },
+        { to: '/admin/company-staff', label: 'Company Staff' },
         { to: '/admin/incident-types', label: 'Incident Types' },
         { to: '/admin/service-types', label: 'Service Types' },
         { to: '/profile', label: 'My Profile' },
