@@ -67,6 +67,12 @@ public class RequestController {
         return ResponseEntity.ok(CommonDto.ApiResponse.success("Request detail fetched successfully", rescueRequestService.getRequestDetail(id)));
     }
 
+    @RequireAuth
+    @GetMapping("/{id}/tracking")
+    public ResponseEntity<CommonDto.ApiResponse<RequestDto.TrackingResponse>> getRequestTracking(@PathVariable Long id) {
+        return ResponseEntity.ok(CommonDto.ApiResponse.success("Request tracking fetched successfully", rescueRequestService.getRequestTracking(id)));
+    }
+
     @RequiredRoles(RoleName.CUSTOMER)
     @PutMapping("/{id}/cancel")
     public ResponseEntity<CommonDto.ApiResponse<Void>> cancelRequest(
