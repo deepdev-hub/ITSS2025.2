@@ -3,9 +3,11 @@ package com.itss.vbas.service.impl;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import com.itss.vbas.dto.common.CommonDto;
 import com.itss.vbas.dto.company.CompanyDto;
 import com.itss.vbas.dto.request.RequestDto;
 import com.itss.vbas.entity.Account;
+import com.itss.vbas.entity.Address;
 import com.itss.vbas.entity.RequestAssignment;
 import com.itss.vbas.entity.RescueCompany;
 import com.itss.vbas.entity.RescueRequest;
@@ -29,8 +31,7 @@ import com.itss.vbas.repository.RescueStaffRepository;
 import com.itss.vbas.repository.RescueVehicleRepository;
 import com.itss.vbas.repository.RoleRepository;
 import com.itss.vbas.security.AuthContext;
-import com.itss.vbas.service.AddressService;
-import com.itss.vbas.service.AssignmentTimeoutService;
+import com.itss.vbas.service.AddressService; // Đã thêm import AddressService
 import com.itss.vbas.service.CompanyService;
 import com.itss.vbas.service.RequestSupportService;
 import com.itss.vbas.util.PasswordUtil;
@@ -48,8 +49,8 @@ public class CompanyServiceImpl implements CompanyService {
     private final RequestAssignmentRepository requestAssignmentRepository;
     private final AccountRepository accountRepository;
     private final RoleRepository roleRepository;
+    private final AddressService addressService; // Đã khôi phục AddressService
     private final RequestSupportService requestSupportService;
-    private final AssignmentTimeoutService assignmentTimeoutService;
     private final AuthContext authContext;
     private final AppMapper appMapper;
 
@@ -61,8 +62,8 @@ public class CompanyServiceImpl implements CompanyService {
             RequestAssignmentRepository requestAssignmentRepository,
             AccountRepository accountRepository,
             RoleRepository roleRepository,
+            AddressService addressService, // Đã khôi phục AddressService
             RequestSupportService requestSupportService,
-            AssignmentTimeoutService assignmentTimeoutService,
             AuthContext authContext,
             AppMapper appMapper
     ) {
@@ -73,8 +74,8 @@ public class CompanyServiceImpl implements CompanyService {
         this.requestAssignmentRepository = requestAssignmentRepository;
         this.accountRepository = accountRepository;
         this.roleRepository = roleRepository;
+        this.addressService = addressService; // Đã gán giá trị
         this.requestSupportService = requestSupportService;
-        this.assignmentTimeoutService = assignmentTimeoutService;
         this.authContext = authContext;
         this.appMapper = appMapper;
     }
@@ -103,7 +104,7 @@ public class CompanyServiceImpl implements CompanyService {
         RescueCompany company = getCurrentCompany();
         return rescueStaffRepository.findByCompanyIdOrderByIdDesc(company.getId())
                 .stream()
-                .map(appMapper::toStaffResponse)
+                .map(appMapper::toStaffResponse) // Rút gọn lại cực kỳ sạch sẽ
                 .toList();
     }
 
@@ -207,11 +208,7 @@ public class CompanyServiceImpl implements CompanyService {
         RescueCompany company = getCurrentCompany();
         return rescueRequestRepository.findAssignedRequestsByCompanyId(company.getId())
                 .stream()
-                .map(request -> appMapper.toRequestSummaryResponse(
-                        request,
-                        company,
-                        requestSupportService.getLatestAssignment(request)
-                ))
+                .map(request -> appMapper.toRequestSummaryResponse(request, company,null))
                 .toList();
     }
 
@@ -237,13 +234,8 @@ public class CompanyServiceImpl implements CompanyService {
                         .request(rescueRequest)
                         .company(company)
                         .assignedByUser(account)
-                        .assignedAt(LocalDateTime.now())
                         .status(AssignmentStatus.PENDING)
                         .build());
-        assignment = assignmentTimeoutService.expireIfPendingTimedOut(assignment);
-        if (assignment.getStatus() == AssignmentStatus.REJECTED) {
-            throw new BadRequestException("This assignment has timed out and can no longer be accepted");
-        }
 
         assignment.setAssignedByUser(account);
         assignment.setStaff(staff);
@@ -325,6 +317,43 @@ public class CompanyServiceImpl implements CompanyService {
             return RescueVehicleStatus.valueOf(value.trim().toUpperCase());
         } catch (Exception ex) {
             throw new BadRequestException("Invalid rescue vehicle status: " + value);
+        }
+    }
+
+    @Override
+    public void updateStaffLocation(CompanyDto.LocationUpdateRequest request) {
+        Account account = authContext.getCurrentAccount(); 
+
+        Address currentAddress = account.getDefaultAddress(); 
+        
+        if(currentAddress == null){
+            CommonDto.AddressRequest newAddressReq = new CommonDto.AddressRequest(
+                null, 
+                null, 
+                null, 
+                null, 
+                null, 
+                null, 
+                request.latitude(), 
+                request.longitude()
+            );
+            Address savedAddress = addressService.createAddress(newAddressReq);
+
+            account.setDefaultAddress(savedAddress);
+            accountRepository.save(account);
+        } else {
+            CommonDto.AddressRequest updateReq = new CommonDto.AddressRequest(
+                currentAddress.getCountry(),
+                currentAddress.getProvince(),
+                currentAddress.getDistrict(),
+                currentAddress.getWard(),
+                currentAddress.getStreet(),
+                currentAddress.getDetail(),
+                request.latitude(),
+                request.longitude()
+            );
+
+            addressService.updateAddress(currentAddress, updateReq);
         }
     }
 }

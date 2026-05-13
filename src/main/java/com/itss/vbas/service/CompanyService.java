@@ -31,4 +31,6 @@ public interface CompanyService {
     RequestDto.AssignmentResponse assignStaffAndVehicle(Long requestId, RequestDto.AssignmentRequest request);
 
     List<RequestDto.AssignmentResponse> getMyStaffAssignments();
+
+    void updateStaffLocation(CompanyDto.LocationUpdateRequest request);
 }

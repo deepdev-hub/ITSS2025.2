@@ -186,15 +186,27 @@ public class AppMapper {
     }
 
     public CompanyDto.StaffResponse toStaffResponse(RescueStaff staff) {
+        // 1. Lấy tọa độ an toàn
+        java.math.BigDecimal lat = null;
+        java.math.BigDecimal lng = null;
+        
+        if (staff.getUser() != null && staff.getUser().getDefaultAddress() != null) {
+            lat = staff.getUser().getDefaultAddress().getLatitude();
+            lng = staff.getUser().getDefaultAddress().getLongitude();
+        }
+
+        // 2. Trả về đúng 11 tham số theo định nghĩa
         return new CompanyDto.StaffResponse(
                 staff.getId(),
-                staff.getUser().getId(),
-                staff.getCompany().getId(),
-                staff.getUser().getFullName(),
-                staff.getUser().getEmail(),
-                staff.getUser().getPhone(),
+                staff.getUser() != null ? staff.getUser().getId() : null,
+                staff.getCompany() != null ? staff.getCompany().getId() : null,
+                staff.getUser() != null ? staff.getUser().getFullName() : null,
+                staff.getUser() != null ? staff.getUser().getEmail() : null,
+                staff.getUser() != null ? staff.getUser().getPhone() : null,
                 staff.getJobTitle(),
-                staff.getStatus().name()
+                staff.getStatus() != null ? staff.getStatus().name() : null,
+                lat, // Bạn bị thiếu trường này
+                lng  // Bạn bị thiếu trường này
         );
     }
 
@@ -322,6 +334,7 @@ public class AppMapper {
                 request.getIncidentType().getIncidentName(),
                 request.getServiceType() == null ? null : request.getServiceType().getServiceName(),
                 request.getLocation() == null ? null : buildFullAddress(request.getLocation()),
+                toAddressResponse(request.getLocation()), // location (AddressResponse)
                 request.getVehicle() == null ? null : request.getVehicle().getBrand() + " " + request.getVehicle().getModel() + " - " + request.getVehicle().getPlateNumber(),
                 request.getImageUrl(),
                 request.getCustomer().getFullName(),

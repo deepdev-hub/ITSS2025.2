@@ -37,6 +37,7 @@ public final class RequestDto {
             String incidentTypeName,
             String serviceTypeName,
             String locationLabel,
+            CommonDto.AddressResponse location,
             String vehicleLabel,
             String imageUrl,
             String customerName,

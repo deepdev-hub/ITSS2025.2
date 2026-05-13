@@ -20,4 +20,9 @@ export const companyApi = {
   getDashboard: () => unwrap(apiClient.get('/api/companies/dashboard')),
   getStaffDashboard: () => unwrap(apiClient.get('/api/companies/staff/me/dashboard')),
   getMyAssignments: () => unwrap(apiClient.get('/api/companies/staff/me/assignments')),
+  updateMyLocation: (payload) => unwrap(apiClient.put('/api/companies/staff/me/location', payload)),
+
+  //Accept or Reject Request
+  acceptAssignment: (assignmentId) => unwrap(apiClient.put(`/api/requests/assignments/${assignmentId}/accept`)),
+  rejectAssignment: (assignmentId) => unwrap(apiClient.put(`/api/requests/assignments/${assignmentId}/reject`)),
 };
