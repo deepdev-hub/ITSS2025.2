@@ -16,4 +16,9 @@ export const authApi = {
     .then((response) => response.data?.data ?? response.data),
   getIncidentTypes: () => unwrap(apiClient.get('/api/auth/lookups/incident-types')),
   getServiceTypes: () => unwrap(apiClient.get('/api/auth/lookups/service-types')),
+  uploadAvatar: (formData) => unwrap(apiClient.post('/api/auth/upload-avatar', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  })),
 };
