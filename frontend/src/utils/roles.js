@@ -28,6 +28,7 @@ export function getMenuItems(roleName) {
         { to: '/admin/accounts', label: 'Accounts' },
         { to: '/admin/roles', label: 'Roles' },
         { to: '/admin/companies', label: 'Companies' },
+        { to: '/admin/company-staff', label: 'Company Staff' },
         { to: '/admin/incident-types', label: 'Incident Types' },
         { to: '/admin/service-types', label: 'Service Types' },
         { to: '/profile', label: 'My Profile' },
@@ -44,6 +45,7 @@ export function getMenuItems(roleName) {
     case ROLES.RESCUE_STAFF:
       return [
         { to: '/staff/dashboard', label: 'Dashboard' },
+        { to: '/staff/location', label: 'Location Setting' },
         { to: '/staff/assignments', label: 'My Assignments' },
         { to: '/profile', label: 'My Profile' },
       ];

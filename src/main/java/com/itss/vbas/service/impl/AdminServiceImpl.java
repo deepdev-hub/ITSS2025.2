@@ -3,6 +3,7 @@ package com.itss.vbas.service.impl;
 import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import com.itss.vbas.dto.admin.AdminDto;
 import com.itss.vbas.dto.common.CommonDto;
@@ -11,23 +12,29 @@ import com.itss.vbas.dto.request.RequestDto;
 import com.itss.vbas.entity.Account;
 import com.itss.vbas.entity.IncidentType;
 import com.itss.vbas.entity.RequestAssignment;
+import com.itss.vbas.entity.RequestStatusHistory;
 import com.itss.vbas.entity.RescueCompany;
 import com.itss.vbas.entity.RescueRequest;
+import com.itss.vbas.entity.RescueStaff;
 import com.itss.vbas.entity.Role;
 import com.itss.vbas.entity.ServiceType;
+import com.itss.vbas.entity.Address;
 import com.itss.vbas.enums.AccountStatus;
 import com.itss.vbas.enums.AssignmentStatus;
 import com.itss.vbas.enums.CompanyStatus;
 import com.itss.vbas.enums.RescueRequestStatus;
 import com.itss.vbas.enums.RoleName;
+import com.itss.vbas.enums.StaffStatus;
 import com.itss.vbas.exception.BadRequestException;
 import com.itss.vbas.exception.ResourceNotFoundException;
 import com.itss.vbas.mapper.AppMapper;
 import com.itss.vbas.repository.AccountRepository;
 import com.itss.vbas.repository.IncidentTypeRepository;
 import com.itss.vbas.repository.RequestAssignmentRepository;
+import com.itss.vbas.repository.RequestStatusHistoryRepository;
 import com.itss.vbas.repository.RescueCompanyRepository;
 import com.itss.vbas.repository.RescueRequestRepository;
+import com.itss.vbas.repository.RescueStaffRepository;
 import com.itss.vbas.repository.RoleRepository;
 import com.itss.vbas.repository.ServiceTypeRepository;
 import com.itss.vbas.security.AuthContext;
@@ -55,6 +62,8 @@ public class AdminServiceImpl implements AdminService {
     private final AssignmentTimeoutService assignmentTimeoutService;
     private final AuthContext authContext;
     private final AppMapper appMapper;
+    private final RescueStaffRepository rescueStaffRepository;
+    private final RequestStatusHistoryRepository requestStatusHistoryRepository;
 
     public AdminServiceImpl(
             AccountRepository accountRepository,
@@ -62,8 +71,10 @@ public class AdminServiceImpl implements AdminService {
             IncidentTypeRepository incidentTypeRepository,
             ServiceTypeRepository serviceTypeRepository,
             RescueCompanyRepository rescueCompanyRepository,
+            RescueStaffRepository rescueStaffRepository,
             RescueRequestRepository rescueRequestRepository,
             RequestAssignmentRepository requestAssignmentRepository,
+            RequestStatusHistoryRepository requestStatusHistoryRepository,
             AddressService addressService,
             RequestSupportService requestSupportService,
             AssignmentTimeoutService assignmentTimeoutService,
@@ -75,8 +86,10 @@ public class AdminServiceImpl implements AdminService {
         this.incidentTypeRepository = incidentTypeRepository;
         this.serviceTypeRepository = serviceTypeRepository;
         this.rescueCompanyRepository = rescueCompanyRepository;
+        this.rescueStaffRepository = rescueStaffRepository;
         this.rescueRequestRepository = rescueRequestRepository;
         this.requestAssignmentRepository = requestAssignmentRepository;
+        this.requestStatusHistoryRepository = requestStatusHistoryRepository;
         this.addressService = addressService;
         this.requestSupportService = requestSupportService;
         this.assignmentTimeoutService = assignmentTimeoutService;
@@ -156,6 +169,23 @@ public class AdminServiceImpl implements AdminService {
         Account account = findAccount(id);
         account.setStatus(AccountStatus.INACTIVE);
         accountRepository.save(account);
+    }
+
+    @Override
+    public AdminDto.AccountResponse blockAccount(Long id) {
+        Account account = findAccount(id);
+        if (account.getId().equals(authContext.getCurrentAccount().getId())) {
+            throw new BadRequestException("You cannot block your own account");
+        }
+        account.setStatus(AccountStatus.BANNED);
+        return appMapper.toAdminAccountResponse(accountRepository.save(account));
+    }
+
+    @Override
+    public AdminDto.AccountResponse unblockAccount(Long id) {
+        Account account = findAccount(id);
+        account.setStatus(AccountStatus.ACTIVE);
+        return appMapper.toAdminAccountResponse(accountRepository.save(account));
     }
 
     @Override
@@ -335,6 +365,69 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     @Transactional(readOnly = true)
+    public List<CompanyDto.StaffResponse> getCompanyStaff(Long companyId) {
+        findCompany(companyId);
+        return rescueStaffRepository.findByCompanyIdOrderByIdDesc(companyId)
+                .stream()
+                .map(appMapper::toStaffResponse)
+                .toList();
+    }
+
+    @Override
+    public CompanyDto.StaffResponse createCompanyStaff(Long companyId, CompanyDto.StaffRequest request) {
+        RescueCompany company = findCompany(companyId);
+        RescueStaff staff = RescueStaff.builder()
+                .company(company)
+                .jobTitle(request.jobTitle())
+                .status(parseStaffStatus(request.status()))
+                .user(resolveStaffAccount(request))
+                .build();
+        return appMapper.toStaffResponse(rescueStaffRepository.save(staff));
+    }
+
+    @Override
+    public CompanyDto.StaffResponse updateCompanyStaff(Long companyId, Long staffId, CompanyDto.StaffRequest request) {
+        findCompany(companyId);
+        RescueStaff staff = rescueStaffRepository.findByIdAndCompanyId(staffId, companyId)
+                .orElseThrow(() -> new ResourceNotFoundException("Staff not found with id: " + staffId));
+        Account user = staff.getUser();
+
+        if (request.email() != null && !request.email().isBlank()
+                && !request.email().equalsIgnoreCase(user.getEmail())
+                && accountRepository.existsByEmailIgnoreCase(request.email())) {
+            throw new BadRequestException("Email is already in use");
+        }
+
+        if (request.email() != null && !request.email().isBlank()) {
+            user.setEmail(request.email().trim().toLowerCase());
+        }
+        if (request.fullName() != null && !request.fullName().isBlank()) {
+            user.setFullName(request.fullName());
+        }
+        user.setPhone(request.phone());
+        if (request.password() != null && !request.password().isBlank()) {
+            user.setPasswordHash(PasswordUtil.hash(request.password()));
+        }
+        accountRepository.save(user);
+
+        staff.setJobTitle(request.jobTitle());
+        staff.setStatus(parseStaffStatus(request.status()));
+        return appMapper.toStaffResponse(rescueStaffRepository.save(staff));
+    }
+
+    @Override
+    public void deleteCompanyStaff(Long companyId, Long staffId) {
+        findCompany(companyId);
+        RescueStaff staff = rescueStaffRepository.findByIdAndCompanyId(staffId, companyId)
+                .orElseThrow(() -> new ResourceNotFoundException("Staff not found with id: " + staffId));
+        Account user = staff.getUser();
+        user.setStatus(AccountStatus.INACTIVE);
+        accountRepository.save(user);
+        rescueStaffRepository.delete(staff);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<RequestDto.RequestSummaryResponse> getAllRequests() {
         return rescueRequestRepository.findAll()
                 .stream()
@@ -348,38 +441,142 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
-    public RequestDto.AssignmentResponse assignCompany(Long requestId, AdminDto.AssignCompanyRequest request) {
-        Account currentAdmin = authContext.getCurrentAccount();
+    public RequestDto.AssignmentResponse assignStaff(Long requestId, AdminDto.AssignStaffRequest request) {
         RescueRequest rescueRequest = rescueRequestRepository.findById(requestId)
                 .orElseThrow(() -> new ResourceNotFoundException("Rescue request not found with id: " + requestId));
-        if (rescueRequest.getStatus() == RescueRequestStatus.COMPLETED || rescueRequest.getStatus() == RescueRequestStatus.CANCELED) {
-            throw new BadRequestException("Cannot assign company for a completed or canceled request");
-        }
-        RequestAssignment latestAssignment = requestSupportService.getLatestAssignment(rescueRequest);
-        latestAssignment = assignmentTimeoutService.expireIfPendingTimedOut(latestAssignment);
-        if (latestAssignment != null && latestAssignment.getStatus() == AssignmentStatus.PENDING) {
-            throw new BadRequestException("Current assignment is still pending until " + assignmentTimeoutService.getExpiresAt(latestAssignment));
-        }
-        if (latestAssignment != null
-                && (latestAssignment.getStatus() == AssignmentStatus.ACCEPTED || latestAssignment.getStatus() == AssignmentStatus.COMPLETED)) {
-            throw new BadRequestException("Cannot re-assign a request after the company accepted it");
+
+        RescueStaff staff = rescueStaffRepository.findById(request.staffId())
+                .orElseThrow(() -> new ResourceNotFoundException("Staff not found with id: " + request.staffId()));
+
+        if (staff.getStatus() != StaffStatus.ACTIVE) {
+            throw new BadRequestException("Nhân viên hiện không sẵn sàng (OFFLINE hoặc BUSY)");
         }
 
-        RescueCompany company = findCompany(request.companyId());
-        if (company.getStatus() != CompanyStatus.APPROVED) {
-            throw new BadRequestException("Only approved companies can be assigned");
-        }
+        // Lấy trực tiếp Company từ Staff thay vì qua request.companyId()
+        RescueCompany company = staff.getCompany();
 
         RequestAssignment assignment = RequestAssignment.builder()
                 .request(rescueRequest)
                 .company(company)
-                .assignedByUser(currentAdmin)
-                .assignedAt(LocalDateTime.now())
+                .staff(staff)
+                .assignedByUser(authContext.getCurrentAccount())
                 .status(AssignmentStatus.PENDING)
                 .build();
+
         RequestAssignment savedAssignment = requestAssignmentRepository.save(assignment);
-        requestSupportService.changeRequestStatus(rescueRequest, RescueRequestStatus.MATCHED, currentAdmin, request.note());
+
+        RescueRequestStatus oldStatus = rescueRequest.getStatus();
+        rescueRequest.setStatus(RescueRequestStatus.MATCHED);
+        rescueRequestRepository.save(rescueRequest);
+
+        String historyNote = defaultIfBlank(request.note(), 
+                "Admin gán trực tiếp cho nhân viên: " + staff.getUser().getFullName());
+
+        requestStatusHistoryRepository.save(RequestStatusHistory.builder()
+                .request(rescueRequest)
+                .oldStatus(oldStatus)
+                .newStatus(RescueRequestStatus.MATCHED)
+                .changedByUser(authContext.getCurrentAccount())
+                .note(historyNote)
+                .build());
+
         return appMapper.toAssignmentResponse(savedAssignment);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<CompanyDto.StaffResponse> getActiveStaffLocations() {
+        return rescueStaffRepository.findAll().stream()
+                .filter(s -> s.getStatus() == StaffStatus.ACTIVE)
+                .map(appMapper::toStaffResponse)
+                .toList();
+    }
+
+    // Logic tự động điều phối Staff
+    @Override
+    public RequestDto.AssignmentResponse autoAssignNearestStaff(Long requestId) {
+        RescueRequest rescueRequest = rescueRequestRepository.findById(requestId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy yêu cầu ID: " + requestId));
+
+        if (rescueRequest.getLocation() == null || 
+            rescueRequest.getLocation().getLatitude() == null || 
+            rescueRequest.getLocation().getLongitude() == null) {
+            throw new BadRequestException("Yêu cầu không có tọa độ GPS hợp lệ.");
+        }
+
+        // Lấy danh sách ID nhân viên đã từng được gán cho ca này (để loại trừ)
+        List<Long> previousStaffIds = requestAssignmentRepository.findByRequestId(requestId).stream()
+                .map(a -> a.getStaff().getId())
+                .collect(Collectors.toList());
+
+        double reqLat = rescueRequest.getLocation().getLatitude().doubleValue();
+        double reqLng = rescueRequest.getLocation().getLongitude().doubleValue();
+
+        // Lọc nhân viên: ACTIVE và CHƯA TỪNG được gán cho yêu cầu này
+        List<RescueStaff> candidates = rescueStaffRepository.findAll().stream()
+                .filter(s -> s.getStatus() == StaffStatus.ACTIVE)
+                .filter(s -> !previousStaffIds.contains(s.getId()))
+                .collect(Collectors.toList());
+
+        RescueStaff nearestStaff = null;
+        double minDistance = Double.MAX_VALUE;
+
+        for (RescueStaff staff : candidates) {
+            Address staffAddr = staff.getUser().getDefaultAddress();
+            if (staffAddr != null && staffAddr.getLatitude() != null && staffAddr.getLongitude() != null) {
+                double staffLat = staffAddr.getLatitude().doubleValue();
+                double staffLng = staffAddr.getLongitude().doubleValue();
+
+                double distance = calculateDistance(reqLat, reqLng, staffLat, staffLng);
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    nearestStaff = staff;
+                }
+            }
+        }
+
+        if (nearestStaff == null) {
+            // Không tìm thấy ai mới, chuyển request về trạng thái chờ tìm kiếm thủ công
+            rescueRequest.setStatus(RescueRequestStatus.SEARCHING);
+            rescueRequestRepository.save(rescueRequest);
+            return null;
+        }
+
+        // Tạo bản ghi gán việc mới
+        RequestAssignment assignment = RequestAssignment.builder()
+                .request(rescueRequest)
+                .company(nearestStaff.getCompany())
+                .staff(nearestStaff)
+                .assignedByUser(authContext.getCurrentAccount())
+                .status(AssignmentStatus.PENDING)
+                .assignedAt(LocalDateTime.now())
+                .build();
+
+        RequestAssignment saved = requestAssignmentRepository.save(assignment);
+
+        RescueRequestStatus oldStatus = rescueRequest.getStatus();
+        rescueRequest.setStatus(RescueRequestStatus.MATCHED);
+        rescueRequestRepository.save(rescueRequest);
+
+        requestStatusHistoryRepository.save(RequestStatusHistory.builder()
+                .request(rescueRequest)
+                .oldStatus(oldStatus)
+                .newStatus(RescueRequestStatus.MATCHED)
+                .changedByUser(authContext.getCurrentAccount())
+                .note("Hệ thống tự động gán nhân viên gần nhất: " + nearestStaff.getUser().getFullName())
+                .build());
+
+        return appMapper.toAssignmentResponse(saved);
+    }
+
+    private double calculateDistance(double lat1, double lon1, double lat2, double lon2) {
+        double R = 6371; 
+        double dLat = Math.toRadians(lat2 - lat1);
+        double dLon = Math.toRadians(lon2 - lon1);
+        double a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                   Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2)) *
+                   Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     }
 
     private Account findAccount(Long id) {
@@ -408,6 +605,38 @@ public class AdminServiceImpl implements AdminService {
         return ownerAccount;
     }
 
+    private Account resolveStaffAccount(CompanyDto.StaffRequest request) {
+        if (request.userId() != null) {
+            Account existingAccount = findAccount(request.userId());
+            if (existingAccount.getRole().getRoleName() != RoleName.RESCUE_STAFF) {
+                throw new BadRequestException("Existing account must have role RESCUE_STAFF");
+            }
+            if (rescueStaffRepository.findByUserId(existingAccount.getId()).isPresent()) {
+                throw new BadRequestException("This account is already linked to another rescue staff profile");
+            }
+            existingAccount.setStatus(AccountStatus.ACTIVE);
+            return existingAccount;
+        }
+
+        if (request.email() == null || request.email().isBlank()
+                || request.password() == null || request.password().isBlank()
+                || request.fullName() == null || request.fullName().isBlank()) {
+            throw new BadRequestException("email, password, and fullName are required when creating a new staff account");
+        }
+        if (accountRepository.existsByEmailIgnoreCase(request.email())) {
+            throw new BadRequestException("Email is already in use");
+        }
+
+        return accountRepository.save(Account.builder()
+                .email(request.email().trim().toLowerCase())
+                .passwordHash(PasswordUtil.hash(request.password()))
+                .fullName(request.fullName())
+                .phone(request.phone())
+                .status(AccountStatus.ACTIVE)
+                .role(getOrCreateRole(RoleName.RESCUE_STAFF))
+                .build());
+    }
+
     private RoleName parseRoleName(String value) {
         try {
             return RoleName.valueOf(value.trim().toUpperCase());
@@ -429,6 +658,14 @@ public class AdminServiceImpl implements AdminService {
             return CompanyStatus.valueOf(value.trim().toUpperCase());
         } catch (Exception ex) {
             throw new BadRequestException("Invalid company status: " + value);
+        }
+    }
+
+    private StaffStatus parseStaffStatus(String value) {
+        try {
+            return StaffStatus.valueOf(value.trim().toUpperCase());
+        } catch (Exception ex) {
+            throw new BadRequestException("Invalid staff status: " + value);
         }
     }
 

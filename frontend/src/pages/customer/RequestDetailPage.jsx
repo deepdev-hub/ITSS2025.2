@@ -7,6 +7,7 @@ import Countdown from '../../components/common/Countdown';
 import Loader from '../../components/common/Loader';
 import PageHeader from '../../components/common/PageHeader';
 import StatusBadge from '../../components/common/StatusBadge';
+import RequestTrackingMap from '../../components/requests/RequestTrackingMap';
 import {
   canCustomerCancel,
   formatCurrency,
@@ -480,6 +481,8 @@ export default function RequestDetailPage() {
           </div>
         )}
       />
+
+      {isCustomer ? <RequestTrackingMap requestId={id} /> : null}
 
       {notice ? <div className="notice">{notice}</div> : null}
       {error ? <div className="notice error">{error}</div> : null}

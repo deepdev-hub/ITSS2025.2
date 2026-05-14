@@ -4,6 +4,7 @@ export const requestApi = {
   createRequest: (payload) => unwrap(apiClient.post('/api/requests', payload)),
   getMyRequests: () => unwrap(apiClient.get('/api/requests/my')),
   getRequestDetail: (id) => unwrap(apiClient.get(`/api/requests/${id}`)),
+  getRequestTracking: (id) => unwrap(apiClient.get(`/api/requests/${id}/tracking`)),
   cancelRequest: (id, payload) => unwrap(apiClient.put(`/api/requests/${id}/cancel`, payload)),
   updateStatus: (id, payload) => unwrap(apiClient.put(`/api/requests/${id}/status`, payload)),
   getHistory: (id) => unwrap(apiClient.get(`/api/requests/${id}/history`)),

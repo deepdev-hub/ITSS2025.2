@@ -280,6 +280,36 @@ export default function AdminAccountsPage() {
     }
   };
 
+  const handleBlockToggle = async (account) => {
+    const isBlocked = account.status === 'BANNED';
+    const message = isBlocked ? 'Unblock this account?' : 'Block this account?';
+    if (!window.confirm(message)) {
+      return;
+    }
+    setActionAccountId(account.id);
+    setError('');
+    setNotice('');
+    try {
+      let updatedAccount;
+      if (isBlocked) {
+        updatedAccount = await adminApi.unblockAccount(account.id);
+        setNotice('Account unblocked successfully');
+      } else {
+        updatedAccount = await adminApi.blockAccount(account.id);
+        setNotice('Account blocked successfully');
+      }
+      if (editingId === account.id) {
+        setSelectedAccount(updatedAccount);
+        setForm(toForm(updatedAccount, defaultRole));
+      }
+      await loadData();
+    } catch (err) {
+      setError(getApiError(err));
+    } finally {
+      setActionAccountId(null);
+    }
+  };
+
   return (
     <>
       <PageHeader title="Accounts" subtitle="Search, filter, edit, and quickly activate or deactivate accounts with full profile fields and default address support." />
@@ -484,6 +514,14 @@ export default function AdminAccountsPage() {
                           <div className="actions-stack">
                             <button className="button button-secondary" type="button" onClick={() => handleEdit(account.id)}>
                               Open detail
+                            </button>
+                            <button
+                              className="button button-secondary"
+                              type="button"
+                              disabled={actionAccountId === account.id}
+                              onClick={() => handleBlockToggle(account)}
+                            >
+                              {account.status === 'BANNED' ? 'Unblock' : 'Block'}
                             </button>
                             {account.status === 'ACTIVE' ? (
                               <button
