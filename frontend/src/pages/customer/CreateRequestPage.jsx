@@ -34,7 +34,7 @@ function RequestImagePicker({ onFileSelected, onError }) {
   const [previewUrl, setPreviewUrl] = useState(null);
   const [imageError, setImageError] = useState(false);
 
-  const resolvedDisplayUrl = resolveRequestImageUrl(previewUrl || '');
+  const resolvedDisplayUrl = resolveRequestImageUrl(previewUrl || "");
   const displayUrl = imageError ? null : resolvedDisplayUrl;
 
   useEffect(() => {
@@ -43,7 +43,7 @@ function RequestImagePicker({ onFileSelected, onError }) {
 
   useEffect(() => {
     return () => {
-      if (previewUrl?.startsWith('blob:')) {
+      if (previewUrl?.startsWith("blob:")) {
         URL.revokeObjectURL(previewUrl);
       }
     };
@@ -54,57 +54,73 @@ function RequestImagePicker({ onFileSelected, onError }) {
     if (!file) return;
 
     if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
-      onError('Please select a valid image file (JPEG, PNG, WebP, or GIF).');
-      event.target.value = '';
+      onError("Please select a valid image file (JPEG, PNG, WebP, or GIF).");
+      event.target.value = "";
       return;
     }
 
     if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
       onError(`Image must be smaller than ${MAX_FILE_SIZE_MB}MB.`);
-      event.target.value = '';
+      event.target.value = "";
       return;
     }
 
     const objectUrl = URL.createObjectURL(file);
     setPreviewUrl((previous) => {
-      if (previous?.startsWith('blob:')) URL.revokeObjectURL(previous);
+      if (previous?.startsWith("blob:")) URL.revokeObjectURL(previous);
       return objectUrl;
     });
     setImageError(false);
-    onError('');
+    onError("");
     onFileSelected(file);
   };
 
   const handleRemove = () => {
     setPreviewUrl((previous) => {
-      if (previous?.startsWith('blob:')) URL.revokeObjectURL(previous);
+      if (previous?.startsWith("blob:")) URL.revokeObjectURL(previous);
       return null;
     });
     onFileSelected(null);
-    if (fileInputRef.current) fileInputRef.current.value = '';
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   return (
     <div className="request-image-picker">
       {displayUrl ? (
-        <div className="request-image-preview-wrap">
-          <img
-            src={displayUrl}
-            alt="Request preview"
-            className="request-image-preview"
-            onError={() => setImageError(true)}
-          />
-          <button
-            type="button"
-            className="button button-danger request-image-remove"
-            onClick={handleRemove}
-          >
-            Remove
-          </button>
-        </div>
+        <>
+          <div className="request-image-preview-wrap">
+            <img
+              src={displayUrl}
+              alt="Request preview"
+              className="request-image-preview"
+              onError={() => setImageError(true)}
+            />
+          </div>
+
+          <div className="request-image-actions">
+            <button
+              type="button"
+              className="button button-secondary"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              Change image
+            </button>
+
+            <button
+              type="button"
+              className="button button-danger"
+              onClick={handleRemove}
+            >
+              Remove
+            </button>
+          </div>
+        </>
       ) : (
         <div className="request-image-placeholder">
-          <p className="muted-line">No image selected. JPEG, PNG, WebP or GIF — Max {MAX_FILE_SIZE_MB}MB</p>
+          <p className="muted-line">
+            No image selected. JPEG, PNG, WebP or GIF — Max {MAX_FILE_SIZE_MB}MB
+          </p>
+
           <button
             type="button"
             className="button button-secondary"
@@ -114,34 +130,14 @@ function RequestImagePicker({ onFileSelected, onError }) {
           </button>
         </div>
       )}
-      {!displayUrl && (
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept={ACCEPTED_IMAGE_TYPES.join(',')}
-          style={{ display: 'none' }}
-          onChange={handleFileChange}
-        />
-      )}
-      {displayUrl && (
-        <button
-          type="button"
-          className="button button-secondary"
-          style={{ marginTop: '0.5rem' }}
-          onClick={() => fileInputRef.current?.click()}
-        >
-          Change image
-        </button>
-      )}
-      {displayUrl && (
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept={ACCEPTED_IMAGE_TYPES.join(',')}
-          style={{ display: 'none' }}
-          onChange={handleFileChange}
-        />
-      )}
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept={ACCEPTED_IMAGE_TYPES.join(",")}
+        style={{ display: "none" }}
+        onChange={handleFileChange}
+      />
     </div>
   );
 }

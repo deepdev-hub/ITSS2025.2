@@ -124,22 +124,6 @@ function RequestImage({ imageUrl, updatedAt }) {
 function RequestImageUpload({ requestId, currentImageUrl, onUploadSuccess, onError }) {
   const fileInputRef = useRef(null);
   const [uploading, setUploading] = useState(false);
-  const [previewUrl, setPreviewUrl] = useState(null);
-  const [imageError, setImageError] = useState(false);
-
-  const rawUrl = previewUrl || currentImageUrl || '';
-  const resolvedUrl = resolveRequestImageUrl(rawUrl);
-  const displayUrl = imageError ? null : resolvedUrl;
-
-  useEffect(() => {
-    setImageError(false);
-  }, [rawUrl]);
-
-  useEffect(() => {
-    return () => {
-      if (previewUrl?.startsWith('blob:')) URL.revokeObjectURL(previewUrl);
-    };
-  }, [previewUrl]);
 
   const handleFileChange = async (event) => {
     const file = event.target.files?.[0];
@@ -157,30 +141,17 @@ function RequestImageUpload({ requestId, currentImageUrl, onUploadSuccess, onErr
       return;
     }
 
-    const objectUrl = URL.createObjectURL(file);
-    setPreviewUrl((previous) => {
-      if (previous?.startsWith('blob:')) URL.revokeObjectURL(previous);
-      return objectUrl;
-    });
-    setImageError(false);
-    onError('');
-
     setUploading(true);
+
     try {
       const formData = new FormData();
       formData.append('file', file);
+
       const result = await requestApi.uploadRequestImage(requestId, formData);
       const newUrl = getRequestImageUrlFromUploadResponse(result);
-      setPreviewUrl((previous) => {
-        if (previous?.startsWith('blob:')) URL.revokeObjectURL(previous);
-        return null;
-      });
+
       onUploadSuccess('Request image updated successfully.', newUrl);
     } catch (err) {
-      setPreviewUrl((previous) => {
-        if (previous?.startsWith('blob:')) URL.revokeObjectURL(previous);
-        return null;
-      });
       onError(getApiError(err));
     } finally {
       setUploading(false);
@@ -189,44 +160,25 @@ function RequestImageUpload({ requestId, currentImageUrl, onUploadSuccess, onErr
   };
 
   return (
-    <div className="avatar-upload-block" style={{ marginTop: '1rem' }}>
-      <div className="avatar-preview-wrap">
-        {displayUrl ? (
-          <img
-            src={displayUrl}
-            alt="Request"
-            className="request-image-thumb"
-            onError={() => setImageError(true)}
-          />
-        ) : (
-          <span className="avatar-preview avatar-initials-lg" style={{ fontSize: '1.2rem' }}>📷</span>
-        )}
-        {uploading && (
-          <div className="avatar-overlay">
-            <div className="avatar-spinner" />
-          </div>
-        )}
-      </div>
-      <div className="avatar-upload-info">
-        <p className="avatar-upload-hint">
-          JPEG, PNG, WebP or GIF — Max {MAX_FILE_SIZE_MB}MB
-        </p>
-        <button
-          type="button"
-          className="button button-secondary"
-          disabled={uploading}
-          onClick={() => fileInputRef.current?.click()}
-        >
-          {uploading ? 'Uploading...' : (currentImageUrl ? 'Change image' : 'Upload image')}
-        </button>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept={ACCEPTED_IMAGE_TYPES.join(',')}
-          style={{ display: 'none' }}
-          onChange={handleFileChange}
-        />
-      </div>
+    <div className="request-image-actions">
+      <button
+        type="button"
+        className="button button-secondary"
+        disabled={uploading}
+        onClick={() => fileInputRef.current?.click()}
+      >
+        {uploading
+          ? 'Uploading...'
+          : (currentImageUrl ? 'Change image' : 'Upload image')}
+      </button>
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept={ACCEPTED_IMAGE_TYPES.join(',')}
+        style={{ display: 'none' }}
+        onChange={handleFileChange}
+      />
     </div>
   );
 }
