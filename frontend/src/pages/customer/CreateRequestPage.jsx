@@ -29,24 +29,26 @@ const initialForm = {
   },
 };
 
+function formatMoney(value) {
+  return `${Number(value || 0).toLocaleString('vi-VN')} VND`;
+}
+
 function RequestImagePicker({ onFileSelected, onError }) {
   const fileInputRef = useRef(null);
   const [previewUrl, setPreviewUrl] = useState(null);
   const [imageError, setImageError] = useState(false);
 
-  const resolvedDisplayUrl = resolveRequestImageUrl(previewUrl || "");
+  const resolvedDisplayUrl = resolveRequestImageUrl(previewUrl || '');
   const displayUrl = imageError ? null : resolvedDisplayUrl;
 
   useEffect(() => {
     setImageError(false);
   }, [previewUrl]);
 
-  useEffect(() => {
-    return () => {
-      if (previewUrl?.startsWith("blob:")) {
-        URL.revokeObjectURL(previewUrl);
-      }
-    };
+  useEffect(() => () => {
+    if (previewUrl?.startsWith('blob:')) {
+      URL.revokeObjectURL(previewUrl);
+    }
   }, [previewUrl]);
 
   const handleFileChange = (event) => {
@@ -54,34 +56,34 @@ function RequestImagePicker({ onFileSelected, onError }) {
     if (!file) return;
 
     if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
-      onError("Please select a valid image file (JPEG, PNG, WebP, or GIF).");
-      event.target.value = "";
+      onError('Please select a valid image file (JPEG, PNG, WebP, or GIF).');
+      event.target.value = '';
       return;
     }
 
     if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
       onError(`Image must be smaller than ${MAX_FILE_SIZE_MB}MB.`);
-      event.target.value = "";
+      event.target.value = '';
       return;
     }
 
     const objectUrl = URL.createObjectURL(file);
     setPreviewUrl((previous) => {
-      if (previous?.startsWith("blob:")) URL.revokeObjectURL(previous);
+      if (previous?.startsWith('blob:')) URL.revokeObjectURL(previous);
       return objectUrl;
     });
     setImageError(false);
-    onError("");
+    onError('');
     onFileSelected(file);
   };
 
   const handleRemove = () => {
     setPreviewUrl((previous) => {
-      if (previous?.startsWith("blob:")) URL.revokeObjectURL(previous);
+      if (previous?.startsWith('blob:')) URL.revokeObjectURL(previous);
       return null;
     });
     onFileSelected(null);
-    if (fileInputRef.current) fileInputRef.current.value = "";
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   return (
@@ -98,34 +100,18 @@ function RequestImagePicker({ onFileSelected, onError }) {
           </div>
 
           <div className="request-image-actions">
-            <button
-              type="button"
-              className="button button-secondary"
-              onClick={() => fileInputRef.current?.click()}
-            >
+            <button type="button" className="button button-secondary" onClick={() => fileInputRef.current?.click()}>
               Change image
             </button>
-
-            <button
-              type="button"
-              className="button button-danger"
-              onClick={handleRemove}
-            >
+            <button type="button" className="button button-danger" onClick={handleRemove}>
               Remove
             </button>
           </div>
         </>
       ) : (
         <div className="request-image-placeholder">
-          <p className="muted-line">
-            No image selected. JPEG, PNG, WebP or GIF — Max {MAX_FILE_SIZE_MB}MB
-          </p>
-
-          <button
-            type="button"
-            className="button button-secondary"
-            onClick={() => fileInputRef.current?.click()}
-          >
+          <p className="muted-line">No image selected. JPEG, PNG, WebP or GIF - Max {MAX_FILE_SIZE_MB}MB</p>
+          <button type="button" className="button button-secondary" onClick={() => fileInputRef.current?.click()}>
             Choose image
           </button>
         </div>
@@ -134,8 +120,8 @@ function RequestImagePicker({ onFileSelected, onError }) {
       <input
         ref={fileInputRef}
         type="file"
-        accept={ACCEPTED_IMAGE_TYPES.join(",")}
-        style={{ display: "none" }}
+        accept={ACCEPTED_IMAGE_TYPES.join(',')}
+        style={{ display: 'none' }}
         onChange={handleFileChange}
       />
     </div>
@@ -153,6 +139,10 @@ export default function CreateRequestPage() {
   const [error, setError] = useState('');
   const [imageError, setImageError] = useState('');
   const [selectedImageFile, setSelectedImageFile] = useState(null);
+  const [transportCost, setTransportCost] = useState('');
+  const [feeInfo, setFeeInfo] = useState(null);
+  const [feeLoading, setFeeLoading] = useState(false);
+  const [feeError, setFeeError] = useState('');
 
   useEffect(() => {
     async function loadOptions() {
@@ -176,6 +166,50 @@ export default function CreateRequestPage() {
     loadOptions();
   }, []);
 
+  useEffect(() => {
+    if (!form.serviceTypeId) {
+      setFeeInfo(null);
+      setFeeError('');
+      setFeeLoading(false);
+      return;
+    }
+
+    const cost = Number(transportCost || 0);
+    if (Number.isNaN(cost) || cost < 0) {
+      setFeeInfo(null);
+      setFeeError('Travel cost must be a valid non-negative number.');
+      setFeeLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setFeeLoading(true);
+    setFeeError('');
+
+    requestApi
+      .predictFee(Number(form.serviceTypeId), cost)
+      .then((data) => {
+        if (!cancelled) {
+          setFeeInfo(data);
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setFeeInfo(null);
+          setFeeError(getApiError(err));
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setFeeLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [form.serviceTypeId, transportCost]);
+
   const handleChange = (event) => {
     const { name, value } = event.target;
     if (name.startsWith('location.')) {
@@ -198,11 +232,18 @@ export default function CreateRequestPage() {
     setError('');
     setImageError('');
     try {
+      const resolvedTransportCost = Number(transportCost || 0);
+      if (Number.isNaN(resolvedTransportCost) || resolvedTransportCost < 0) {
+        setError('Travel cost must be a valid non-negative number.');
+        return;
+      }
+
       const payload = {
         ...form,
         vehicleId: form.vehicleId ? Number(form.vehicleId) : null,
         incidentTypeId: Number(form.incidentTypeId),
-        serviceTypeId: form.serviceTypeId ? Number(form.serviceTypeId) : null,
+        serviceTypeId: Number(form.serviceTypeId),
+        transportCost: resolvedTransportCost,
         location: {
           ...form.location,
           latitude: form.location.latitude ? Number(form.location.latitude) : null,
@@ -211,14 +252,12 @@ export default function CreateRequestPage() {
       };
       const created = await requestApi.createRequest(payload);
 
-      // Upload image after successful request creation (non-blocking)
       if (selectedImageFile) {
         try {
           const formData = new FormData();
           formData.append('file', selectedImageFile);
           await requestApi.uploadRequestImage(created.id, formData);
         } catch (uploadErr) {
-          // Image upload failure does not block navigation
           setImageError(`Request created, but image upload failed: ${getApiError(uploadErr)}`);
         }
       }
@@ -246,7 +285,7 @@ export default function CreateRequestPage() {
     <>
       <PageHeader
         title="Create Rescue Request"
-        subtitle="Submit your breakdown incident, service type, and location so a rescue company can take over."
+        subtitle="Submit your incident, service type, travel cost, and location. The estimated quotation is calculated automatically before you submit."
       />
 
       {error ? <div className="notice error">{error}</div> : null}
@@ -279,12 +318,24 @@ export default function CreateRequestPage() {
 
           <div className="field">
             <label>Service Type</label>
-            <select name="serviceTypeId" value={form.serviceTypeId} onChange={handleChange}>
+            <select name="serviceTypeId" value={form.serviceTypeId} onChange={handleChange} required>
               <option value="">Select service</option>
               {serviceTypes.map((item) => (
                 <option key={item.id} value={item.id}>{item.name}</option>
               ))}
             </select>
+          </div>
+
+          <div className="field">
+            <label>Travel Cost (VND)</label>
+            <input
+              type="number"
+              min="0"
+              step="1000"
+              placeholder="Example: 50000"
+              value={transportCost}
+              onChange={(event) => setTransportCost(event.target.value)}
+            />
           </div>
 
           <div className="field">
@@ -357,9 +408,29 @@ export default function CreateRequestPage() {
           </div>
         </div>
 
+        <div className={`fee-preview-panel ${feeInfo ? 'fee-preview-panel-ready' : ''}`}>
+          <div>
+            <span>Estimated fee</span>
+            {feeLoading ? (
+              <strong>Calculating...</strong>
+            ) : feeInfo ? (
+              <strong>{formatMoney(feeInfo.estimatedFee)}</strong>
+            ) : (
+              <strong>Not calculated yet</strong>
+            )}
+          </div>
+          {feeInfo ? (
+            <p>
+              Coefficient {feeInfo.coefficient} x (Service price {formatMoney(feeInfo.basePrice)} + Travel cost {formatMoney(feeInfo.transportCost)})
+            </p>
+          ) : (
+            <p>{feeError || 'Select a service type and enter travel cost above, then the fee will appear here before you create the request.'}</p>
+          )}
+        </div>
+
         <div className="actions-row">
           <button className="button button-primary" type="submit" disabled={submitting}>
-            {submitting ? 'Submitting...' : 'Create Request'}
+            {submitting ? 'Submitting...' : 'Create request'}
           </button>
         </div>
       </form>

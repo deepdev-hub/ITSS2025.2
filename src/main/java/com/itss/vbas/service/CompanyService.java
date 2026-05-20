@@ -18,6 +18,8 @@ public interface CompanyService {
 
     void deleteStaff(Long id);
 
+    CompanyDto.StaffProfileResponse getStaffProfile(Long id);
+
     List<CompanyDto.VehicleResponse> getVehicles();
 
     CompanyDto.VehicleResponse createVehicle(CompanyDto.VehicleRequest request);

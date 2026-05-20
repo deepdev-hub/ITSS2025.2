@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.List;
 
 import com.itss.vbas.dto.dashboard.DashboardDto;
@@ -19,6 +20,7 @@ import com.itss.vbas.enums.PaymentStatus;
 import com.itss.vbas.enums.QuoteStatus;
 import com.itss.vbas.enums.RescueRequestStatus;
 import com.itss.vbas.enums.RoleName;
+import com.itss.vbas.exception.BadRequestException;
 import com.itss.vbas.repository.AccountRepository;
 import com.itss.vbas.repository.DailyStatisticRepository;
 import com.itss.vbas.repository.PaymentRepository;
@@ -145,7 +147,47 @@ public class DashboardServiceImpl implements DashboardService {
                         .stream()
                         .filter(request -> request.getStatus() == RescueRequestStatus.ACCEPTED || request.getStatus() == RescueRequestStatus.IN_PROGRESS)
                         .count()
-        );
+                );
+    }
+
+    @Override
+    public DashboardDto.CompanyPerformanceResponse getCompanyPerformance(LocalDate startDate, LocalDate endDate) {
+        if (startDate != null && endDate != null && startDate.isAfter(endDate)) {
+            throw new BadRequestException("startDate must be before or equal to endDate");
+        }
+
+        LocalDateTime startAt = startDate == null ? LocalDate.of(1970, 1, 1).atStartOfDay() : startDate.atStartOfDay();
+        LocalDateTime endAt = endDate == null ? LocalDate.of(3000, 1, 1).atStartOfDay() : endDate.plusDays(1).atStartOfDay();
+
+        List<DashboardDto.CompanyMetricResponse> companies = rescueCompanyRepository.findAll()
+                .stream()
+                .map(company -> {
+                    BigDecimal revenue = defaultMoney(paymentRepository.sumPaidRevenueByCompanyId(
+                            company.getId(),
+                            PaymentStatus.PAID,
+                            startAt,
+                            endAt
+                    ));
+                    Double averageRatingValue = reviewRepository.findAverageRatingByCompanyId(company.getId(), startAt, endAt);
+                    return new DashboardDto.CompanyMetricResponse(
+                            company.getId(),
+                            company.getCompanyName(),
+                            revenue,
+                            toRating(averageRatingValue),
+                            reviewRepository.countReviewsByCompanyId(company.getId(), startAt, endAt),
+                            paymentRepository.countPaidPaymentsByCompanyId(company.getId(), PaymentStatus.PAID, startAt, endAt),
+                            requestAssignmentRepository.countDistinctRequestsByCompanyIdAndRequestStatus(
+                                    company.getId(),
+                                    RescueRequestStatus.COMPLETED,
+                                    startAt,
+                                    endAt
+                            )
+                    );
+                })
+                .sorted(Comparator.comparing(DashboardDto.CompanyMetricResponse::revenue).reversed())
+                .toList();
+
+        return new DashboardDto.CompanyPerformanceResponse(startDate, endDate, companies);
     }
 
     private DashboardDto.AdminDashboardResponse toAdminDashboardResponse(DailyStatistic statistics) {
@@ -214,5 +256,9 @@ public class DashboardServiceImpl implements DashboardService {
 
     private BigDecimal defaultMoney(BigDecimal value) {
         return value == null ? BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP) : value.setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private BigDecimal toRating(Double value) {
+        return value == null ? null : BigDecimal.valueOf(value).setScale(2, RoundingMode.HALF_UP);
     }
 }

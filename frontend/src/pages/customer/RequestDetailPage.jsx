@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { requestApi } from '../../api/requestApi';
 import { getApiError } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
@@ -91,6 +91,13 @@ function getPriceStatusLabel(quote, hasPaidPayment, requestStatus) {
     default:
       return 'Chưa có giá deal';
   }
+function getInitials(name = '') {
+  return name
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join('') || 'ST';
 }
 
 function normalizeMessages(items = []) {
@@ -128,7 +135,34 @@ function SectionHeader({ title, subtitle, aside }) {
   );
 }
 
-// Displays the request image with broken-image fallback and cache busting
+function EstimatedQuotationPanel({ quotation, prominent = false }) {
+  if (!quotation) {
+    return (
+      <div className={`estimated-quote-panel ${prominent ? 'estimated-quote-panel-prominent' : ''}`}>
+        <div>
+          <span>Estimated quotation</span>
+          <strong>Not available</strong>
+        </div>
+        <p className="muted-line">Service price, travel cost, or coefficient data is missing for this request.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className={`estimated-quote-panel ${prominent ? 'estimated-quote-panel-prominent' : ''}`}>
+      <div>
+        <span>Estimated quotation</span>
+        <strong>{formatCurrency(quotation.estimatedAmount)}</strong>
+      </div>
+      <div className="estimated-quote-grid">
+        <span>Service price {formatCurrency(quotation.servicePrice ?? 0)}</span>
+        <span>Travel cost {formatCurrency(quotation.travelCost ?? 0)}</span>
+        <span>Coefficient {quotation.coefficient}</span>
+      </div>
+    </div>
+  );
+}
+
 function RequestImage({ imageUrl, updatedAt }) {
   const [imageError, setImageError] = useState(false);
 
@@ -285,6 +319,9 @@ export default function RequestDetailPage() {
     () => detail?.payments?.some((item) => item.paymentStatus === 'PAID') ?? false,
     [detail],
   );
+  const assignedStaffPath = detail?.currentAssignment?.staffId
+    ? `/staff/${detail.currentAssignment.staffId}/profile`
+    : null;
 
   const requestCanceled = detail?.status === 'CANCELED';
   const requestFinalized = ['CANCELED', 'COMPLETED'].includes(detail?.status);
@@ -635,6 +672,8 @@ export default function RequestDetailPage() {
             </div>
           </div>
 
+          <EstimatedQuotationPanel quotation={detail.estimatedQuotation} prominent />
+
           <div className="field">
             <label>Description</label>
             <textarea value={detail.description || 'No description provided.'} disabled />
@@ -696,7 +735,24 @@ export default function RequestDetailPage() {
             </div>
             <div className="card card-muted">
               <h3>Assigned Staff</h3>
-              <p>{detail.currentAssignment?.staffName || 'Not assigned yet'}</p>
+              {assignedStaffPath ? (
+                <div className="staff-profile-summary">
+                  <Link className="staff-mini-card" to={assignedStaffPath} aria-label="Open staff profile">
+                    {detail.currentAssignment?.staffAvatarUrl ? (
+                      <img src={detail.currentAssignment.staffAvatarUrl} alt="" />
+                    ) : (
+                      <span>{getInitials(detail.currentAssignment?.staffName)}</span>
+                    )}
+                    <strong>{detail.currentAssignment?.staffName || 'Rescue staff'}</strong>
+                  </Link>
+                  <Link className="staff-profile-link" to={assignedStaffPath}>
+                    View profile
+                  </Link>
+                </div>
+              ) : (
+                <p>{detail.currentAssignment?.staffName || 'Not assigned yet'}</p>
+              )}
+              <p className="muted-line">{detail.currentAssignment?.staffJobTitle || 'Rescue staff'}</p>
               <p className="muted-line">{detail.currentAssignment?.status || 'Pending assignment'}</p>
               <Countdown
                 expiresAt={detail.currentAssignment?.expiresAt}
@@ -882,6 +938,8 @@ export default function RequestDetailPage() {
               Review already submitted for this request.
             </div>
           ) : null}
+
+          <EstimatedQuotationPanel quotation={detail.estimatedQuotation} />
 
           <div className="table-wrapper">
             <table>

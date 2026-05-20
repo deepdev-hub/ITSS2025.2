@@ -1,6 +1,7 @@
 package com.itss.vbas.repository;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -27,4 +28,46 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
             where p.paymentStatus = :paymentStatus
             """)
     BigDecimal sumAmountByPaymentStatus(@Param("paymentStatus") PaymentStatus paymentStatus);
+
+    @Query("""
+            select coalesce(sum(p.amount), 0)
+            from Payment p
+            where p.paymentStatus = :paymentStatus
+              and p.paidAt >= :startAt
+              and p.paidAt < :endAt
+              and exists (
+                  select 1
+                  from Quote q
+                  where q.request.id = p.request.id
+                    and q.company.id = :companyId
+                    and q.status = com.itss.vbas.enums.QuoteStatus.ACCEPTED
+              )
+            """)
+    BigDecimal sumPaidRevenueByCompanyId(
+            @Param("companyId") Long companyId,
+            @Param("paymentStatus") PaymentStatus paymentStatus,
+            @Param("startAt") LocalDateTime startAt,
+            @Param("endAt") LocalDateTime endAt
+    );
+
+    @Query("""
+            select count(p)
+            from Payment p
+            where p.paymentStatus = :paymentStatus
+              and p.paidAt >= :startAt
+              and p.paidAt < :endAt
+              and exists (
+                  select 1
+                  from Quote q
+                  where q.request.id = p.request.id
+                    and q.company.id = :companyId
+                    and q.status = com.itss.vbas.enums.QuoteStatus.ACCEPTED
+              )
+            """)
+    long countPaidPaymentsByCompanyId(
+            @Param("companyId") Long companyId,
+            @Param("paymentStatus") PaymentStatus paymentStatus,
+            @Param("startAt") LocalDateTime startAt,
+            @Param("endAt") LocalDateTime endAt
+    );
 }

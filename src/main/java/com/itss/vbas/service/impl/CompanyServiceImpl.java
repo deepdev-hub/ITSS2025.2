@@ -1,5 +1,7 @@
 package com.itss.vbas.service.impl;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -29,6 +31,7 @@ import com.itss.vbas.repository.RescueCompanyRepository;
 import com.itss.vbas.repository.RescueRequestRepository;
 import com.itss.vbas.repository.RescueStaffRepository;
 import com.itss.vbas.repository.RescueVehicleRepository;
+import com.itss.vbas.repository.ReviewRepository;
 import com.itss.vbas.repository.RoleRepository;
 import com.itss.vbas.security.AuthContext;
 import com.itss.vbas.service.AddressService; // Đã thêm import AddressService
@@ -45,6 +48,7 @@ public class CompanyServiceImpl implements CompanyService {
     private final RescueCompanyRepository rescueCompanyRepository;
     private final RescueStaffRepository rescueStaffRepository;
     private final RescueVehicleRepository rescueVehicleRepository;
+    private final ReviewRepository reviewRepository;
     private final RescueRequestRepository rescueRequestRepository;
     private final RequestAssignmentRepository requestAssignmentRepository;
     private final AccountRepository accountRepository;
@@ -58,6 +62,7 @@ public class CompanyServiceImpl implements CompanyService {
             RescueCompanyRepository rescueCompanyRepository,
             RescueStaffRepository rescueStaffRepository,
             RescueVehicleRepository rescueVehicleRepository,
+            ReviewRepository reviewRepository,
             RescueRequestRepository rescueRequestRepository,
             RequestAssignmentRepository requestAssignmentRepository,
             AccountRepository accountRepository,
@@ -70,6 +75,7 @@ public class CompanyServiceImpl implements CompanyService {
         this.rescueCompanyRepository = rescueCompanyRepository;
         this.rescueStaffRepository = rescueStaffRepository;
         this.rescueVehicleRepository = rescueVehicleRepository;
+        this.reviewRepository = reviewRepository;
         this.rescueRequestRepository = rescueRequestRepository;
         this.requestAssignmentRepository = requestAssignmentRepository;
         this.accountRepository = accountRepository;
@@ -114,6 +120,8 @@ public class CompanyServiceImpl implements CompanyService {
         RescueStaff staff = RescueStaff.builder()
                 .company(company)
                 .jobTitle(request.jobTitle())
+                .yearsExperience(request.yearsExperience())
+                .bio(request.bio())
                 .status(parseStaffStatus(request.status()))
                 .user(resolveStaffAccount(request))
                 .build();
@@ -144,6 +152,8 @@ public class CompanyServiceImpl implements CompanyService {
         accountRepository.save(user);
 
         staff.setJobTitle(request.jobTitle());
+        staff.setYearsExperience(request.yearsExperience());
+        staff.setBio(request.bio());
         staff.setStatus(parseStaffStatus(request.status()));
         return appMapper.toStaffResponse(rescueStaffRepository.save(staff));
     }
@@ -157,6 +167,34 @@ public class CompanyServiceImpl implements CompanyService {
         user.setStatus(AccountStatus.INACTIVE);
         accountRepository.save(user);
         rescueStaffRepository.delete(staff);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public CompanyDto.StaffProfileResponse getStaffProfile(Long id) {
+        RescueStaff staff = rescueStaffRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Staff not found with id: " + id));
+        Double averageRatingValue = reviewRepository.findAverageRatingByStaffId(staff.getId());
+        BigDecimal averageRating = averageRatingValue == null
+                ? null
+                : BigDecimal.valueOf(averageRatingValue).setScale(2, RoundingMode.HALF_UP);
+
+        return new CompanyDto.StaffProfileResponse(
+                staff.getId(),
+                staff.getUser().getId(),
+                staff.getUser().getAvatarUrl(),
+                staff.getUser().getFullName(),
+                staff.getUser().getEmail(),
+                staff.getUser().getPhone(),
+                staff.getCompany().getId(),
+                staff.getCompany().getCompanyName(),
+                staff.getJobTitle(),
+                staff.getStatus().name(),
+                staff.getYearsExperience(),
+                averageRating,
+                requestAssignmentRepository.countByStaffIdAndStatus(staff.getId(), AssignmentStatus.COMPLETED),
+                staff.getBio()
+        );
     }
 
     @Override

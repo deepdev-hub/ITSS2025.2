@@ -186,27 +186,22 @@ public class AppMapper {
     }
 
     public CompanyDto.StaffResponse toStaffResponse(RescueStaff staff) {
-        // 1. Lấy tọa độ an toàn
-        java.math.BigDecimal lat = null;
-        java.math.BigDecimal lng = null;
-        
-        if (staff.getUser() != null && staff.getUser().getDefaultAddress() != null) {
-            lat = staff.getUser().getDefaultAddress().getLatitude();
-            lng = staff.getUser().getDefaultAddress().getLongitude();
-        }
-
-        // 2. Trả về đúng 11 tham số theo định nghĩa
+        Account user = staff.getUser();
+        Address defaultAddress = user == null ? null : user.getDefaultAddress();
         return new CompanyDto.StaffResponse(
                 staff.getId(),
-                staff.getUser() != null ? staff.getUser().getId() : null,
-                staff.getCompany() != null ? staff.getCompany().getId() : null,
-                staff.getUser() != null ? staff.getUser().getFullName() : null,
-                staff.getUser() != null ? staff.getUser().getEmail() : null,
-                staff.getUser() != null ? staff.getUser().getPhone() : null,
+                user == null ? null : user.getId(),
+                staff.getCompany() == null ? null : staff.getCompany().getId(),
+                user == null ? null : user.getFullName(),
+                user == null ? null : user.getEmail(),
+                user == null ? null : user.getPhone(),
                 staff.getJobTitle(),
-                staff.getStatus() != null ? staff.getStatus().name() : null,
-                lat, // Bạn bị thiếu trường này
-                lng  // Bạn bị thiếu trường này
+                user == null ? null : user.getAvatarUrl(),
+                staff.getYearsExperience(),
+                staff.getBio(),
+                staff.getStatus() == null ? null : staff.getStatus().name(),
+                defaultAddress == null ? null : defaultAddress.getLatitude(),
+                defaultAddress == null ? null : defaultAddress.getLongitude()
         );
     }
 
@@ -225,18 +220,23 @@ public class AppMapper {
         if (assignment == null) {
             return null;
         }
+        RescueStaff staff = assignment.getStaff();
+        Account staffUser = staff == null ? null : staff.getUser();
+        Account assignedBy = assignment.getAssignedByUser();
         return new RequestDto.AssignmentResponse(
                 assignment.getId(),
                 assignment.getRequest().getId(),
                 assignment.getCompany().getId(),
                 assignment.getCompany().getCompanyName(),
-                assignment.getStaff() == null ? null : assignment.getStaff().getId(),
-                assignment.getStaff() == null ? null : assignment.getStaff().getUser().getFullName(),
+                staff == null ? null : staff.getId(),
+                staffUser == null ? null : staffUser.getFullName(),
+                staffUser == null ? null : staffUser.getAvatarUrl(),
+                staff == null ? null : staff.getJobTitle(),
                 assignment.getVehicle() == null ? null : assignment.getVehicle().getId(),
                 assignment.getVehicle() == null ? null : assignment.getVehicle().getVehicleCode(),
                 assignment.getVehicle() == null ? null : assignment.getVehicle().getPlateNumber(),
-                assignment.getAssignedByUser().getId(),
-                assignment.getAssignedByUser().getFullName(),
+                assignedBy == null ? null : assignedBy.getId(),
+                assignedBy == null ? null : assignedBy.getFullName(),
                 assignment.getAssignedAt(),
                 assignment.getAcceptedAt(),
                 assignment.getRejectedAt(),
@@ -336,7 +336,7 @@ public class AppMapper {
                 request.getIncidentType().getIncidentName(),
                 request.getServiceType() == null ? null : request.getServiceType().getServiceName(),
                 request.getLocation() == null ? null : buildFullAddress(request.getLocation()),
-                toAddressResponse(request.getLocation()), // location (AddressResponse)
+                toAddressResponse(request.getLocation()),
                 request.getVehicle() == null ? null : request.getVehicle().getBrand() + " " + request.getVehicle().getModel() + " - " + request.getVehicle().getPlateNumber(),
                 request.getImageUrl(),
                 request.getCustomer().getFullName(),
@@ -373,10 +373,25 @@ public class AppMapper {
                 toAddressResponse(request.getLocation()),
                 toBasicCompanyResponse(assignedCompany),
                 toAssignmentResponse(currentAssignment),
+                toEstimatedQuotationResponse(request),
                 history,
                 quotes,
                 payments,
                 review
+        );
+    }
+
+    private RequestDto.EstimatedQuotationResponse toEstimatedQuotationResponse(RescueRequest request) {
+        if (request.getEstimatedQuotationAmount() == null) {
+            return null;
+        }
+        return new RequestDto.EstimatedQuotationResponse(
+                request.getServiceType() == null ? null : request.getServiceType().getId(),
+                request.getServiceType() == null ? null : request.getServiceType().getServiceName(),
+                request.getServicePriceSnapshot(),
+                request.getTravelCost(),
+                request.getFeeCoefficient(),
+                request.getEstimatedQuotationAmount()
         );
     }
 

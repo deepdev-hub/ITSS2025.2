@@ -171,9 +171,13 @@ export default function CompanyRequestsPage() {
     const nextStatusOptions  = getAllowedStatusOptions('RESCUE_COMPANY', detail.status);
 
     setAssignmentForm({
-      staffId:   detail.currentAssignment?.staffId   ? String(detail.currentAssignment.staffId)   : '',
-      vehicleId: detail.currentAssignment?.vehicleId ? String(detail.currentAssignment.vehicleId) : '',
-      note:      '',
+      staffId: detail.currentAssignment?.staffId
+        ? String(detail.currentAssignment.staffId)
+        : (staff.length === 1 ? String(staff[0].id) : ''),
+      vehicleId: detail.currentAssignment?.vehicleId
+        ? String(detail.currentAssignment.vehicleId)
+        : (vehicles.length === 1 ? String(vehicles[0].id) : ''),
+      note: '',
     });
     setQuoteForm({
       staffId:         editableQuote?.staffId ? String(editableQuote.staffId) : '',
@@ -190,7 +194,7 @@ export default function CompanyRequestsPage() {
       status: nextStatusOptions.includes(prev.status) ? prev.status : (nextStatusOptions[0] || prev.status),
       note:   prev.note,
     }));
-  }, [detail]);
+  }, [detail, staff, vehicles]);
 
   // ── Actions ────────────────────────────────────────────────────────────────
 
@@ -346,7 +350,9 @@ export default function CompanyRequestsPage() {
                             type="button"
                             onClick={() => setActiveRequestId(request.id)}
                           >
-                            {activeRequestId === request.id ? 'Selected' : 'Select'}
+                            {activeRequestId === request.id
+                              ? 'Selected'
+                              : (request.status === 'MATCHED' ? 'Assign staff' : 'Select')}
                           </button>
                           <Link className="button button-secondary" to={`/requests/${request.id}`}>
                             Detail
@@ -429,6 +435,78 @@ export default function CompanyRequestsPage() {
                 </div>
               ) : null}
 
+              <form className="card card-muted dispatch-assignment-panel" onSubmit={handleAssignment}>
+                <h3>Assign Staff & Vehicle</h3>
+                <p className="muted-line">
+                  Choose a staff member and vehicle, then confirm. If there is only one available option, it is selected automatically.
+                </p>
+
+                {assignmentExpired ? (
+                  <div className="notice error" style={{ marginBottom: '0.75rem' }}>
+                    The acceptance window has expired. Confirming staff is no longer possible for this assignment.
+                  </div>
+                ) : null}
+
+                <div className="form-grid">
+                  <div className="field">
+                    <label>Staff</label>
+                    <select
+                      value={assignmentForm.staffId}
+                      disabled={assignmentExpired}
+                      onChange={(e) => setAssignmentForm((p) => ({ ...p, staffId: e.target.value }))}
+                    >
+                      <option value="">Select staff</option>
+                      {staff.map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {item.fullName} ({item.status})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="field">
+                    <label>Vehicle</label>
+                    <select
+                      value={assignmentForm.vehicleId}
+                      disabled={assignmentExpired}
+                      onChange={(e) => setAssignmentForm((p) => ({ ...p, vehicleId: e.target.value }))}
+                    >
+                      <option value="">Select vehicle</option>
+                      {vehicles.map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {item.vehicleCode} - {item.plateNumber} ({item.status})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <div className="field">
+                  <label>Dispatch Note</label>
+                  <input
+                    value={assignmentForm.note}
+                    disabled={assignmentExpired}
+                    onChange={(e) => setAssignmentForm((p) => ({ ...p, note: e.target.value }))}
+                    placeholder="Optional note"
+                  />
+                </div>
+                <button
+                  className="button button-primary"
+                  type="submit"
+                  disabled={
+                    busyAction === 'assignment' ||
+                    !assignmentForm.staffId ||
+                    !assignmentForm.vehicleId ||
+                    assignmentExpired
+                  }
+                  title={assignmentExpired ? 'Acceptance window has expired' : undefined}
+                >
+                  {assignmentExpired
+                    ? 'Expired - cannot confirm'
+                    : busyAction === 'assignment'
+                      ? 'Saving...'
+                      : 'Confirm assignment'}
+                </button>
+              </form>
+
               <div className="field">
                 <label>Breakdown Location</label>
                 <textarea value={detail.location?.fullAddress || 'No location available.'} disabled />
@@ -459,7 +537,7 @@ export default function CompanyRequestsPage() {
               </div>
 
               {/* ── Assign Staff & Vehicle ──────────────────────────────── */}
-              <form className="card card-muted" style={{ marginTop: '1rem' }} onSubmit={handleAssignment}>
+              <form className="card card-muted secondary-assignment-panel" style={{ marginTop: '1rem' }} onSubmit={handleAssignment}>
                 <h3>Confirm Staff & Vehicle</h3>
 
                 {assignmentExpired ? (

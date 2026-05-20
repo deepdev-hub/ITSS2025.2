@@ -1,5 +1,7 @@
 package com.itss.vbas.entity;
 
+import java.math.BigDecimal;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -33,4 +35,7 @@ public class ServiceType {
 
     @Column(columnDefinition = "TEXT")
     private String description;
+
+    @Column(name = "base_price", nullable = true, precision = 15, scale = 2, columnDefinition = "NUMERIC(15,2) DEFAULT 0")
+    private BigDecimal basePrice = BigDecimal.ZERO;
 }

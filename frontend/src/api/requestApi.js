@@ -25,4 +25,10 @@ export const requestApi = {
       'Content-Type': 'multipart/form-data',
     },
   })),
+  predictFee: (serviceTypeId, transportCost = 0) =>
+    unwrap(
+      apiClient.get('/api/requests/predict-fee', {
+        params: { serviceTypeId, transportCost },
+      }),
+    ),
 };

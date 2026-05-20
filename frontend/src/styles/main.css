@@ -785,6 +785,229 @@ th {
   color: var(--muted);
 }
 
+.chart-panel {
+  display: grid;
+  gap: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--surface);
+}
+
+.bar-chart {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.bar-chart-row {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.bar-chart-label {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.94rem;
+}
+
+.bar-chart-label span {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.bar-chart-track {
+  height: 0.85rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(36, 48, 59, 0.08);
+}
+
+.bar-chart-fill {
+  height: 100%;
+  min-width: 0;
+  border-radius: inherit;
+}
+
+.bar-chart-fill-revenue {
+  background: #2165a6;
+}
+
+.bar-chart-fill-rating {
+  background: var(--success);
+}
+
+.estimated-quote-panel {
+  display: grid;
+  gap: 0.85rem;
+  padding: 1rem;
+  border: 1px solid rgba(35, 123, 75, 0.2);
+  border-radius: 18px;
+  margin-bottom: 1rem;
+  background: rgba(35, 123, 75, 0.08);
+}
+
+.estimated-quote-panel-prominent {
+  margin: 1rem 0 0;
+  border-color: rgba(33, 101, 166, 0.28);
+  background: linear-gradient(135deg, rgba(33, 101, 166, 0.11), rgba(35, 123, 75, 0.1));
+}
+
+.estimated-quote-panel p {
+  margin: 0;
+}
+
+.estimated-quote-panel span {
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.estimated-quote-panel strong {
+  display: block;
+  margin-top: 0.2rem;
+  color: var(--success);
+  font-size: 1.45rem;
+}
+
+.estimated-quote-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.estimated-quote-grid span {
+  padding: 0.45rem 0.65rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.65);
+  color: var(--text);
+}
+
+.fee-preview-panel {
+  display: grid;
+  gap: 0.65rem;
+  margin: 1rem 0;
+  padding: 1rem;
+  border: 1px solid rgba(33, 101, 166, 0.24);
+  border-radius: 18px;
+  background: rgba(33, 101, 166, 0.07);
+}
+
+.fee-preview-panel-ready {
+  border-color: rgba(35, 123, 75, 0.35);
+  background: rgba(35, 123, 75, 0.09);
+}
+
+.fee-preview-panel span {
+  display: block;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.fee-preview-panel strong {
+  display: block;
+  margin-top: 0.25rem;
+  color: var(--success);
+  font-size: 1.55rem;
+}
+
+.fee-preview-panel p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.staff-profile-summary {
+  display: grid;
+  gap: 0.35rem;
+  justify-items: start;
+}
+
+.staff-mini-card {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  color: var(--text);
+  text-decoration: none;
+  cursor: pointer;
+  max-width: 100%;
+}
+
+.staff-mini-card:hover strong,
+.staff-mini-card:focus-visible strong {
+  color: var(--primary);
+  text-decoration: underline;
+}
+
+.staff-profile-link {
+  margin-left: 3.25rem;
+  color: var(--primary);
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.staff-profile-link:hover,
+.staff-profile-link:focus-visible {
+  text-decoration: underline;
+}
+
+.staff-mini-card img,
+.staff-mini-card span,
+.staff-profile-avatar img,
+.staff-profile-avatar span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(33, 101, 166, 0.12);
+  color: #2165a6;
+  font-weight: 800;
+}
+
+.staff-mini-card img,
+.staff-mini-card span {
+  width: 2.6rem;
+  height: 2.6rem;
+}
+
+.staff-mini-card img,
+.staff-profile-avatar img {
+  object-fit: cover;
+}
+
+.staff-profile-layout {
+  display: grid;
+  gap: 1rem;
+}
+
+.staff-profile-hero {
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
+  padding: 1.4rem;
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  background: var(--surface-strong);
+  box-shadow: var(--shadow);
+}
+
+.staff-profile-hero h2 {
+  margin: 0;
+  font-size: 1.6rem;
+}
+
+.staff-profile-hero p {
+  margin: 0.3rem 0 0.75rem;
+  color: var(--muted);
+}
+
+.staff-profile-avatar img,
+.staff-profile-avatar span {
+  width: 6rem;
+  height: 6rem;
+  font-size: 1.6rem;
+}
+
 .tracking-panel {
   display: grid;
   gap: 0.9rem;

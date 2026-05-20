@@ -3,6 +3,7 @@ import { apiClient, unwrap } from './client';
 export const adminApi = {
   getDashboard: () => unwrap(apiClient.get('/api/admin/dashboard')),
   refreshDashboard: () => unwrap(apiClient.post('/api/admin/dashboard/refresh')),
+  getCompanyPerformance: (params = {}) => unwrap(apiClient.get('/api/admin/dashboard/company-performance', { params })),
   getRequests: () => unwrap(apiClient.get('/api/admin/requests')),
   assignCompany: (requestId, payload) => unwrap(apiClient.put(`/api/admin/requests/${requestId}/assign-company`, payload)),
   getAccounts: () => unwrap(apiClient.get('/api/admin/accounts')),

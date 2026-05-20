@@ -1,5 +1,6 @@
 package com.itss.vbas.repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -20,4 +21,30 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
 
     @Query("select avg(r.ratingScore) from Review r where r.staff.id = :staffId")
     Double findAverageRatingByStaffId(@Param("staffId") Long staffId);
+
+    @Query("""
+            select avg(r.ratingScore)
+            from Review r
+            where r.company.id = :companyId
+              and r.createdAt >= :startAt
+              and r.createdAt < :endAt
+            """)
+    Double findAverageRatingByCompanyId(
+            @Param("companyId") Long companyId,
+            @Param("startAt") LocalDateTime startAt,
+            @Param("endAt") LocalDateTime endAt
+    );
+
+    @Query("""
+            select count(r)
+            from Review r
+            where r.company.id = :companyId
+              and r.createdAt >= :startAt
+              and r.createdAt < :endAt
+            """)
+    long countReviewsByCompanyId(
+            @Param("companyId") Long companyId,
+            @Param("startAt") LocalDateTime startAt,
+            @Param("endAt") LocalDateTime endAt
+    );
 }
