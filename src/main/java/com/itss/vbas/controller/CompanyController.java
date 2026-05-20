@@ -7,6 +7,7 @@ import com.itss.vbas.dto.company.CompanyDto;
 import com.itss.vbas.dto.dashboard.DashboardDto;
 import com.itss.vbas.dto.request.RequestDto;
 import com.itss.vbas.enums.RoleName;
+import com.itss.vbas.security.RequireAuth;
 import com.itss.vbas.security.RequiredRoles;
 import com.itss.vbas.service.CompanyService;
 import com.itss.vbas.service.DashboardService;
@@ -103,6 +104,12 @@ public class CompanyController {
     @GetMapping("/staff")
     public ResponseEntity<CommonDto.ApiResponse<List<CompanyDto.StaffResponse>>> getStaff() {
         return ResponseEntity.ok(CommonDto.ApiResponse.success("Staff fetched successfully", companyService.getStaff()));
+    }
+
+    @RequireAuth
+    @GetMapping("/staff/{id}/profile")
+    public ResponseEntity<CommonDto.ApiResponse<CompanyDto.StaffProfileResponse>> getStaffProfile(@PathVariable Long id) {
+        return ResponseEntity.ok(CommonDto.ApiResponse.success("Staff profile fetched successfully", companyService.getStaffProfile(id)));
     }
 
     @RequiredRoles(RoleName.RESCUE_COMPANY)

@@ -379,6 +379,8 @@ public class AdminServiceImpl implements AdminService {
         RescueStaff staff = RescueStaff.builder()
                 .company(company)
                 .jobTitle(request.jobTitle())
+                .yearsExperience(request.yearsExperience())
+                .bio(request.bio())
                 .status(parseStaffStatus(request.status()))
                 .user(resolveStaffAccount(request))
                 .build();
@@ -411,6 +413,8 @@ public class AdminServiceImpl implements AdminService {
         accountRepository.save(user);
 
         staff.setJobTitle(request.jobTitle());
+        staff.setYearsExperience(request.yearsExperience());
+        staff.setBio(request.bio());
         staff.setStatus(parseStaffStatus(request.status()));
         return appMapper.toStaffResponse(rescueStaffRepository.save(staff));
     }

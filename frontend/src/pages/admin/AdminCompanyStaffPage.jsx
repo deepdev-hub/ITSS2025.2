@@ -11,6 +11,8 @@ const initialForm = {
   fullName: '',
   phone: '',
   jobTitle: '',
+  yearsExperience: '',
+  bio: '',
   status: 'ACTIVE',
 };
 
@@ -82,6 +84,8 @@ export default function AdminCompanyStaffPage() {
       fullName: item.fullName || '',
       phone: item.phone || '',
       jobTitle: item.jobTitle || '',
+      yearsExperience: item.yearsExperience ?? '',
+      bio: item.bio || '',
       status: item.status || 'ACTIVE',
     });
   };
@@ -94,6 +98,8 @@ export default function AdminCompanyStaffPage() {
   const buildPayload = () => ({
     ...form,
     userId: form.userId ? Number(form.userId) : null,
+    yearsExperience: form.yearsExperience !== '' ? Number(form.yearsExperience) : null,
+    bio: form.bio.trim() || null,
   });
 
   const handleSubmit = async (event) => {
@@ -182,6 +188,10 @@ export default function AdminCompanyStaffPage() {
               <input name="jobTitle" value={form.jobTitle} onChange={handleChange} />
             </div>
             <div className="field">
+              <label>Years Experience</label>
+              <input name="yearsExperience" type="number" min="0" value={form.yearsExperience} onChange={handleChange} />
+            </div>
+            <div className="field">
               <label>Status</label>
               <select name="status" value={form.status} onChange={handleChange}>
                 <option value="ACTIVE">ACTIVE</option>
@@ -189,6 +199,10 @@ export default function AdminCompanyStaffPage() {
                 <option value="BUSY">BUSY</option>
               </select>
             </div>
+          </div>
+          <div className="field">
+            <label>Bio</label>
+            <textarea name="bio" value={form.bio} onChange={handleChange} />
           </div>
           <div className="actions-row">
             <button className="button button-primary" type="submit" disabled={!selectedCompanyId}>
@@ -206,6 +220,7 @@ export default function AdminCompanyStaffPage() {
                 <tr>
                   <th>Name</th>
                   <th>Email</th>
+                  <th>Experience</th>
                   <th>Status</th>
                   <th />
                 </tr>
@@ -215,6 +230,7 @@ export default function AdminCompanyStaffPage() {
                   <tr key={item.id}>
                     <td>{item.fullName}</td>
                     <td>{item.email}</td>
+                    <td>{item.yearsExperience !== null && item.yearsExperience !== undefined ? `${item.yearsExperience} years` : 'N/A'}</td>
                     <td><StatusBadge value={item.status} /></td>
                     <td>
                       <div className="actions-row">
@@ -226,7 +242,7 @@ export default function AdminCompanyStaffPage() {
                 ))}
                 {staff.length === 0 ? (
                   <tr>
-                    <td colSpan="4">No staff found</td>
+                    <td colSpan="5">No staff found</td>
                   </tr>
                 ) : null}
               </tbody>

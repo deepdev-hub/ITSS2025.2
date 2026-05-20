@@ -49,6 +49,8 @@ public final class CompanyDto {
             @Size(max = 255) String fullName,
             @Size(max = 20) String phone,
             @Size(max = 255) String jobTitle,
+            @Min(0) Integer yearsExperience,
+            @Size(max = 2000) String bio,
             @NotBlank String status
     ) {
     }
@@ -61,16 +63,37 @@ public final class CompanyDto {
             String email,
             String phone,
             String jobTitle,
+            String avatarUrl,
+            Integer yearsExperience,
+            String bio,
             String status,
-            BigDecimal currentLatitude,   
+            BigDecimal currentLatitude,
             BigDecimal currentLongitude
     ) {
     }
 
     public record LocationUpdateRequest(
-        @NotNull BigDecimal latitude,
-        @NotNull BigDecimal longitude
-    ){
+            @NotNull BigDecimal latitude,
+            @NotNull BigDecimal longitude
+    ) {
+    }
+
+    public record StaffProfileResponse(
+            Long id,
+            Long userId,
+            String avatarUrl,
+            String fullName,
+            String email,
+            String phone,
+            Long companyId,
+            String companyName,
+            String jobTitle,
+            String status,
+            Integer yearsExperience,
+            BigDecimal averageRating,
+            long completedRequests,
+            String bio
+    ) {
     }
 
     public record VehicleRequest(

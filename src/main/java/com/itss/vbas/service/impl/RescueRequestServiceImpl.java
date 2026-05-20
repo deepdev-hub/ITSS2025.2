@@ -5,6 +5,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import com.itss.vbas.dto.common.CommonDto;
+import com.itss.vbas.dto.request.FeeDto;
 import com.itss.vbas.dto.request.RequestDto;
 import com.itss.vbas.entity.Account;
 import com.itss.vbas.entity.Address;
@@ -36,6 +37,7 @@ import com.itss.vbas.repository.ReviewRepository;
 import com.itss.vbas.repository.ServiceTypeRepository;
 import com.itss.vbas.security.AuthContext;
 import com.itss.vbas.service.AddressService;
+import com.itss.vbas.service.FeeService;
 import com.itss.vbas.service.RequestSupportService;
 import com.itss.vbas.service.RescueRequestService;
 import com.itss.vbas.util.CodeGenerator;
@@ -62,6 +64,7 @@ public class RescueRequestServiceImpl implements RescueRequestService {
     private final AuthContext authContext;
     private final AppMapper appMapper;
     private final FileStorageService fileStorageService;
+    private final FeeService feeService;
 
     public RescueRequestServiceImpl(
             RescueRequestRepository rescueRequestRepository,
@@ -77,7 +80,8 @@ public class RescueRequestServiceImpl implements RescueRequestService {
             RequestSupportService requestSupportService,
             AuthContext authContext,
             AppMapper appMapper,
-            FileStorageService fileStorageService
+            FileStorageService fileStorageService,
+            FeeService feeService
     ) {
         this.rescueRequestRepository = rescueRequestRepository;
         this.customerVehicleRepository = customerVehicleRepository;
@@ -93,6 +97,7 @@ public class RescueRequestServiceImpl implements RescueRequestService {
         this.authContext = authContext;
         this.appMapper = appMapper;
         this.fileStorageService = fileStorageService;
+        this.feeService = feeService;
     }
 
     @Override
@@ -108,6 +113,10 @@ public class RescueRequestServiceImpl implements RescueRequestService {
                 .orElseThrow(() -> new ResourceNotFoundException("Service type not found with id: " + request.serviceTypeId()));
         CustomerVehicle vehicle = request.vehicleId() == null ? null : customerVehicleRepository.findByIdAndCustomerId(request.vehicleId(), customer.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Vehicle not found with id: " + request.vehicleId()));
+        BigDecimal travelCost = resolveTravelCost(request.transportCost());
+        FeeDto.PredictFeeResponse estimatedQuotation = serviceType == null
+                ? null
+                : feeService.predictFee(serviceType.getId(), travelCost);
 
         RescueRequest rescueRequest = RescueRequest.builder()
                 .requestCode(CodeGenerator.requestCode())
@@ -115,6 +124,10 @@ public class RescueRequestServiceImpl implements RescueRequestService {
                 .vehicle(vehicle)
                 .incidentType(incidentType)
                 .serviceType(serviceType)
+                .servicePriceSnapshot(estimatedQuotation == null ? null : estimatedQuotation.basePrice())
+                .travelCost(travelCost)
+                .feeCoefficient(estimatedQuotation == null ? null : estimatedQuotation.coefficient())
+                .estimatedQuotationAmount(estimatedQuotation == null ? null : estimatedQuotation.estimatedFee())
                 .location(addressService.createAddress(request.location()))
                 .description(request.description())
                 .priorityLevel(parsePriority(request.priorityLevel()))
@@ -396,6 +409,14 @@ public class RescueRequestServiceImpl implements RescueRequestService {
         } catch (Exception ex) {
             throw new BadRequestException("Invalid request status: " + value);
         }
+    }
+
+    private BigDecimal resolveTravelCost(BigDecimal travelCost) {
+        BigDecimal resolved = travelCost == null ? BigDecimal.ZERO : travelCost;
+        if (resolved.compareTo(BigDecimal.ZERO) < 0) {
+            throw new BadRequestException("Travel cost cannot be negative");
+        }
+        return resolved;
     }
 
     @Override

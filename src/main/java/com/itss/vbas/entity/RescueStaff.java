@@ -43,6 +43,12 @@ public class RescueStaff {
     @Column(name = "job_title", length = 255)
     private String jobTitle;
 
+    @Column(name = "years_experience")
+    private Integer yearsExperience;
+
+    @Column(columnDefinition = "TEXT")
+    private String bio;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private StaffStatus status;

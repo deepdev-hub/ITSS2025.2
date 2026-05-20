@@ -29,6 +29,7 @@ import CompanyVehiclesPage from '../pages/company/CompanyVehiclesPage';
 import StaffDashboardPage from '../pages/staff/StaffDashboardPage';
 import StaffAssignmentsPage from '../pages/staff/StaffAssignmentsPage';
 import StaffLocationPage from '../pages/staff/StaffLocationPage';
+import StaffProfilePage from '../pages/staff/StaffProfilePage';
 import ProfilePage from '../pages/ProfilePage';
 
 export default function AppRouter() {
@@ -46,6 +47,7 @@ export default function AppRouter() {
           <Route path="/app" element={<Navigate to="/" replace />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/requests/:id" element={<RequestDetailPage />} />
+          <Route path="/staff/:id/profile" element={<StaffProfilePage />} />
 
           <Route element={<ProtectedRoute roles={[ROLES.CUSTOMER]} />}>
             <Route path="/customer/requests" element={<MyRequestsPage />} />

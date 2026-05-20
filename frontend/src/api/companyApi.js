@@ -9,6 +9,7 @@ export const companyApi = {
   createQuote: (requestId, payload) => unwrap(apiClient.post(`/api/companies/requests/${requestId}/quotes`, payload)),
   sendQuote: (quoteId) => unwrap(apiClient.put(`/api/companies/quotes/${quoteId}/send`)),
   getStaff: () => unwrap(apiClient.get('/api/companies/staff')),
+  getStaffProfile: (id) => unwrap(apiClient.get(`/api/companies/staff/${id}/profile`)),
   createStaff: (payload) => unwrap(apiClient.post('/api/companies/staff', payload)),
   updateStaff: (id, payload) => unwrap(apiClient.put(`/api/companies/staff/${id}`, payload)),
   deleteStaff: (id) => unwrap(apiClient.delete(`/api/companies/staff/${id}`)),

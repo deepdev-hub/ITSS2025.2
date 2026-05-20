@@ -1,5 +1,6 @@
 package com.itss.vbas.controller;
 
+import java.time.LocalDate;
 import java.util.List;
 
 import com.itss.vbas.dto.admin.AdminDto;
@@ -21,6 +22,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -249,5 +251,16 @@ public class AdminController {
     @PostMapping("/dashboard/refresh")
     public ResponseEntity<CommonDto.ApiResponse<DashboardDto.AdminDashboardResponse>> refreshDashboard() {
         return ResponseEntity.ok(CommonDto.ApiResponse.success("Admin dashboard refreshed successfully", dashboardService.refreshAdminDashboard()));
+    }
+
+    @GetMapping("/dashboard/company-performance")
+    public ResponseEntity<CommonDto.ApiResponse<DashboardDto.CompanyPerformanceResponse>> getCompanyPerformance(
+            @RequestParam(required = false) LocalDate startDate,
+            @RequestParam(required = false) LocalDate endDate
+    ) {
+        return ResponseEntity.ok(CommonDto.ApiResponse.success(
+                "Company performance statistics fetched successfully",
+                dashboardService.getCompanyPerformance(startDate, endDate)
+        ));
     }
 }

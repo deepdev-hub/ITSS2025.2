@@ -1,5 +1,6 @@
 package com.itss.vbas.entity;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 import com.itss.vbas.enums.RequestPriority;
@@ -54,6 +55,18 @@ public class RescueRequest {
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "service_type_id")
     private ServiceType serviceType;
+
+    @Column(name = "service_price_snapshot", precision = 15, scale = 2)
+    private BigDecimal servicePriceSnapshot;
+
+    @Column(name = "travel_cost", precision = 15, scale = 2)
+    private BigDecimal travelCost;
+
+    @Column(name = "fee_coefficient", precision = 10, scale = 4)
+    private BigDecimal feeCoefficient;
+
+    @Column(name = "estimated_quotation_amount", precision = 15, scale = 2)
+    private BigDecimal estimatedQuotationAmount;
 
     @ManyToOne(fetch = FetchType.EAGER, optional = false)
     @JoinColumn(name = "location_id", nullable = false)

@@ -7,6 +7,7 @@ import java.util.List;
 import com.itss.vbas.dto.common.CommonDto;
 import com.itss.vbas.dto.customer.CustomerDto;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -21,7 +22,8 @@ public final class RequestDto {
     public record CreateRequest(
             Long vehicleId,
             @NotNull Long incidentTypeId,
-            Long serviceTypeId,
+            @NotNull Long serviceTypeId,
+            @DecimalMin("0.0") BigDecimal transportCost,
             @Size(max = 2000) String description,
             @NotBlank String priorityLevel,
             @Valid @NotNull CommonDto.AddressRequest location
@@ -63,6 +65,8 @@ public final class RequestDto {
             String companyName,
             Long staffId,
             String staffName,
+            String staffAvatarUrl,
+            String staffJobTitle,
             Long vehicleId,
             String vehicleCode,
             String vehiclePlateNumber,
@@ -205,6 +209,16 @@ public final class RequestDto {
     ) {
     }
 
+    public record EstimatedQuotationResponse(
+            Long serviceTypeId,
+            String serviceName,
+            BigDecimal servicePrice,
+            BigDecimal travelCost,
+            BigDecimal coefficient,
+            BigDecimal estimatedAmount
+    ) {
+    }
+
     public record RequestDetailResponse(
             Long id,
             String requestCode,
@@ -221,6 +235,7 @@ public final class RequestDto {
             CommonDto.AddressResponse location,
             CommonDto.BasicCompanyResponse assignedCompany,
             AssignmentResponse currentAssignment,
+            EstimatedQuotationResponse estimatedQuotation,
             List<StatusHistoryResponse> history,
             List<QuoteResponse> quotes,
             List<PaymentResponse> payments,

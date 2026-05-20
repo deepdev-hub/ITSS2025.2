@@ -3,6 +3,7 @@ package com.itss.vbas.dto.dashboard;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 public final class DashboardDto {
 
@@ -53,6 +54,24 @@ public final class DashboardDto {
             long activeAssignments,
             long completedAssignments,
             long handlingRequests
+    ) {
+    }
+
+    public record CompanyPerformanceResponse(
+            LocalDate startDate,
+            LocalDate endDate,
+            List<CompanyMetricResponse> companies
+    ) {
+    }
+
+    public record CompanyMetricResponse(
+            Long companyId,
+            String companyName,
+            BigDecimal revenue,
+            BigDecimal averageRating,
+            long reviewCount,
+            long paidPaymentCount,
+            long completedRequestCount
     ) {
     }
 }
