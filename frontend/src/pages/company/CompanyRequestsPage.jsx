@@ -24,6 +24,7 @@ const initialQuote = {
   unitPrice: '',
   subtotal: '',
   expiresAt: '',
+  note: '',
 };
 
 function hasAssignedStaff(assignment) {
@@ -187,6 +188,7 @@ export default function CompanyRequestsPage() {
       unitPrice:       editableQuote?.unitPrice   ?? '',
       subtotal:        editableQuote?.subtotal    ?? '',
       expiresAt:       toDateTimeInputValue(editableQuote?.expiresAt),
+      note:            editableQuote?.note        ?? '',
     });
     setStatusForm((prev) => ({
       status: nextStatusOptions.includes(prev.status) ? prev.status : (nextStatusOptions[0] || prev.status),
@@ -264,6 +266,7 @@ export default function CompanyRequestsPage() {
           unitPrice:       quoteForm.unitPrice        ? Number(quoteForm.unitPrice)        : null,
           subtotal:        quoteForm.subtotal         ? Number(quoteForm.subtotal)         : null,
           expiresAt:       quoteForm.expiresAt || null,
+          note:            quoteForm.note,
         });
         if (sendImmediately) await companyApi.sendQuote(quote.id);
       },
@@ -707,6 +710,14 @@ export default function CompanyRequestsPage() {
                       onChange={(e) => setQuoteForm((p) => ({ ...p, expiresAt: e.target.value }))}
                     />
                   </div>
+                  <div className="field">
+                    <label>Deal Note</label>
+                    <input
+                      value={quoteForm.note}
+                      onChange={(e) => setQuoteForm((p) => ({ ...p, note: e.target.value }))}
+                      placeholder="Included fees, night surcharge, or other deal terms"
+                    />
+                  </div>
                 </div>
                 <div className="actions-row">
                   <button
@@ -738,19 +749,21 @@ export default function CompanyRequestsPage() {
                         <th>Quote</th>
                         <th>Service</th>
                         <th>Total</th>
+                        <th>Note</th>
                         <th>Status</th>
                         <th>Expires</th>
                       </tr>
                     </thead>
                     <tbody>
                       {(detail.quotes || []).length === 0 ? (
-                        <tr><td colSpan="5">No quotes created yet.</td></tr>
+                        <tr><td colSpan="6">No quotes created yet.</td></tr>
                       ) : (
                         detail.quotes.map((quote) => (
                           <tr key={quote.id}>
                             <td>{quote.quoteCode}</td>
                             <td>{quote.serviceName}</td>
                             <td>{formatCurrency(quote.finalAmount ?? quote.estimatedAmount ?? quote.subtotal)}</td>
+                            <td>{quote.note || 'N/A'}</td>
                             <td><StatusBadge value={quote.status} /></td>
                             <td>{formatDateTime(quote.expiresAt)}</td>
                           </tr>

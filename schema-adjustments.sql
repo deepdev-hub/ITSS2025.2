@@ -41,6 +41,10 @@ ALTER TABLE public.service_types
 ALTER TABLE public.payments
     ADD COLUMN IF NOT EXISTS created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL;
 
+ALTER TABLE public.quotes
+    ADD COLUMN IF NOT EXISTS note text,
+    ADD COLUMN IF NOT EXISTS customer_note text;
+
 ALTER TABLE public.rescue_vehicles
     ADD COLUMN IF NOT EXISTS company_id bigint;
 

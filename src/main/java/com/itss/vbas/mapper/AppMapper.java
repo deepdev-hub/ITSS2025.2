@@ -275,7 +275,9 @@ public class AppMapper {
                 quote.getServiceName(),
                 quote.getQuantity(),
                 quote.getUnitPrice(),
-                quote.getSubtotal()
+                quote.getSubtotal(),
+                quote.getNote(),
+                quote.getCustomerNote()
         );
     }
 

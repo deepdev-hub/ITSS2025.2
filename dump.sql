@@ -414,6 +414,8 @@ CREATE TABLE public.quotes (
     quantity integer,
     unit_price numeric(15,2),
     subtotal numeric(15,2),
+    note text,
+    customer_note text,
     CONSTRAINT quotes_status_check CHECK (((status)::text = ANY ((ARRAY['DRAFT'::character varying, 'SENT'::character varying, 'ACCEPTED'::character varying, 'REJECTED'::character varying, 'EXPIRED'::character varying])::text[])))
 );
 
@@ -2158,4 +2160,3 @@ GRANT ALL ON SCHEMA public TO PUBLIC;
 --
 -- PostgreSQL database dump complete
 --
-

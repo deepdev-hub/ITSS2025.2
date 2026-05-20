@@ -19,6 +19,7 @@ import com.itss.vbas.entity.RescueStaff;
 import com.itss.vbas.entity.RescueVehicle;
 import com.itss.vbas.entity.ServiceType;
 import com.itss.vbas.enums.AssignmentStatus;
+import com.itss.vbas.enums.PaymentStatus;
 import com.itss.vbas.enums.RequestPriority;
 import com.itss.vbas.enums.RescueRequestStatus;
 import com.itss.vbas.enums.RoleName;
@@ -244,6 +245,9 @@ public class RescueRequestServiceImpl implements RescueRequestService {
         }
         if (rescueRequest.getStatus() == RescueRequestStatus.COMPLETED || rescueRequest.getStatus() == RescueRequestStatus.CANCELED) {
             throw new BadRequestException("This request can no longer be canceled");
+        }
+        if (paymentRepository.existsByRequestIdAndPaymentStatus(requestId, PaymentStatus.PAID)) {
+            throw new BadRequestException("Paid request can no longer be canceled");
         }
         requestSupportService.changeRequestStatus(rescueRequest, RescueRequestStatus.CANCELED, customer, note);
         RequestAssignment latestAssignment = requestSupportService.getLatestAssignment(rescueRequest);

@@ -18,6 +18,8 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
 
     Optional<Payment> findByIdAndCustomerId(Long id, Long customerId);
 
+    boolean existsByRequestIdAndPaymentStatus(Long requestId, PaymentStatus paymentStatus);
+
     long countByPaymentStatus(PaymentStatus paymentStatus);
 
     @Query("""
