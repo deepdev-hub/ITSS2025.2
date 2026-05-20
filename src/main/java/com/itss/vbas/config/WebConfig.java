@@ -28,8 +28,7 @@ public class WebConfig implements WebMvcConfigurer {
                 .allowedOrigins(Arrays.stream(allowedOrigins.split(","))
                         .map(String::trim)
                         .toArray(String[]::new))
-                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
-                .allowedHeaders("*")
+                        .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")                .allowedHeaders("*")
                 .allowCredentials(false);
     }
 

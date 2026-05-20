@@ -10,6 +10,8 @@ import com.itss.vbas.entity.Quote;
 import com.itss.vbas.entity.RescueRequest;
 import com.itss.vbas.enums.PaymentMethod;
 import com.itss.vbas.enums.PaymentStatus;
+import com.itss.vbas.enums.QuoteStatus;
+import com.itss.vbas.enums.RescueRequestStatus;
 import com.itss.vbas.exception.BadRequestException;
 import com.itss.vbas.exception.ForbiddenException;
 import com.itss.vbas.exception.ResourceNotFoundException;
@@ -53,9 +55,8 @@ public class PaymentServiceImpl implements PaymentService {
     @Override
     @Transactional(readOnly = true)
     public List<RequestDto.PaymentResponse> getPaymentsByRequest(Long requestId) {
-        Account account = authContext.getCurrentAccount();
         RescueRequest rescueRequest = findRequest(requestId);
-        requestSupportService.assertRequestParticipant(account, rescueRequest);
+        requestSupportService.assertRequestParticipant(authContext.getCurrentAccount(), rescueRequest);
         return paymentRepository.findByRequestIdOrderByIdDesc(requestId)
                 .stream()
                 .map(appMapper::toPaymentResponse)
@@ -64,11 +65,9 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Override
     public RequestDto.PaymentResponse createPayment(Long requestId, RequestDto.PaymentCreateRequest request) {
-        Account customer = authContext.getCurrentAccount();
         RescueRequest rescueRequest = findRequest(requestId);
-        if (!rescueRequest.getCustomer().getId().equals(customer.getId())) {
-            throw new ForbiddenException("You can only create payment for your own request");
-        }
+        requireCurrentCustomer(rescueRequest);
+        ensureRequestCanCreatePayment(rescueRequest);
 
         Payment existingPayment = paymentRepository.findFirstByRequestIdOrderByIdDesc(requestId).orElse(null);
         if (existingPayment != null && existingPayment.getPaymentStatus() == PaymentStatus.PAID) {
@@ -80,37 +79,47 @@ public class PaymentServiceImpl implements PaymentService {
 
         Quote acceptedQuote = quoteRepository.findByRequestIdOrderByCreatedAtDesc(requestId)
                 .stream()
-                .filter(quote -> quote.getStatus().name().equals("ACCEPTED"))
+                .filter(quote -> quote.getStatus() == QuoteStatus.ACCEPTED)
                 .findFirst()
-                .orElse(null);
+                .orElseThrow(() -> new BadRequestException("Customer must accept the deal price before payment"));
+        java.math.BigDecimal paymentAmount = resolveQuoteAmount(acceptedQuote);
+        if (paymentAmount == null || paymentAmount.compareTo(java.math.BigDecimal.ZERO) <= 0) {
+            throw new BadRequestException("Accepted deal price must be greater than zero");
+        }
 
         Payment payment = Payment.builder()
                 .request(rescueRequest)
-                .customer(customer)
-                .amount(request.amount() != null ? request.amount() : resolveQuoteAmount(acceptedQuote))
+                .customer(rescueRequest.getCustomer())
+                .amount(paymentAmount)
                 .paymentMethod(parsePaymentMethod(request.paymentMethod()))
                 .paymentStatus(PaymentStatus.PENDING)
                 .build();
-
-        if (payment.getAmount() == null) {
-            throw new BadRequestException("Payment amount is required because no accepted quote amount was found");
-        }
 
         return appMapper.toPaymentResponse(paymentRepository.save(payment));
     }
 
     @Override
     public RequestDto.PaymentResponse pay(Long paymentId, RequestDto.PaymentActionRequest request) {
-        Account customer = authContext.getCurrentAccount();
-        Payment payment = paymentRepository.findByIdAndCustomerId(paymentId, customer.getId())
+        Payment payment = paymentRepository.findById(paymentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Payment not found with id: " + paymentId));
-        if (!payment.getRequest().getCustomer().getId().equals(customer.getId())) {
-            throw new ForbiddenException("You can only pay your own request");
+        requireCurrentCustomer(payment.getRequest());
+        if (payment.getRequest().getStatus() == RescueRequestStatus.CANCELED) {
+            throw new BadRequestException("Canceled request cannot be paid");
+        }
+        if (paymentRepository.existsByRequestIdAndPaymentStatus(payment.getRequest().getId(), PaymentStatus.PAID)
+                && payment.getPaymentStatus() != PaymentStatus.PAID) {
+            throw new BadRequestException("This request has already been paid");
         }
 
         PaymentStatus paymentStatus = parsePaymentStatus(request.paymentStatus());
         if (!(paymentStatus == PaymentStatus.PAID || paymentStatus == PaymentStatus.FAILED)) {
             throw new BadRequestException("Payment endpoint only supports PAID or FAILED");
+        }
+        if (payment.getPaymentStatus() == PaymentStatus.PAID) {
+            if (paymentStatus == PaymentStatus.PAID) {
+                return appMapper.toPaymentResponse(payment);
+            }
+            throw new BadRequestException("Paid payment cannot be changed");
         }
 
         payment.setPaymentStatus(paymentStatus);
@@ -144,5 +153,22 @@ public class PaymentServiceImpl implements PaymentService {
             return null;
         }
         return acceptedQuote.getFinalAmount() != null ? acceptedQuote.getFinalAmount() : acceptedQuote.getEstimatedAmount();
+    }
+
+    private void ensureRequestCanCreatePayment(RescueRequest rescueRequest) {
+        if (rescueRequest.getStatus() == RescueRequestStatus.CANCELED) {
+            throw new BadRequestException("Canceled request cannot be paid");
+        }
+        if (paymentRepository.existsByRequestIdAndPaymentStatus(rescueRequest.getId(), PaymentStatus.PAID)) {
+            throw new BadRequestException("This request has already been paid");
+        }
+    }
+
+    private Account requireCurrentCustomer(RescueRequest rescueRequest) {
+        Account account = authContext.getCurrentAccount();
+        if (!rescueRequest.getCustomer().getId().equals(account.getId())) {
+            throw new ForbiddenException("You can only pay for your own request");
+        }
+        return account;
     }
 }

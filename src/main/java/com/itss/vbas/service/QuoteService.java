@@ -10,6 +10,12 @@ public interface QuoteService {
 
     RequestDto.QuoteResponse createOrUpdateQuote(Long requestId, CompanyDto.QuoteRequest request);
 
+    RequestDto.QuoteResponse updateDealPrice(Long requestId, RequestDto.DealPriceRequest request);
+
+    RequestDto.QuoteResponse acceptLatestDealPrice(Long requestId);
+
+    RequestDto.QuoteResponse rejectLatestDealPrice(Long requestId, RequestDto.PriceDecisionRequest request);
+
     RequestDto.QuoteResponse sendQuote(Long quoteId);
 
     RequestDto.QuoteResponse acceptQuote(Long quoteId);

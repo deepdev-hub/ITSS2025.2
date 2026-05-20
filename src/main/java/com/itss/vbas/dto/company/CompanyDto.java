@@ -99,7 +99,8 @@ public final class CompanyDto {
             @Min(1) Integer quantity,
             BigDecimal unitPrice,
             BigDecimal subtotal,
-            LocalDateTime expiresAt
+            LocalDateTime expiresAt,
+            @Size(max = 2000) String note
     ) {
     }
 }

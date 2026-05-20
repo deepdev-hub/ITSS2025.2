@@ -94,9 +94,19 @@ public class RequestController {
     @PutMapping("/{id}/cancel")
     public ResponseEntity<CommonDto.ApiResponse<Void>> cancelRequest(
             @PathVariable Long id,
-            @RequestBody(required = false) CommonDto.SimpleNoteRequest request
+            @RequestBody(required = false) RequestDto.PriceDecisionRequest request
     ) {
-        rescueRequestService.cancelRequest(id, request == null ? null : request.note());
+        rescueRequestService.cancelRequest(id, resolveCustomerNote(request));
+        return ResponseEntity.ok(CommonDto.ApiResponse.success("Request canceled successfully"));
+    }
+
+    @RequiredRoles(RoleName.CUSTOMER)
+    @PatchMapping("/{id}/cancel")
+    public ResponseEntity<CommonDto.ApiResponse<Void>> cancelRequestPatch(
+            @PathVariable Long id,
+            @RequestBody(required = false) RequestDto.PriceDecisionRequest request
+    ) {
+        rescueRequestService.cancelRequest(id, resolveCustomerNote(request));
         return ResponseEntity.ok(CommonDto.ApiResponse.success("Request canceled successfully"));
     }
 
@@ -137,6 +147,30 @@ public class RequestController {
         return ResponseEntity.ok(CommonDto.ApiResponse.success("Quotes fetched successfully", quoteService.getQuotesByRequest(id)));
     }
 
+    @RequiredRoles(RoleName.RESCUE_STAFF)
+    @PatchMapping("/{id}/deal-price")
+    public ResponseEntity<CommonDto.ApiResponse<RequestDto.QuoteResponse>> updateDealPrice(
+            @PathVariable Long id,
+            @Valid @RequestBody RequestDto.DealPriceRequest request
+    ) {
+        return ResponseEntity.ok(CommonDto.ApiResponse.success("Deal price updated successfully", quoteService.updateDealPrice(id, request)));
+    }
+
+    @RequiredRoles(RoleName.CUSTOMER)
+    @PatchMapping("/{id}/accept-price")
+    public ResponseEntity<CommonDto.ApiResponse<RequestDto.QuoteResponse>> acceptPrice(@PathVariable Long id) {
+        return ResponseEntity.ok(CommonDto.ApiResponse.success("Deal price accepted successfully", quoteService.acceptLatestDealPrice(id)));
+    }
+
+    @RequiredRoles(RoleName.CUSTOMER)
+    @PatchMapping("/{id}/reject-price")
+    public ResponseEntity<CommonDto.ApiResponse<RequestDto.QuoteResponse>> rejectPrice(
+            @PathVariable Long id,
+            @RequestBody(required = false) RequestDto.PriceDecisionRequest request
+    ) {
+        return ResponseEntity.ok(CommonDto.ApiResponse.success("Deal price rejected successfully", quoteService.rejectLatestDealPrice(id, request)));
+    }
+
     @RequiredRoles(RoleName.CUSTOMER)
     @PutMapping("/quotes/{quoteId}/accept")
     public ResponseEntity<CommonDto.ApiResponse<RequestDto.QuoteResponse>> acceptQuote(@PathVariable Long quoteId) {
@@ -158,6 +192,16 @@ public class RequestController {
     @RequiredRoles(RoleName.CUSTOMER)
     @PostMapping("/{id}/payments")
     public ResponseEntity<CommonDto.ApiResponse<RequestDto.PaymentResponse>> createPayment(
+            @PathVariable Long id,
+            @Valid @RequestBody RequestDto.PaymentCreateRequest request
+    ) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(CommonDto.ApiResponse.success("Payment created successfully", paymentService.createPayment(id, request)));
+    }
+
+    @RequiredRoles(RoleName.CUSTOMER)
+    @PostMapping("/{id}/payment")
+    public ResponseEntity<CommonDto.ApiResponse<RequestDto.PaymentResponse>> createPaymentSingular(
             @PathVariable Long id,
             @Valid @RequestBody RequestDto.PaymentCreateRequest request
     ) {
@@ -232,5 +276,15 @@ public class RequestController {
         adminService.autoAssignNearestStaff(request.getId());
 
         return ResponseEntity.ok(CommonDto.ApiResponse.success("Assignment rejected successfully"));
+    }
+
+    private String resolveCustomerNote(RequestDto.PriceDecisionRequest request) {
+        if (request == null) {
+            return null;
+        }
+        if (request.reason() != null && !request.reason().isBlank()) {
+            return request.reason();
+        }
+        return request.note();
     }
 }

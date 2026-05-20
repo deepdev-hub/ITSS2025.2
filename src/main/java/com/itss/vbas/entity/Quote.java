@@ -77,4 +77,10 @@ public class Quote {
 
     @Column(precision = 15, scale = 2)
     private BigDecimal subtotal;
+
+    @Column(columnDefinition = "TEXT")
+    private String note;
+
+    @Column(name = "customer_note", columnDefinition = "TEXT")
+    private String customerNote;
 }

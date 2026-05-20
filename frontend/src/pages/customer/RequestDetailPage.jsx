@@ -33,6 +33,15 @@ const defaultPaymentForm = {
   paymentStatus: 'PAID',
 };
 
+const defaultDealPriceForm = {
+  dealPrice: '',
+  note: '',
+};
+
+const defaultDecisionForm = {
+  reason: '',
+};
+
 const defaultReviewForm = {
   ratingScore: 5,
   comment: '',
@@ -47,6 +56,41 @@ function getCurrentPollMode() {
 
 function getQuoteAmount(quote) {
   return quote?.finalAmount ?? quote?.estimatedAmount ?? quote?.subtotal ?? null;
+}
+
+function isValidCoordinate(value, min, max) {
+  const numericValue = Number(value);
+  return Number.isFinite(numericValue) && numericValue >= min && numericValue <= max;
+}
+
+function getGoogleMapsDirectionsUrl(location) {
+  if (!isValidCoordinate(location?.latitude, -90, 90) || !isValidCoordinate(location?.longitude, -180, 180)) {
+    return null;
+  }
+  return `https://www.google.com/maps/dir/?api=1&destination=${location.latitude},${location.longitude}&travelmode=driving`;
+}
+
+function getPriceStatusLabel(quote, hasPaidPayment, requestStatus) {
+  if (requestStatus === 'CANCELED') {
+    return 'Đã hủy';
+  }
+  if (hasPaidPayment) {
+    return 'Đã thanh toán';
+  }
+  switch (quote?.status) {
+    case 'SENT':
+      return 'Chờ khách hàng xác nhận giá';
+    case 'ACCEPTED':
+      return 'Khách hàng đã chấp nhận giá';
+    case 'REJECTED':
+      return 'Khách hàng yêu cầu deal lại';
+    case 'DRAFT':
+      return 'Đang chuẩn bị giá';
+    case 'EXPIRED':
+      return 'Báo giá đã hết hạn';
+    default:
+      return 'Chưa có giá deal';
+  }
 }
 
 function normalizeMessages(items = []) {
@@ -199,6 +243,9 @@ export default function RequestDetailPage() {
   const [messageInput, setMessageInput] = useState('');
   const [statusForm, setStatusForm] = useState({ status: 'IN_PROGRESS', note: '' });
   const [paymentForm, setPaymentForm] = useState(defaultPaymentForm);
+  const [dealPriceForm, setDealPriceForm] = useState(defaultDealPriceForm);
+  const [rejectForm, setRejectForm] = useState(defaultDecisionForm);
+  const [cancelForm, setCancelForm] = useState(defaultDecisionForm);
   const [reviewForm, setReviewForm] = useState(defaultReviewForm);
   const refreshInFlightRef = useRef(false);
   const messageListRef = useRef(null);
@@ -206,6 +253,7 @@ export default function RequestDetailPage() {
   const lastMessageIdRef = useRef(null);
 
   const isCustomer = user?.roleName === 'CUSTOMER';
+  const isStaff = user?.roleName === 'RESCUE_STAFF';
   const isOpsRole = ['ADMIN', 'RESCUE_COMPANY', 'RESCUE_STAFF'].includes(user?.roleName);
 
   const statusOptions = useMemo(
@@ -218,15 +266,42 @@ export default function RequestDetailPage() {
     [detail],
   );
 
+  const latestQuote = useMemo(
+    () => detail?.quotes?.[0] ?? null,
+    [detail],
+  );
+
+  const waitingDealQuote = useMemo(
+    () => detail?.quotes?.find((item) => item.status === 'SENT') ?? null,
+    [detail],
+  );
+
   const pendingPayment = useMemo(
     () => detail?.payments?.find((item) => item.paymentStatus === 'PENDING') ?? null,
     [detail],
   );
 
-  const sentQuote = useMemo(
-    () => detail?.quotes?.find((item) => item.status === 'SENT') ?? null,
+  const hasPaidPayment = useMemo(
+    () => detail?.payments?.some((item) => item.paymentStatus === 'PAID') ?? false,
     [detail],
   );
+
+  const requestCanceled = detail?.status === 'CANCELED';
+  const requestFinalized = ['CANCELED', 'COMPLETED'].includes(detail?.status);
+  const latestPriceStatus = getPriceStatusLabel(latestQuote, hasPaidPayment, detail?.status);
+  const customerDirectionsUrl = getGoogleMapsDirectionsUrl(detail?.location);
+  const canManageDealPrice = isStaff
+    && !requestFinalized
+    && !acceptedQuote
+    && !hasPaidPayment;
+  const canCustomerActOnPrice = isCustomer
+    && Boolean(waitingDealQuote)
+    && !requestCanceled
+    && !hasPaidPayment;
+  const canCustomerCreatePayment = isCustomer
+    && Boolean(acceptedQuote)
+    && !requestCanceled
+    && !hasPaidPayment;
 
   const canLeaveReview = isCustomer && detail?.status === 'COMPLETED' && !detail?.review;
   const stableRequest = useMemo(
@@ -344,6 +419,15 @@ export default function RequestDetailPage() {
         ? (pendingPayment.amount ?? '')
         : (previous.amount !== '' ? previous.amount : resolvedAmount),
     }));
+
+    const editableQuote = detail.quotes?.find((item) => item.status === 'SENT' || item.status === 'REJECTED' || item.status === 'DRAFT')
+      ?? detail.quotes?.[0]
+      ?? null;
+
+    setDealPriceForm((previous) => ({
+      dealPrice: previous.dealPrice !== '' ? previous.dealPrice : (getQuoteAmount(editableQuote) ?? ''),
+      note: previous.note !== '' ? previous.note : (editableQuote?.note ?? ''),
+    }));
   }, [detail, pendingPayment, user?.roleName]);
 
   useEffect(() => {
@@ -402,7 +486,12 @@ export default function RequestDetailPage() {
 
   const cancelRequest = async () => runAction(
     'cancel',
-    () => requestApi.cancelRequest(id, { note: 'Canceled by customer from request detail' }),
+    async () => {
+      await requestApi.cancelRequest(id, {
+        reason: cancelForm.reason.trim() || 'Canceled by customer from request detail',
+      });
+      setCancelForm(defaultDecisionForm);
+    },
     'Request canceled successfully.',
   );
 
@@ -415,16 +504,40 @@ export default function RequestDetailPage() {
     );
   };
 
-  const decideQuote = async (quoteId, action) => runAction(
-    `quote-${action}`,
-    () => (action === 'accept' ? requestApi.acceptQuote(quoteId) : requestApi.rejectQuote(quoteId)),
-    `Quote ${action === 'accept' ? 'accepted' : 'rejected'} successfully.`,
+  const updateDealPrice = async (event) => {
+    event.preventDefault();
+    await runAction(
+      'deal-price',
+      async () => {
+        await requestApi.updateDealPrice(id, {
+          dealPrice: Number(dealPriceForm.dealPrice),
+          note: dealPriceForm.note,
+        });
+        setDealPriceForm((previous) => ({ ...previous, dealPrice: '' }));
+      },
+      'Deal price updated. Waiting for customer confirmation.',
+    );
+  };
+
+  const acceptPrice = async () => runAction(
+    'price-accept',
+    () => requestApi.acceptPrice(id),
+    'Deal price accepted. Payment is now available.',
+  );
+
+  const rejectPrice = async () => runAction(
+    'price-reject',
+    async () => {
+      await requestApi.rejectPrice(id, { reason: rejectForm.reason.trim() || null });
+      setRejectForm(defaultDecisionForm);
+    },
+    'Deal price rejected. Staff can update a new deal price.',
   );
 
   const createPayment = async () => runAction(
     'create-payment',
     () => requestApi.createPayment(id, {
-      amount: paymentForm.amount ? Number(paymentForm.amount) : null,
+      amount: null,
       paymentMethod: paymentForm.paymentMethod,
     }),
     'Payment record created successfully.',
@@ -532,6 +645,19 @@ export default function RequestDetailPage() {
             <textarea value={detail.location?.fullAddress || 'No location available.'} disabled />
           </div>
 
+          {isStaff && customerDirectionsUrl ? (
+            <div className="actions-row" style={{ marginBottom: '1rem' }}>
+              <a
+                className="button button-primary"
+                href={customerDirectionsUrl}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Dẫn đường tới khách hàng
+              </a>
+            </div>
+          ) : null}
+
           <div className="field">
             <label>Customer Vehicle</label>
             <input
@@ -587,7 +713,15 @@ export default function RequestDetailPage() {
           {isCustomer && canCustomerCancel(detail.status) ? (
             <div className="card card-muted" style={{ marginTop: '1rem' }}>
               <h3>Customer Actions</h3>
-              <p className="muted-line">You can still cancel while the request is waiting, matching, or already accepted.</p>
+              <p className="muted-line">Bạn có thể hủy đơn nếu quá trình deal giá không thành công.</p>
+              <div className="field">
+                <label>Lý do hủy</label>
+                <input
+                  value={cancelForm.reason}
+                  onChange={(event) => setCancelForm({ reason: event.target.value })}
+                  placeholder="Ví dụ: Không thỏa thuận được giá"
+                />
+              </div>
               <div className="actions-row">
                 <button
                   className="button button-danger"
@@ -639,9 +773,101 @@ export default function RequestDetailPage() {
             subtitle="Commercial and completion states for this request. These sections stay up to date automatically."
           />
 
-          {isCustomer && sentQuote ? (
+          <div className="card card-muted" style={{ marginBottom: '1rem' }}>
+            <h3>Deal Price</h3>
+            <div className="info-grid">
+              <div className="info-item">
+                <span>Giá dự kiến ban đầu</span>
+                <strong>{formatCurrency(latestQuote?.estimatedAmount)}</strong>
+              </div>
+              <div className="info-item">
+                <span>Giá đã deal</span>
+                <strong>{formatCurrency(getQuoteAmount(latestQuote))}</strong>
+              </div>
+              <div className="info-item">
+                <span>Trạng thái deal giá</span>
+                <strong>{latestPriceStatus}</strong>
+              </div>
+            </div>
+            <div className="field">
+              <label>Ghi chú từ staff</label>
+              <textarea value={latestQuote?.note || 'Chưa có ghi chú deal giá.'} disabled />
+            </div>
+            {latestQuote?.customerNote ? (
+              <div className="field">
+                <label>Lý do khách hàng từ chối</label>
+                <textarea value={latestQuote.customerNote} disabled />
+              </div>
+            ) : null}
+            {canCustomerActOnPrice ? (
+              <div style={{ marginTop: '1rem' }}>
+                <div className="field">
+                  <label>Lý do nếu không chấp nhận</label>
+                  <input
+                    value={rejectForm.reason}
+                    onChange={(event) => setRejectForm({ reason: event.target.value })}
+                    placeholder="Ví dụ: Giá quá cao, muốn thương lượng lại"
+                  />
+                </div>
+                <div className="actions-row" style={{ marginTop: '0.75rem' }}>
+                  <button
+                    className="button button-primary"
+                    type="button"
+                    disabled={busyAction === 'price-accept'}
+                    onClick={acceptPrice}
+                  >
+                    {busyAction === 'price-accept' ? 'Accepting...' : 'Chấp nhận giá'}
+                  </button>
+                  <button
+                    className="button button-secondary"
+                    type="button"
+                    disabled={busyAction === 'price-reject'}
+                    onClick={rejectPrice}
+                  >
+                    {busyAction === 'price-reject' ? 'Rejecting...' : 'Không chấp nhận / Yêu cầu deal lại'}
+                  </button>
+                </div>
+              </div>
+            ) : null}
+          </div>
+
+          {canManageDealPrice ? (
+            <form className="card card-muted" style={{ marginBottom: '1rem' }} onSubmit={updateDealPrice}>
+              <h3>Update Deal Price</h3>
+              <div className="form-grid">
+                <div className="field">
+                  <label>Deal Price</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1000"
+                    value={dealPriceForm.dealPrice}
+                    onChange={(event) => setDealPriceForm((previous) => ({ ...previous, dealPrice: event.target.value }))}
+                    placeholder="300000"
+                  />
+                </div>
+                <div className="field">
+                  <label>Deal Note</label>
+                  <input
+                    value={dealPriceForm.note}
+                    onChange={(event) => setDealPriceForm((previous) => ({ ...previous, note: event.target.value }))}
+                    placeholder="Giá đã bao gồm phí kéo xe và phụ phí ban đêm"
+                  />
+                </div>
+              </div>
+              <button
+                className="button button-primary"
+                type="submit"
+                disabled={busyAction === 'deal-price' || !dealPriceForm.dealPrice || Number(dealPriceForm.dealPrice) <= 0}
+              >
+                {busyAction === 'deal-price' ? 'Updating...' : 'Update deal price'}
+              </button>
+            </form>
+          ) : null}
+
+          {isCustomer && waitingDealQuote ? (
             <div className="section-banner section-banner-warning">
-              A quote is waiting for your response. Accept or reject it below.
+              Giá deal mới đang chờ bạn xác nhận. Hãy chấp nhận để chuyển sang thanh toán hoặc yêu cầu deal lại.
             </div>
           ) : null}
 
@@ -665,6 +891,7 @@ export default function RequestDetailPage() {
                   <th>Service</th>
                   <th>Staff</th>
                   <th>Total</th>
+                  <th>Note</th>
                   <th>Expires</th>
                   <th>Status</th>
                   <th />
@@ -673,7 +900,7 @@ export default function RequestDetailPage() {
               <tbody>
                 {(detail.quotes || []).length === 0 ? (
                   <tr>
-                    <td colSpan="7">No quote has been created yet.</td>
+                    <td colSpan="8">No quote has been created yet.</td>
                   </tr>
                 ) : (
                   detail.quotes.map((quote) => (
@@ -691,6 +918,10 @@ export default function RequestDetailPage() {
                       </td>
                       <td>{quote.staffName || 'Company dispatch team'}</td>
                       <td>{formatCurrency(getQuoteAmount(quote))}</td>
+                      <td>
+                        {quote.note || 'N/A'}
+                        {quote.customerNote ? <div className="muted-line">Customer: {quote.customerNote}</div> : null}
+                      </td>
                       <td>{formatDateTime(quote.expiresAt)}</td>
                       <td><StatusBadge value={quote.status} /></td>
                       <td>
@@ -699,18 +930,18 @@ export default function RequestDetailPage() {
                             <button
                               className="button button-primary"
                               type="button"
-                              disabled={busyAction === 'quote-accept'}
-                              onClick={() => decideQuote(quote.id, 'accept')}
+                              disabled={busyAction === 'price-accept'}
+                              onClick={acceptPrice}
                             >
-                              Accept
+                              Chấp nhận
                             </button>
                             <button
-                              className="button button-danger"
+                              className="button button-secondary"
                               type="button"
-                              disabled={busyAction === 'quote-reject'}
-                              onClick={() => decideQuote(quote.id, 'reject')}
+                              disabled={busyAction === 'price-reject'}
+                              onClick={rejectPrice}
                             >
-                              Reject
+                              Deal lại
                             </button>
                           </div>
                         ) : null}
@@ -754,7 +985,16 @@ export default function RequestDetailPage() {
             </table>
           </div>
 
-          {isCustomer ? (
+          {isCustomer && !canCustomerCreatePayment ? (
+            <div className="card card-muted" style={{ marginTop: '1rem' }}>
+              <h3>Payment Actions</h3>
+              <p className="muted-line">
+                Thanh toán chỉ mở sau khi staff cập nhật giá deal và bạn chấp nhận giá. Đơn đã hủy hoặc đã thanh toán sẽ không thể tạo payment mới.
+              </p>
+            </div>
+          ) : null}
+
+          {isCustomer && canCustomerCreatePayment ? (
             <div className="card card-muted" style={{ marginTop: '1rem' }}>
               <h3>Payment Actions</h3>
               <p className="muted-line">
@@ -764,9 +1004,8 @@ export default function RequestDetailPage() {
                 <div className="field">
                   <label>Amount</label>
                   <input
-                    value={paymentForm.amount}
-                    onChange={(event) => setPaymentForm((previous) => ({ ...previous, amount: event.target.value }))}
-                    placeholder="Leave blank to use accepted quote amount"
+                    value={formatCurrency(getQuoteAmount(acceptedQuote))}
+                    disabled
                   />
                 </div>
                 <div className="field">
@@ -798,7 +1037,7 @@ export default function RequestDetailPage() {
                 <button
                   className="button button-secondary"
                   type="button"
-                  disabled={busyAction === 'create-payment'}
+                  disabled={busyAction === 'create-payment' || Boolean(pendingPayment)}
                   onClick={createPayment}
                 >
                   {busyAction === 'create-payment' ? 'Creating...' : 'Create payment record'}
