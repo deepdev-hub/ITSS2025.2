@@ -41,6 +41,8 @@ import com.itss.vbas.service.AddressService;
 import com.itss.vbas.service.FeeService;
 import com.itss.vbas.service.RequestSupportService;
 import com.itss.vbas.service.RescueRequestService;
+import com.itss.vbas.service.AdminService;
+import org.springframework.context.annotation.Lazy;
 import com.itss.vbas.util.CodeGenerator;
 import com.itss.vbas.service.FileStorageService;
 import org.springframework.web.multipart.MultipartFile;
@@ -66,6 +68,7 @@ public class RescueRequestServiceImpl implements RescueRequestService {
     private final AppMapper appMapper;
     private final FileStorageService fileStorageService;
     private final FeeService feeService;
+    private final AdminService adminService;
 
     public RescueRequestServiceImpl(
             RescueRequestRepository rescueRequestRepository,
@@ -82,7 +85,8 @@ public class RescueRequestServiceImpl implements RescueRequestService {
             AuthContext authContext,
             AppMapper appMapper,
             FileStorageService fileStorageService,
-            FeeService feeService
+            FeeService feeService,
+            @Lazy AdminService adminService
     ) {
         this.rescueRequestRepository = rescueRequestRepository;
         this.customerVehicleRepository = customerVehicleRepository;
@@ -99,6 +103,7 @@ public class RescueRequestServiceImpl implements RescueRequestService {
         this.appMapper = appMapper;
         this.fileStorageService = fileStorageService;
         this.feeService = feeService;
+        this.adminService = adminService;
     }
 
     @Override
@@ -144,6 +149,9 @@ public class RescueRequestServiceImpl implements RescueRequestService {
                 .note("Request created")
                 .changedAt(LocalDateTime.now())
                 .build());
+
+        adminService.autoAssignNearestStaff(savedRequest.getId());
+
         return buildDetail(savedRequest);
     }
 
