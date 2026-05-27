@@ -201,9 +201,10 @@ public class RescueRequestServiceImpl implements RescueRequestService {
 
         RescueStaff staff = assignment.getStaff();
         RescueVehicle vehicle = assignment.getVehicle();
+        boolean hasCurrentStaffLocation = hasCoordinates(staff.getUser().getDefaultAddress());
         RequestDto.TrackingPointResponse staffLocation = resolveStaffLocation(staff, destination, rescueRequest.getStatus());
         Double distanceKm = calculateDistanceKm(staffLocation, destination);
-        String movementStatus = resolveMovementStatus(rescueRequest.getStatus(), distanceKm);
+        String movementStatus = resolveMovementStatus(rescueRequest.getStatus(), distanceKm, hasCurrentStaffLocation);
         Integer etaMinutes = estimateEtaMinutes(movementStatus, distanceKm);
         List<RequestDto.TrackingPointResponse> route = staffLocation != null && destination != null
                 ? List.of(staffLocation, destination)
@@ -332,6 +333,10 @@ public class RescueRequestServiceImpl implements RescueRequestService {
         return new RequestDto.TrackingPointResponse(address.getLatitude(), address.getLongitude(), label);
     }
 
+    private boolean hasCoordinates(Address address) {
+        return address != null && address.getLatitude() != null && address.getLongitude() != null;
+    }
+
     private RequestDto.TrackingPointResponse resolveStaffLocation(
             RescueStaff staff,
             RequestDto.TrackingPointResponse destination,
@@ -378,9 +383,12 @@ public class RescueRequestServiceImpl implements RescueRequestService {
         return earthRadiusKm * c;
     }
 
-    private String resolveMovementStatus(RescueRequestStatus requestStatus, Double distanceKm) {
+    private String resolveMovementStatus(RescueRequestStatus requestStatus, Double distanceKm, boolean hasCurrentStaffLocation) {
         if (requestStatus == RescueRequestStatus.IN_PROGRESS || requestStatus == RescueRequestStatus.COMPLETED) {
             return "ARRIVED";
+        }
+        if (hasCurrentStaffLocation) {
+            return "NEARBY";
         }
         if (distanceKm != null && distanceKm < 0.3) {
             return "NEARBY";
@@ -391,6 +399,9 @@ public class RescueRequestServiceImpl implements RescueRequestService {
     private Integer estimateEtaMinutes(String movementStatus, Double distanceKm) {
         if ("ARRIVED".equals(movementStatus)) {
             return 0;
+        }
+        if ("NEARBY".equals(movementStatus)) {
+            return 3;
         }
         if (distanceKm == null) {
             return null;

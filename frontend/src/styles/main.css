@@ -352,6 +352,24 @@ textarea {
   color: #2165a6;
 }
 
+.staff-checkin-panel {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.staff-checkin-panel .button {
+  white-space: nowrap;
+}
+
+.staff-checkin-panel span {
+  display: block;
+  margin-top: 0.25rem;
+  color: var(--muted);
+}
+
 .toolbar {
   display: flex;
   justify-content: space-between;
@@ -1343,6 +1361,15 @@ th {
 
   .tracking-map-warning {
     bottom: 0.75rem;
+  }
+
+  .staff-checkin-panel {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .staff-checkin-panel .button {
+    width: 100%;
   }
 }
 /* CreateRequestPage preview */
