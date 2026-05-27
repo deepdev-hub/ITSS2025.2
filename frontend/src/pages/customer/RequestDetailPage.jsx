@@ -91,6 +91,8 @@ function getPriceStatusLabel(quote, hasPaidPayment, requestStatus) {
     default:
       return 'Chưa có giá deal';
   }
+}
+
 function getInitials(name = '') {
   return name
     .split(' ')
@@ -164,14 +166,11 @@ function EstimatedQuotationPanel({ quotation, prominent = false }) {
 }
 
 function RequestImage({ imageUrl, updatedAt }) {
-  const [imageError, setImageError] = useState(false);
+  const [failedImageUrl, setFailedImageUrl] = useState(null);
 
   const resolvedUrl = resolveRequestImageUrl(imageUrl || '');
-  const displayUrl = imageError ? null : addRequestImageCacheKey(resolvedUrl, updatedAt);
-
-  useEffect(() => {
-    setImageError(false);
-  }, [imageUrl]);
+  const imageSrc = addRequestImageCacheKey(resolvedUrl, updatedAt);
+  const displayUrl = failedImageUrl === imageSrc ? null : imageSrc;
 
   if (!imageUrl) {
     return (
@@ -194,7 +193,7 @@ function RequestImage({ imageUrl, updatedAt }) {
       src={displayUrl}
       alt="Request"
       className="request-image-display"
-      onError={() => setImageError(true)}
+      onError={() => setFailedImageUrl(imageSrc)}
     />
   );
 }
