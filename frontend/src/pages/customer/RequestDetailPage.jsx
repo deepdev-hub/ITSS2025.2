@@ -92,6 +92,7 @@ function getPriceStatusLabel(quote, hasPaidPayment, requestStatus) {
       return 'Chưa có giá deal';
   }
 }
+
 function getInitials(name = '') {
   return name
     .split(' ')
