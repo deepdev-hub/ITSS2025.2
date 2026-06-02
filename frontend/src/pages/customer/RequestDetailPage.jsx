@@ -324,6 +324,11 @@ export default function RequestDetailPage() {
 
   const requestCanceled = detail?.status === 'CANCELED';
   const requestFinalized = ['CANCELED', 'COMPLETED'].includes(detail?.status);
+  const staffCheckedIn = isStaff && detail?.status === 'IN_PROGRESS';
+  const canStaffCheckIn = isStaff
+    && detail?.currentAssignment?.status === 'ACCEPTED'
+    && !staffCheckedIn
+    && !requestFinalized;
   const latestPriceStatus = getPriceStatusLabel(latestQuote, hasPaidPayment, detail?.status);
   const customerDirectionsUrl = getGoogleMapsDirectionsUrl(detail?.location);
   const canManageDealPrice = isStaff
@@ -540,6 +545,15 @@ export default function RequestDetailPage() {
     );
   };
 
+  const confirmStaffCheckIn = async () => runAction(
+    'check-in',
+    () => requestApi.updateStatus(id, {
+      status: 'IN_PROGRESS',
+      note: 'Staff checked in at customer location',
+    }),
+    'Check-in confirmed. Technician đang thực hiện nhiệm vụ.',
+  );
+
   const updateDealPrice = async (event) => {
     event.preventDefault();
     await runAction(
@@ -631,7 +645,7 @@ export default function RequestDetailPage() {
         )}
       />
 
-      {isCustomer ? <RequestTrackingMap requestId={id} /> : null}
+      {isCustomer ? <RequestTrackingMap requestId={id} requestStatus={detail.status} /> : null}
 
       {notice ? <div className="notice">{notice}</div> : null}
       {error ? <div className="notice error">{error}</div> : null}
@@ -693,6 +707,32 @@ export default function RequestDetailPage() {
               >
                 Dẫn đường tới khách hàng
               </a>
+            </div>
+          ) : null}
+
+          {staffCheckedIn ? (
+            <div className="section-banner section-banner-success staff-checkin-panel">
+              <div>
+                <strong>Technician đang thực hiện nhiệm vụ</strong>
+                <span>Staff đã check-in tại điểm cứu hộ, luồng theo dõi đang tới đã được dừng.</span>
+              </div>
+            </div>
+          ) : null}
+
+          {canStaffCheckIn ? (
+            <div className="section-banner section-banner-info staff-checkin-panel">
+              <div>
+                <strong>Check-in khi đã đến nơi</strong>
+                <span>Xác nhận để chuyển request sang trạng thái thực hiện nhiệm vụ.</span>
+              </div>
+              <button
+                className="button button-primary"
+                type="button"
+                disabled={busyAction === 'check-in'}
+                onClick={confirmStaffCheckIn}
+              >
+                {busyAction === 'check-in' ? 'Đang check-in...' : 'Xác nhận check-in'}
+              </button>
             </div>
           ) : null}
 

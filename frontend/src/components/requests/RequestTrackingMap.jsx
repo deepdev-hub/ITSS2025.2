@@ -6,6 +6,7 @@ import { requestApi } from '../../api/requestApi';
 
 const DEFAULT_CENTER = [21.0285, 105.8542];
 const TRACKING_POLL_INTERVAL = 20000;
+const TECHNICIAN_WORKING_STATUSES = ['IN_PROGRESS'];
 
 const staffMarkerIcon = L.divIcon({
   className: 'tracking-div-icon',
@@ -94,6 +95,10 @@ function getEtaLabel(tracking) {
   return 'Đang cập nhật ETA';
 }
 
+function isTechnicianWorkingStatus(status) {
+  return TECHNICIAN_WORKING_STATUSES.includes(status);
+}
+
 function FitTrackingBounds({ points, boundsKey }) {
   const map = useMap();
 
@@ -123,15 +128,16 @@ function FitTrackingBounds({ points, boundsKey }) {
   return null;
 }
 
-export default function RequestTrackingMap({ requestId }) {
+export default function RequestTrackingMap({ requestId, requestStatus }) {
   const [tracking, setTracking] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
   const inFlightRef = useRef(false);
+  const trackingStoppedRef = useRef(false);
 
   const loadTracking = useCallback(async ({ initial = false } = {}) => {
-    if (!requestId || inFlightRef.current) {
+    if (!requestId || inFlightRef.current || trackingStoppedRef.current) {
       return;
     }
 
@@ -144,6 +150,9 @@ export default function RequestTrackingMap({ requestId }) {
 
     try {
       const nextTracking = await requestApi.getRequestTracking(requestId);
+      if (isTechnicianWorkingStatus(nextTracking?.requestStatus)) {
+        trackingStoppedRef.current = true;
+      }
       setTracking(nextTracking);
       setError('');
     } catch (err) {
@@ -158,16 +167,26 @@ export default function RequestTrackingMap({ requestId }) {
   useEffect(() => {
     setTracking(null);
     setError('');
+    trackingStoppedRef.current = isTechnicianWorkingStatus(requestStatus);
+
+    if (trackingStoppedRef.current) {
+      setLoading(false);
+      setRefreshing(false);
+      return undefined;
+    }
+
     loadTracking({ initial: true });
 
     const intervalId = window.setInterval(() => {
-      loadTracking();
+      if (!trackingStoppedRef.current) {
+        loadTracking();
+      }
     }, TRACKING_POLL_INTERVAL);
 
     return () => {
       window.clearInterval(intervalId);
     };
-  }, [loadTracking]);
+  }, [loadTracking, requestStatus]);
 
   const destinationPosition = useMemo(() => toLatLng(tracking?.destination), [tracking]);
   const staffPosition = useMemo(() => toLatLng(tracking?.staff?.location), [tracking]);
@@ -195,15 +214,32 @@ export default function RequestTrackingMap({ requestId }) {
   }, [destinationPosition, staffPosition]);
 
   const boundsKey = mapPoints.map((point) => point.join(',')).join('|');
-  const movementLabel = getMovementLabel(tracking, staffPosition, destinationPosition);
-  const etaLabel = getEtaLabel(tracking);
-  const vehicleLabel = tracking?.vehicle
+  const effectiveRequestStatus = tracking?.requestStatus || requestStatus;
+  const technicianStartedTask = isTechnicianWorkingStatus(effectiveRequestStatus);
+  const isNearbyStaffUpdate = tracking?.movementStatus === 'NEARBY' && !technicianStartedTask;
+  const movementLabel = isNearbyStaffUpdate ? 'Sắp đến nơi' : getMovementLabel(tracking, staffPosition, destinationPosition);
+  const etaLabel = isNearbyStaffUpdate ? 'Khoảng 3 phút' : getEtaLabel(tracking);
+  const vehicleLabel = isNearbyStaffUpdate
+    ? 'Phương tiện đang cập nhật'
+    : tracking?.vehicle
     ? [tracking.vehicle.vehicleType, tracking.vehicle.vehicleCode].filter(Boolean).join(' - ')
     : 'Phương tiện đang cập nhật';
-  const plateLabel = tracking?.vehicle?.plateNumber || 'Chưa có biển số';
+  const plateLabel = isNearbyStaffUpdate ? 'Chưa có biển số' : (tracking?.vehicle?.plateNumber || 'Chưa có biển số');
   const ratingLabel = Number.isFinite(Number(tracking?.staff?.rating))
     ? `${Number(tracking.staff.rating).toFixed(1)}/5`
     : 'Chưa có đánh giá';
+
+  if (technicianStartedTask) {
+    return (
+      <div className="card tracking-state-card tracking-task-card">
+        <div className="tracking-search-icon">OK</div>
+        <div>
+          <h2>Technician đang thực hiện nhiệm vụ</h2>
+          <p>Staff đã check-in tại điểm cứu hộ. Hệ thống đã dừng cập nhật trạng thái đang tới.</p>
+        </div>
+      </div>
+    );
+  }
 
   if (loading && !tracking) {
     return (

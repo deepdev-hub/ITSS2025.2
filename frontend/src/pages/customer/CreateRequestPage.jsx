@@ -12,6 +12,12 @@ import { resolveRequestImageUrl } from '../../utils/requestImage';
 const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 const MAX_FILE_SIZE_MB = 5;
 
+const SUGGESTED_SERVICES_MAP = {
+  'FLAT_TIRE': ['ON_SITE_REPAIR', 'TOWING'],
+  'ENGINE_FAIL': ['TOWING'],
+  'BATTERY': ['BATTERY_SUPPORT', 'ON_SITE_REPAIR']
+};
+
 const initialForm = {
   vehicleId: '',
   incidentTypeId: '',
@@ -220,6 +226,21 @@ export default function CreateRequestPage() {
       }));
       return;
     }
+
+    if (name === 'incidentTypeId') {
+      const selectedIncident = incidentTypes.find((i) => i.id === Number(value));
+      const suggestedCodes = selectedIncident ? (SUGGESTED_SERVICES_MAP[selectedIncident.code] || []) : [];
+      let newServiceTypeId = form.serviceTypeId;
+      if (suggestedCodes.length > 0) {
+         const firstSuggested = serviceTypes.find((s) => s.code === suggestedCodes[0]);
+         if (firstSuggested) {
+             newServiceTypeId = String(firstSuggested.id);
+         }
+      }
+      setForm((previous) => ({ ...previous, incidentTypeId: value, serviceTypeId: newServiceTypeId }));
+      return;
+    }
+
     setForm((previous) => ({ ...previous, [name]: value }));
   };
 
@@ -310,6 +331,21 @@ export default function CreateRequestPage() {
     }
   };
 
+const selectedIncidentId = Number(form.incidentTypeId);
+
+const selectedIncident = incidentTypes.find((i) => i.id === selectedIncidentId);
+
+const suggestedCodes = selectedIncident
+  ? SUGGESTED_SERVICES_MAP[selectedIncident.code] || []
+  : [];
+
+const suggestedServices = serviceTypes.filter((s) =>
+  suggestedCodes.includes(s.code),
+);
+
+const otherServices = serviceTypes.filter(
+  (s) => !suggestedCodes.includes(s.code),
+);
   return (
     <>
       <PageHeader
@@ -349,9 +385,24 @@ export default function CreateRequestPage() {
             <label>Service Type</label>
             <select name="serviceTypeId" value={form.serviceTypeId} onChange={handleChange} required>
               <option value="">Select service</option>
-              {serviceTypes.map((item) => (
-                <option key={item.id} value={item.id}>{item.name}</option>
-              ))}
+              {suggestedServices.length > 0 ? (
+                <>
+                  <optgroup label="Suggested">
+                    {suggestedServices.map((item) => (
+                      <option key={item.id} value={item.id}>{item.name} (Recommended)</option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="Other Services">
+                    {otherServices.map((item) => (
+                      <option key={item.id} value={item.id}>{item.name}</option>
+                    ))}
+                  </optgroup>
+                </>
+              ) : (
+                serviceTypes.map((item) => (
+                  <option key={item.id} value={item.id}>{item.name}</option>
+                ))
+              )}
             </select>
           </div>
 
