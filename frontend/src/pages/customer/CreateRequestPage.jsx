@@ -140,7 +140,6 @@ export default function CreateRequestPage() {
   const [feeLoading, setFeeLoading] = useState(false);
   const [feeError, setFeeError] = useState('');
   const [geocoding, setGeocoding] = useState(false);
-  const [locatingUser, setLocatingUser] = useState(false);
 
   useEffect(() => {
     async function loadOptions() {
@@ -267,41 +266,6 @@ export default function CreateRequestPage() {
     runReverseGeocode(latitude, longitude);
   };
 
-  const handleUseCurrentLocation = () => {
-    if (!navigator.geolocation) {
-      setError('Geolocation is not supported by your browser.');
-      return;
-    }
-    if (locatingUser || geocoding) return;
-
-    setLocatingUser(true);
-    setError('');
-
-    navigator.geolocation.getCurrentPosition(
-      async ({ coords }) => {
-        setLocatingUser(false);
-        await runReverseGeocode(coords.latitude, coords.longitude);
-      },
-      (geolocationError) => {
-        setLocatingUser(false);
-        switch (geolocationError.code) {
-          case geolocationError.PERMISSION_DENIED:
-            setError('Location access was denied. Please allow location access and try again.');
-            break;
-          case geolocationError.POSITION_UNAVAILABLE:
-            setError('Current location is unavailable. Please try again or pick manually on the map.');
-            break;
-          case geolocationError.TIMEOUT:
-            setError('Location request timed out. Please try again.');
-            break;
-          default:
-            setError('Unable to retrieve your location. Please pick manually on the map.');
-        }
-      },
-      { timeout: 10000, maximumAge: 60000 },
-    );
-  };
-
   const handleSubmit = async (event) => {
     event.preventDefault();
     setSubmitting(true);
@@ -345,8 +309,6 @@ export default function CreateRequestPage() {
       setSubmitting(false);
     }
   };
-
-  const isLocating = locatingUser || geocoding;
 
   return (
     <>
@@ -427,20 +389,6 @@ export default function CreateRequestPage() {
             onFileSelected={setSelectedImageFile}
             onError={setImageError}
           />
-        </div>
-
-        <h3>Incident Location</h3>
-
-        <div className="actions-row" style={{ marginBottom: '1rem' }}>
-          <button
-            type="button"
-            className="button button-secondary"
-            disabled={isLocating}
-            onClick={handleUseCurrentLocation}
-          >
-            {locatingUser ? 'Getting location...' : geocoding ? 'Looking up address...' : 'Use Current Location'}
-          </button>
-          {geocoding ? <span className="muted-line">Looking up address from coordinates…</span> : null}
         </div>
 
         <div className="field" style={{ gridColumn: '1 / -1' }}>

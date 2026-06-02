@@ -1,7 +1,10 @@
 package com.itss.vbas.service.impl;
 
 import java.math.BigDecimal;
+import java.util.LinkedHashSet;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 import com.itss.vbas.dto.location.LocationDto;
 import com.itss.vbas.exception.BadRequestException;
@@ -67,7 +70,6 @@ public class GeocodingServiceImpl implements GeocodingService {
         }
 
         Map<String, String> address = (Map<String, String>) body.get("address");
-        String displayName = (String) body.get("display_name");
 
         if (address == null) {
             throw new BadRequestException("No address data returned for the given coordinates");
@@ -78,7 +80,7 @@ public class GeocodingServiceImpl implements GeocodingService {
         String district = resolveDistrict(address);
         String ward = resolveWard(address);
         String street = resolveStreet(address);
-        String detail = displayName != null ? displayName : buildFallbackDetail(country, province, district, ward, street);
+        String detail = buildDetail(address, country, province, district, ward, street);
 
         return new LocationDto.ReverseGeocodeResponse(country, province, district, ward, street, detail, lat, lng);
     }
@@ -117,15 +119,61 @@ public class GeocodingServiceImpl implements GeocodingService {
         return v != null ? v : "";
     }
 
-    private String buildFallbackDetail(String country, String province, String district, String ward, String street) {
+    private String buildDetail(Map<String, String> address,
+                               String country,
+                               String province,
+                               String district,
+                               String ward,
+                               String street) {
+        Set<String> excludedValues = normalizedSet(country, province, district, ward, street);
+        Set<String> seenValues = new LinkedHashSet<>();
         StringBuilder sb = new StringBuilder();
-        for (String part : new String[]{street, ward, district, province, country}) {
-            if (part != null && !part.isBlank()) {
-                if (sb.length() > 0) sb.append(", ");
-                sb.append(part);
+
+        for (String key : new String[]{
+                "house_name", "building", "amenity", "hospital", "clinic", "school",
+                "university", "office", "shop", "commercial", "retail", "tourism", "attraction"
+        }) {
+            appendDetailPart(sb, address.get(key), excludedValues, seenValues);
+        }
+
+        String houseNumber = address.get("house_number");
+        appendDetailPart(sb, houseNumber, excludedValues, seenValues);
+
+        return sb.toString();
+    }
+
+    private void appendDetailPart(StringBuilder sb,
+                                  String value,
+                                  Set<String> excludedValues,
+                                  Set<String> seenValues) {
+        if (value == null || value.isBlank()) {
+            return;
+        }
+
+        String trimmedValue = value.trim();
+        String normalizedValue = normalize(trimmedValue);
+        if (excludedValues.contains(normalizedValue) || !seenValues.add(normalizedValue)) {
+            return;
+        }
+
+        if (sb.length() > 0) {
+            sb.append(", ");
+        }
+        sb.append(trimmedValue);
+    }
+
+    private Set<String> normalizedSet(String... values) {
+        Set<String> normalizedValues = new LinkedHashSet<>();
+        for (String value : values) {
+            if (value != null && !value.isBlank()) {
+                normalizedValues.add(normalize(value));
             }
         }
-        return sb.toString();
+        return normalizedValues;
+    }
+
+    private String normalize(String value) {
+        return value.trim().toLowerCase(Locale.ROOT);
     }
 
     private String firstNonBlank(String... values) {
