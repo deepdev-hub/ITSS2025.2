@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { authApi } from '../../api/authApi';
 import { customerApi } from '../../api/customerApi';
 import { requestApi } from '../../api/requestApi';
+import { locationApi } from '../../api/locationApi';
 import { getApiError } from '../../api/client';
 import PageHeader from '../../components/common/PageHeader';
 import LocationPickerMap from '../../components/common/LocationPickerMap';
@@ -42,14 +43,10 @@ function formatMoney(value) {
 function RequestImagePicker({ onFileSelected, onError }) {
   const fileInputRef = useRef(null);
   const [previewUrl, setPreviewUrl] = useState(null);
-  const [imageError, setImageError] = useState(false);
+  const [failedPreviewUrl, setFailedPreviewUrl] = useState(null);
 
   const resolvedDisplayUrl = resolveRequestImageUrl(previewUrl || '');
-  const displayUrl = imageError ? null : resolvedDisplayUrl;
-
-  useEffect(() => {
-    setImageError(false);
-  }, [previewUrl]);
+  const displayUrl = failedPreviewUrl === resolvedDisplayUrl ? null : resolvedDisplayUrl;
 
   useEffect(() => () => {
     if (previewUrl?.startsWith('blob:')) {
@@ -78,7 +75,6 @@ function RequestImagePicker({ onFileSelected, onError }) {
       if (previous?.startsWith('blob:')) URL.revokeObjectURL(previous);
       return objectUrl;
     });
-    setImageError(false);
     onError('');
     onFileSelected(file);
   };
@@ -101,7 +97,7 @@ function RequestImagePicker({ onFileSelected, onError }) {
               src={displayUrl}
               alt="Request preview"
               className="request-image-preview"
-              onError={() => setImageError(true)}
+              onError={() => setFailedPreviewUrl(resolvedDisplayUrl)}
             />
           </div>
 
@@ -149,6 +145,7 @@ export default function CreateRequestPage() {
   const [feeInfo, setFeeInfo] = useState(null);
   const [feeLoading, setFeeLoading] = useState(false);
   const [feeError, setFeeError] = useState('');
+  const [geocoding, setGeocoding] = useState(false);
 
   useEffect(() => {
     async function loadOptions() {
@@ -247,6 +244,49 @@ export default function CreateRequestPage() {
     setForm((previous) => ({ ...previous, [name]: value }));
   };
 
+  const applyGeocodeResult = (geocodeData, latitude, longitude) => {
+    setForm((previous) => ({
+      ...previous,
+      location: {
+        country: geocodeData.country || previous.location.country,
+        province: geocodeData.province || '',
+        district: geocodeData.district || '',
+        ward: geocodeData.ward || '',
+        street: geocodeData.street || '',
+        detail: geocodeData.detail || '',
+        latitude: String(latitude),
+        longitude: String(longitude),
+      },
+    }));
+  };
+
+  const runReverseGeocode = async (latitude, longitude) => {
+    if (geocoding) return;
+    setGeocoding(true);
+    setError('');
+    try {
+      const geocodeData = await locationApi.reverseGeocode(latitude, longitude);
+      applyGeocodeResult(geocodeData, latitude, longitude);
+    } catch (err) {
+      // Still update lat/lng even if geocoding fails
+      setForm((previous) => ({
+        ...previous,
+        location: {
+          ...previous.location,
+          latitude: String(latitude),
+          longitude: String(longitude),
+        },
+      }));
+      setError(`Location selected, but address lookup failed: ${getApiError(err)}`);
+    } finally {
+      setGeocoding(false);
+    }
+  };
+
+  const handleLocationPick = ({ latitude, longitude }) => {
+    runReverseGeocode(latitude, longitude);
+  };
+
   const handleSubmit = async (event) => {
     event.preventDefault();
     setSubmitting(true);
@@ -291,24 +331,21 @@ export default function CreateRequestPage() {
     }
   };
 
-  const handleLocationPick = ({ latitude, longitude }) => {
-    setForm((previous) => ({
-      ...previous,
-      location: {
-        ...previous.location,
-        latitude: String(latitude),
-        longitude: String(longitude),
-      },
-    }));
-  };
+const selectedIncidentId = Number(form.incidentTypeId);
 
-  const selectedIncidentId = Number(form.incidentTypeId);
-  const selectedIncident = incidentTypes.find((i) => i.id === selectedIncidentId);
-  const suggestedCodes = selectedIncident ? (SUGGESTED_SERVICES_MAP[selectedIncident.code] || []) : [];
-  
-  const suggestedServices = serviceTypes.filter((s) => suggestedCodes.includes(s.code));
-  const otherServices = serviceTypes.filter((s) => !suggestedCodes.includes(s.code));
+const selectedIncident = incidentTypes.find((i) => i.id === selectedIncidentId);
 
+const suggestedCodes = selectedIncident
+  ? SUGGESTED_SERVICES_MAP[selectedIncident.code] || []
+  : [];
+
+const suggestedServices = serviceTypes.filter((s) =>
+  suggestedCodes.includes(s.code),
+);
+
+const otherServices = serviceTypes.filter(
+  (s) => !suggestedCodes.includes(s.code),
+);
   return (
     <>
       <PageHeader
@@ -405,9 +442,8 @@ export default function CreateRequestPage() {
           />
         </div>
 
-        <h3>Incident Location</h3>
         <div className="field" style={{ gridColumn: '1 / -1' }}>
-          <label>Map</label>
+          <label>Map — click to select location</label>
           <LocationPickerMap
             value={{
               latitude: form.location.latitude,
@@ -416,38 +452,80 @@ export default function CreateRequestPage() {
             onChange={handleLocationPick}
           />
         </div>
-        <div className="form-grid">
+
+        <div className="form-grid" style={{ marginTop: '1rem' }}>
           <div className="field">
             <label>Country</label>
-            <input name="location.country" value={form.location.country} onChange={handleChange} />
+            <input
+              name="location.country"
+              value={form.location.country}
+              onChange={handleChange}
+              disabled={geocoding}
+            />
           </div>
           <div className="field">
             <label>Province</label>
-            <input name="location.province" value={form.location.province} onChange={handleChange} required />
+            <input
+              name="location.province"
+              value={form.location.province}
+              onChange={handleChange}
+              required
+              disabled={geocoding}
+            />
           </div>
           <div className="field">
             <label>District</label>
-            <input name="location.district" value={form.location.district} onChange={handleChange} />
+            <input
+              name="location.district"
+              value={form.location.district}
+              onChange={handleChange}
+              disabled={geocoding}
+            />
           </div>
           <div className="field">
             <label>Ward</label>
-            <input name="location.ward" value={form.location.ward} onChange={handleChange} />
+            <input
+              name="location.ward"
+              value={form.location.ward}
+              onChange={handleChange}
+              disabled={geocoding}
+            />
           </div>
           <div className="field">
             <label>Street</label>
-            <input name="location.street" value={form.location.street} onChange={handleChange} />
+            <input
+              name="location.street"
+              value={form.location.street}
+              onChange={handleChange}
+              disabled={geocoding}
+            />
           </div>
           <div className="field">
             <label>Detail</label>
-            <input name="location.detail" value={form.location.detail} onChange={handleChange} />
+            <input
+              name="location.detail"
+              value={form.location.detail}
+              onChange={handleChange}
+              disabled={geocoding}
+            />
           </div>
           <div className="field">
             <label>Latitude</label>
-            <input name="location.latitude" value={form.location.latitude} onChange={handleChange} />
+            <input
+              name="location.latitude"
+              value={form.location.latitude}
+              onChange={handleChange}
+              disabled={geocoding}
+            />
           </div>
           <div className="field">
             <label>Longitude</label>
-            <input name="location.longitude" value={form.location.longitude} onChange={handleChange} />
+            <input
+              name="location.longitude"
+              value={form.location.longitude}
+              onChange={handleChange}
+              disabled={geocoding}
+            />
           </div>
         </div>
 
@@ -472,7 +550,11 @@ export default function CreateRequestPage() {
         </div>
 
         <div className="actions-row">
-          <button className="button button-primary" type="submit" disabled={submitting}>
+          <button
+            className="button button-primary"
+            type="submit"
+            disabled={submitting || geocoding}
+          >
             {submitting ? 'Submitting...' : 'Create request'}
           </button>
         </div>
