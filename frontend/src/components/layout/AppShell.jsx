@@ -3,6 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import { getMenuItems } from '../../utils/roles';
 import { useEffect, useMemo, useState } from 'react';
 import { addAvatarCacheKey, getAvatarUrl, resolveAvatarUrl } from '../../utils/avatar';
+import NotificationBell from './NotificationBell';
 
 function getInitials(fullName) {
   if (typeof fullName !== 'string') return '?';
@@ -66,6 +67,7 @@ function UserAvatar({ user, size = 46 }) {
 export default function AppShell() {
   const { user, logout } = useAuth();
   const menuItems = getMenuItems(user?.roleName);
+  const notificationsEnabled = ['CUSTOMER', 'RESCUE_STAFF'].includes(user?.roleName);
 
   return (
     <div className="app-shell">
@@ -98,6 +100,7 @@ export default function AppShell() {
             </div>
           </div>
           <div className="topbar-actions">
+            <NotificationBell enabled={notificationsEnabled} />
             <NavLink className="button button-secondary" to="/profile">
               Profile
             </NavLink>
