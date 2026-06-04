@@ -39,6 +39,7 @@ import com.itss.vbas.repository.ServiceTypeRepository;
 import com.itss.vbas.security.AuthContext;
 import com.itss.vbas.service.AddressService;
 import com.itss.vbas.service.FeeService;
+import com.itss.vbas.service.NotificationService;
 import com.itss.vbas.service.RequestSupportService;
 import com.itss.vbas.service.RescueRequestService;
 import com.itss.vbas.service.AdminService;
@@ -69,6 +70,7 @@ public class RescueRequestServiceImpl implements RescueRequestService {
     private final FileStorageService fileStorageService;
     private final FeeService feeService;
     private final AdminService adminService;
+    private final NotificationService notificationService;
 
     public RescueRequestServiceImpl(
             RescueRequestRepository rescueRequestRepository,
@@ -86,7 +88,8 @@ public class RescueRequestServiceImpl implements RescueRequestService {
             AppMapper appMapper,
             FileStorageService fileStorageService,
             FeeService feeService,
-            @Lazy AdminService adminService
+            @Lazy AdminService adminService,
+            NotificationService notificationService
     ) {
         this.rescueRequestRepository = rescueRequestRepository;
         this.customerVehicleRepository = customerVehicleRepository;
@@ -104,6 +107,7 @@ public class RescueRequestServiceImpl implements RescueRequestService {
         this.fileStorageService = fileStorageService;
         this.feeService = feeService;
         this.adminService = adminService;
+        this.notificationService = notificationService;
     }
 
     @Override
@@ -272,6 +276,7 @@ public class RescueRequestServiceImpl implements RescueRequestService {
         Account account = authContext.getCurrentAccount();
         RescueRequest rescueRequest = findRequest(requestId);
         RescueRequestStatus newStatus = parseStatus(request.status());
+        RescueRequestStatus oldStatus = rescueRequest.getStatus();
         RoleName roleName = account.getRole().getRoleName();
 
         if (roleName == RoleName.CUSTOMER) {
@@ -294,13 +299,16 @@ public class RescueRequestServiceImpl implements RescueRequestService {
             }
         }
 
-        requestSupportService.changeRequestStatus(rescueRequest, newStatus, account, request.note());
+        RescueRequest updatedRequest = requestSupportService.changeRequestStatus(rescueRequest, newStatus, account, request.note());
         if (newStatus == RescueRequestStatus.COMPLETED) {
             RequestAssignment latestAssignment = requestSupportService.getLatestAssignment(rescueRequest);
             if (latestAssignment != null) {
                 latestAssignment.setStatus(AssignmentStatus.COMPLETED);
                 requestAssignmentRepository.save(latestAssignment);
             }
+        }
+        if (oldStatus != RescueRequestStatus.COMPLETED && newStatus == RescueRequestStatus.COMPLETED) {
+            notificationService.notifyRequestCompleted(updatedRequest);
         }
         return buildDetail(rescueRequestRepository.findById(requestId).orElseThrow());
     }

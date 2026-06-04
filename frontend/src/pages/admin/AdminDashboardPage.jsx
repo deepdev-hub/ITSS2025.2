@@ -67,10 +67,8 @@ function CompanyMetricChart({ title, items, valueKey, maxValue, formatValue, ton
 export default function AdminDashboardPage() {
   const [dashboard, setDashboard] = useState(null);
   const [requests, setRequests] = useState([]);
-  const [companies, setCompanies] = useState([]);
   const [companyPerformance, setCompanyPerformance] = useState(null);
   const [performanceFilters, setPerformanceFilters] = useState(getDefaultDateRange);
-  const [assignForm, setAssignForm] = useState({});
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [performanceLoading, setPerformanceLoading] = useState(false);
@@ -82,15 +80,13 @@ export default function AdminDashboardPage() {
     setLoading(true);
     setError('');
     try {
-      const [dashboardData, requestList, companyList, performanceData] = await Promise.all([
+      const [dashboardData, requestList, performanceData] = await Promise.all([
         adminApi.getDashboard(),
         adminApi.getRequests(),
-        adminApi.getCompanies(),
         adminApi.getCompanyPerformance(performanceFilters),
       ]);
       setDashboard(dashboardData);
       setRequests(requestList);
-      setCompanies(companyList.filter((company) => company.status === 'APPROVED'));
       setCompanyPerformance(performanceData);
     } catch (err) {
       setError(getApiError(err));
@@ -121,22 +117,13 @@ export default function AdminDashboardPage() {
     }
   };
 
-  const handleAssign = async (requestId) => {
-    const companyId = assignForm[requestId];
-    if (!companyId) {
-      setError('Please select a rescue company before assigning.');
-      return;
-    }
-
+  const handleAutoDispatch = async (requestId) => {
     setAssigningId(requestId);
     setNotice('');
     setError('');
     try {
-      await adminApi.assignCompany(requestId, {
-        companyId: Number(companyId),
-        note: 'Assigned from admin dashboard',
-      });
-      setNotice('Company assigned successfully.');
+      await adminApi.autoAssign(requestId);
+      setNotice('Auto dispatch started successfully.');
       await loadData();
     } catch (err) {
       setError(getApiError(err));
@@ -150,15 +137,13 @@ export default function AdminDashboardPage() {
     setNotice('');
     setError('');
     try {
-      const [dashboardData, requestList, companyList, performanceData] = await Promise.all([
+      const [dashboardData, requestList, performanceData] = await Promise.all([
         adminApi.refreshDashboard(),
         adminApi.getRequests(),
-        adminApi.getCompanies(),
         adminApi.getCompanyPerformance(performanceFilters),
       ]);
       setDashboard(dashboardData);
       setRequests(requestList);
-      setCompanies(companyList.filter((company) => company.status === 'APPROVED'));
       setCompanyPerformance(performanceData);
       setNotice('Dashboard information updated successfully.');
     } catch (err) {
@@ -172,7 +157,7 @@ export default function AdminDashboardPage() {
     <>
       <PageHeader
         title="Admin Dashboard"
-        subtitle="Monitor saved daily statistics, refresh the snapshot on demand, and assign a company without leaving the dashboard."
+        subtitle="Monitor saved daily statistics, refresh the snapshot on demand, and dispatch staff without leaving the dashboard."
         actions={(
           <div className="actions-row">
             <button
@@ -328,7 +313,7 @@ export default function AdminDashboardPage() {
                       <th>Location</th>
                       <th>Status</th>
                       <th>Created</th>
-                      <th>Assigned Company</th>
+                      <th>Assignment</th>
                       <th />
                     </tr>
                   </thead>
@@ -347,34 +332,18 @@ export default function AdminDashboardPage() {
                         <td>{getRequestLocationLabel(request)}</td>
                         <td><StatusBadge value={request.status} /></td>
                         <td>{formatDateTime(request.createdAt)}</td>
-                        <td>{request.assignedCompany?.companyName || 'Not assigned'}</td>
+                        <td>{request.assignedCompany?.companyName || (request.status === 'MATCHED' ? 'Waiting for staff' : 'Not assigned')}</td>
                         <td>
                           <div className="actions-stack">
-                            {!request.assignedCompany && !['COMPLETED', 'CANCELED'].includes(request.status) ? (
-                              <>
-                                <select
-                                  value={assignForm[request.id] || ''}
-                                  onChange={(event) => setAssignForm((previous) => ({
-                                    ...previous,
-                                    [request.id]: event.target.value,
-                                  }))}
-                                >
-                                  <option value="">Select company</option>
-                                  {companies.map((company) => (
-                                    <option key={company.id} value={company.id}>
-                                      {company.companyName} (#{company.id})
-                                    </option>
-                                  ))}
-                                </select>
-                                <button
-                                  className="button button-primary"
-                                  type="button"
-                                  disabled={assigningId === request.id}
-                                  onClick={() => handleAssign(request.id)}
-                                >
-                                  {assigningId === request.id ? 'Assigning...' : 'Assign company'}
-                                </button>
-                              </>
+                            {['CREATED', 'SEARCHING'].includes(request.status) ? (
+                              <button
+                                className="button button-primary"
+                                type="button"
+                                disabled={assigningId === request.id}
+                                onClick={() => handleAutoDispatch(request.id)}
+                              >
+                                {assigningId === request.id ? 'Dispatching...' : 'Auto dispatch'}
+                              </button>
                             ) : (
                               <span className="muted-line">Assignment already handled</span>
                             )}

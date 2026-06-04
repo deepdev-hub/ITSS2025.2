@@ -21,6 +21,7 @@ import com.itss.vbas.security.RequiredRoles;
 import com.itss.vbas.service.AdminService;
 import com.itss.vbas.service.FeeService;
 import com.itss.vbas.service.MessageService;
+import com.itss.vbas.service.NotificationService;
 import com.itss.vbas.service.PaymentService;
 import com.itss.vbas.service.QuoteService;
 import com.itss.vbas.service.RescueRequestService;
@@ -38,7 +39,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.bind.annotation.PatchMapping;
+
 @RestController
 @RequestMapping("/api/requests")
 public class RequestController {
@@ -52,6 +53,7 @@ public class RequestController {
     private final RescueRequestRepository rescueRequestRepository;
     private final AdminService adminService;
     private final FeeService feeService;
+    private final NotificationService notificationService;
 
     public RequestController(
             RescueRequestService rescueRequestService,
@@ -62,7 +64,8 @@ public class RequestController {
             RequestAssignmentRepository requestAssignmentRepository,
             RescueRequestRepository rescueRequestRepository,
             AdminService adminService,
-            FeeService feeService
+            FeeService feeService,
+            NotificationService notificationService
     ) {
         this.rescueRequestService = rescueRequestService;
         this.messageService = messageService;
@@ -73,6 +76,7 @@ public class RequestController {
         this.rescueRequestRepository = rescueRequestRepository;
         this.adminService = adminService;
         this.feeService = feeService;
+        this.notificationService = notificationService;
     }
 
     @RequireAuth
@@ -275,13 +279,17 @@ public class RequestController {
         RequestAssignment assignment = requestAssignmentRepository.findById(assignmentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Assignment not found"));
 
+        AssignmentStatus oldAssignmentStatus = assignment.getStatus();
         assignment.setStatus(AssignmentStatus.ACCEPTED);
         assignment.setAcceptedAt(LocalDateTime.now());
-        requestAssignmentRepository.save(assignment);
+        RequestAssignment savedAssignment = requestAssignmentRepository.save(assignment);
 
         RescueRequest request = assignment.getRequest();
         request.setStatus(RescueRequestStatus.ACCEPTED);
         rescueRequestRepository.save(request);
+        if (oldAssignmentStatus != AssignmentStatus.ACCEPTED) {
+            notificationService.notifyAssignmentAccepted(savedAssignment);
+        }
 
         return ResponseEntity.ok(CommonDto.ApiResponse.success("Assignment accepted successfully"));
     }

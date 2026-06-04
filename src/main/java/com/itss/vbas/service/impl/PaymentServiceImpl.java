@@ -20,6 +20,7 @@ import com.itss.vbas.repository.PaymentRepository;
 import com.itss.vbas.repository.QuoteRepository;
 import com.itss.vbas.repository.RescueRequestRepository;
 import com.itss.vbas.security.AuthContext;
+import com.itss.vbas.service.NotificationService;
 import com.itss.vbas.service.PaymentService;
 import com.itss.vbas.service.RequestSupportService;
 import org.springframework.stereotype.Service;
@@ -35,6 +36,7 @@ public class PaymentServiceImpl implements PaymentService {
     private final RequestSupportService requestSupportService;
     private final AuthContext authContext;
     private final AppMapper appMapper;
+    private final NotificationService notificationService;
 
     public PaymentServiceImpl(
             PaymentRepository paymentRepository,
@@ -42,7 +44,8 @@ public class PaymentServiceImpl implements PaymentService {
             RescueRequestRepository rescueRequestRepository,
             RequestSupportService requestSupportService,
             AuthContext authContext,
-            AppMapper appMapper
+            AppMapper appMapper,
+            NotificationService notificationService
     ) {
         this.paymentRepository = paymentRepository;
         this.quoteRepository = quoteRepository;
@@ -50,6 +53,7 @@ public class PaymentServiceImpl implements PaymentService {
         this.requestSupportService = requestSupportService;
         this.authContext = authContext;
         this.appMapper = appMapper;
+        this.notificationService = notificationService;
     }
 
     @Override
@@ -122,9 +126,14 @@ public class PaymentServiceImpl implements PaymentService {
             throw new BadRequestException("Paid payment cannot be changed");
         }
 
+        PaymentStatus oldPaymentStatus = payment.getPaymentStatus();
         payment.setPaymentStatus(paymentStatus);
         payment.setPaidAt(paymentStatus == PaymentStatus.PAID ? LocalDateTime.now() : null);
-        return appMapper.toPaymentResponse(paymentRepository.save(payment));
+        Payment savedPayment = paymentRepository.save(payment);
+        if (oldPaymentStatus != PaymentStatus.PAID && paymentStatus == PaymentStatus.PAID) {
+            notificationService.notifyPaymentPaid(savedPayment);
+        }
+        return appMapper.toPaymentResponse(savedPayment);
     }
 
     private RescueRequest findRequest(Long requestId) {
