@@ -40,6 +40,11 @@ function formatMoney(value) {
   return `${Number(value || 0).toLocaleString('vi-VN')} VND`;
 }
 
+function isValidCoordinate(value, min, max) {
+  const numericValue = Number(value);
+  return Number.isFinite(numericValue) && numericValue >= min && numericValue <= max;
+}
+
 function RequestImagePicker({ onFileSelected, onError }) {
   const fileInputRef = useRef(null);
   const [previewUrl, setPreviewUrl] = useState(null);
@@ -141,7 +146,6 @@ export default function CreateRequestPage() {
   const [error, setError] = useState('');
   const [imageError, setImageError] = useState('');
   const [selectedImageFile, setSelectedImageFile] = useState(null);
-  const [transportCost, setTransportCost] = useState('');
   const [feeInfo, setFeeInfo] = useState(null);
   const [feeLoading, setFeeLoading] = useState(false);
   const [feeError, setFeeError] = useState('');
@@ -177,10 +181,10 @@ export default function CreateRequestPage() {
       return;
     }
 
-    const cost = Number(transportCost || 0);
-    if (Number.isNaN(cost) || cost < 0) {
+    if (!isValidCoordinate(form.location.latitude, -90, 90)
+        || !isValidCoordinate(form.location.longitude, -180, 180)) {
       setFeeInfo(null);
-      setFeeError('Travel cost must be a valid non-negative number.');
+      setFeeError('Select a location on the map to calculate automatic travel cost.');
       setFeeLoading(false);
       return;
     }
@@ -190,7 +194,11 @@ export default function CreateRequestPage() {
     setFeeError('');
 
     requestApi
-      .predictFee(Number(form.serviceTypeId), cost)
+      .predictFee(
+        Number(form.serviceTypeId),
+        Number(form.location.latitude),
+        Number(form.location.longitude),
+      )
       .then((data) => {
         if (!cancelled) {
           setFeeInfo(data);
@@ -211,7 +219,7 @@ export default function CreateRequestPage() {
     return () => {
       cancelled = true;
     };
-  }, [form.serviceTypeId, transportCost]);
+  }, [form.serviceTypeId, form.location.latitude, form.location.longitude]);
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -293,22 +301,23 @@ export default function CreateRequestPage() {
     setError('');
     setImageError('');
     try {
-      const resolvedTransportCost = Number(transportCost || 0);
-      if (Number.isNaN(resolvedTransportCost) || resolvedTransportCost < 0) {
-        setError('Travel cost must be a valid non-negative number.');
+      if (!isValidCoordinate(form.location.latitude, -90, 90)
+          || !isValidCoordinate(form.location.longitude, -180, 180)) {
+        setError('Please select a valid location on the map before creating the request.');
         return;
       }
 
+      const latitude = Number(form.location.latitude);
+      const longitude = Number(form.location.longitude);
       const payload = {
         ...form,
         vehicleId: form.vehicleId ? Number(form.vehicleId) : null,
         incidentTypeId: Number(form.incidentTypeId),
         serviceTypeId: Number(form.serviceTypeId),
-        transportCost: resolvedTransportCost,
         location: {
           ...form.location,
-          latitude: form.location.latitude ? Number(form.location.latitude) : null,
-          longitude: form.location.longitude ? Number(form.location.longitude) : null,
+          latitude,
+          longitude,
         },
       };
       const created = await requestApi.createRequest(payload);
@@ -350,7 +359,7 @@ const otherServices = serviceTypes.filter(
     <>
       <PageHeader
         title="Create Rescue Request"
-        subtitle="Submit your incident, service type, travel cost, and location. The estimated quotation is calculated automatically before you submit."
+        subtitle="Submit your incident, service type, and location. The estimated quotation is calculated automatically before you submit."
       />
 
       {error ? <div className="notice error">{error}</div> : null}
@@ -404,18 +413,6 @@ const otherServices = serviceTypes.filter(
                 ))
               )}
             </select>
-          </div>
-
-          <div className="field">
-            <label>Travel Cost (VND)</label>
-            <input
-              type="number"
-              min="0"
-              step="1000"
-              placeholder="Example: 50000"
-              value={transportCost}
-              onChange={(event) => setTransportCost(event.target.value)}
-            />
           </div>
 
           <div className="field">
@@ -542,10 +539,10 @@ const otherServices = serviceTypes.filter(
           </div>
           {feeInfo ? (
             <p>
-              Coefficient {feeInfo.coefficient} x (Service price {formatMoney(feeInfo.basePrice)} + Travel cost {formatMoney(feeInfo.transportCost)})
+              Coefficient {feeInfo.coefficient} x (Service price {formatMoney(feeInfo.basePrice)} + Auto travel cost {formatMoney(feeInfo.travelCost)})
             </p>
           ) : (
-            <p>{feeError || 'Select a service type and enter travel cost above, then the fee will appear here before you create the request.'}</p>
+            <p>{feeError || 'Select a service type and location on the map, then the fee will appear here before you create the request.'}</p>
           )}
         </div>
 

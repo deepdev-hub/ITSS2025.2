@@ -83,18 +83,14 @@ public class RequestController {
     @GetMapping("/predict-fee")
     public ResponseEntity<CommonDto.ApiResponse<FeeDto.PredictFeeResponse>> predictFee(
             @RequestParam("serviceTypeId") Long serviceTypeId,
-            @RequestParam(name = "transportCost", required = false, defaultValue = "0") String transportCostValue
+            @RequestParam("latitude") String latitudeValue,
+            @RequestParam("longitude") String longitudeValue
     ) {
-        BigDecimal transportCost;
-        try {
-            transportCostValue = transportCostValue == null ? "0" : transportCostValue.trim();
-            transportCost = new BigDecimal(transportCostValue);
-        } catch (NumberFormatException e) {
-            throw new BadRequestException("Travel cost must be a valid number");
-        }
+        BigDecimal latitude = parseDecimalParam(latitudeValue, "Latitude");
+        BigDecimal longitude = parseDecimalParam(longitudeValue, "Longitude");
         return ResponseEntity.ok(CommonDto.ApiResponse.success(
                 "Estimated fee calculated successfully",
-                feeService.predictFee(serviceTypeId, transportCost)
+                feeService.predictFee(serviceTypeId, latitude, longitude)
         ));
     }
 
@@ -321,5 +317,13 @@ public class RequestController {
             return request.reason();
         }
         return request.note();
+    }
+
+    private BigDecimal parseDecimalParam(String value, String label) {
+        try {
+            return new BigDecimal(value == null ? "" : value.trim());
+        } catch (NumberFormatException e) {
+            throw new BadRequestException(label + " must be a valid number");
+        }
     }
 }

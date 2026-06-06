@@ -1346,7 +1346,13 @@ th {
 
 .tracking-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.5rem;
+}
+
+.tracking-profile-action {
+  width: fit-content;
+  margin-bottom: 0.75rem;
 }
 
 .tracking-actions .button:disabled {

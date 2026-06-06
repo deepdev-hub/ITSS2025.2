@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { requestApi } from '../../api/requestApi';
 import { getApiError } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
-import Countdown from '../../components/common/Countdown';
 import Loader from '../../components/common/Loader';
 import PageHeader from '../../components/common/PageHeader';
 import StatusBadge from '../../components/common/StatusBadge';
@@ -93,15 +92,6 @@ function getPriceStatusLabel(quote, hasPaidPayment, requestStatus) {
   }
 }
 
-function getInitials(name = '') {
-  return name
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
-    .join('') || 'ST';
-}
-
 function normalizeMessages(items = []) {
   const byId = new Map();
   [...items]
@@ -145,7 +135,7 @@ function EstimatedQuotationPanel({ quotation, prominent = false }) {
           <span>Estimated quotation</span>
           <strong>Not available</strong>
         </div>
-        <p className="muted-line">Service price, travel cost, or coefficient data is missing for this request.</p>
+        <p className="muted-line">Service price, auto travel cost, or coefficient data is missing for this request.</p>
       </div>
     );
   }
@@ -158,7 +148,7 @@ function EstimatedQuotationPanel({ quotation, prominent = false }) {
       </div>
       <div className="estimated-quote-grid">
         <span>Service price {formatCurrency(quotation.servicePrice ?? 0)}</span>
-        <span>Travel cost {formatCurrency(quotation.travelCost ?? 0)}</span>
+        <span>Auto travel cost {formatCurrency(quotation.travelCost ?? 0)}</span>
         <span>Coefficient {quotation.coefficient}</span>
       </div>
     </div>
@@ -645,7 +635,13 @@ export default function RequestDetailPage() {
         )}
       />
 
-      {isCustomer ? <RequestTrackingMap requestId={id} requestStatus={detail.status} /> : null}
+      {isCustomer ? (
+        <RequestTrackingMap
+          requestId={id}
+          requestStatus={detail.status}
+          staffProfilePath={assignedStaffPath}
+        />
+      ) : null}
 
       {notice ? <div className="notice">{notice}</div> : null}
       {error ? <div className="notice error">{error}</div> : null}
@@ -771,32 +767,6 @@ export default function RequestDetailPage() {
               <h3>Company</h3>
               <p>{detail.assignedCompany?.companyName || 'Not assigned yet'}</p>
               <p className="muted-line">{detail.assignedCompany?.phone || detail.assignedCompany?.email || 'Waiting for dispatch'}</p>
-            </div>
-            <div className="card card-muted">
-              <h3>Assigned Staff</h3>
-              {assignedStaffPath ? (
-                <div className="staff-profile-summary">
-                  <Link className="staff-mini-card" to={assignedStaffPath} aria-label="Open staff profile">
-                    {detail.currentAssignment?.staffAvatarUrl ? (
-                      <img src={detail.currentAssignment.staffAvatarUrl} alt="" />
-                    ) : (
-                      <span>{getInitials(detail.currentAssignment?.staffName)}</span>
-                    )}
-                    <strong>{detail.currentAssignment?.staffName || 'Rescue staff'}</strong>
-                  </Link>
-                  <Link className="staff-profile-link" to={assignedStaffPath}>
-                    View profile
-                  </Link>
-                </div>
-              ) : (
-                <p>{detail.currentAssignment?.staffName || 'Not assigned yet'}</p>
-              )}
-              <p className="muted-line">{detail.currentAssignment?.staffJobTitle || 'Rescue staff'}</p>
-              <p className="muted-line">{detail.currentAssignment?.status || 'Pending assignment'}</p>
-              <Countdown
-                expiresAt={detail.currentAssignment?.expiresAt}
-                status={detail.currentAssignment?.status}
-              />
             </div>
             <div className="card card-muted">
               <h3>Rescue Vehicle</h3>
