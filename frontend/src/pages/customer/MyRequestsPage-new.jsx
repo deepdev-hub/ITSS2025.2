@@ -206,46 +206,6 @@ export default function MyRequestsPage() {
           staffName={chatRequest.assignedStaff?.fullName}
         />
       )}
-
-      {/* Floating Chat Button for General Support */}
-      <button
-        className="floating-chat-button"
-        onClick={() => {
-          setChatRequest({ id: null, assignedCompany: { companyName: 'Support Team' }, assignedStaff: { fullName: 'Support Agent' } });
-          setIsChatOpen(true);
-        }}
-        title="Chat with support"
-      >
-        <MessageCircle size={24} />
-      </button>
-
-      <style>{`
-        .floating-chat-button {
-          position: fixed;
-          bottom: 30px;
-          right: 30px;
-          width: 60px;
-          height: 60px;
-          border-radius: 50%;
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-          color: white;
-          border: none;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
-          transition: all 0.3s ease;
-          z-index: 1000;
-        }
-        .floating-chat-button:hover {
-          transform: translateY(-3px);
-          box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
-        }
-        .floating-chat-button:active {
-          transform: translateY(-1px);
-        }
-      `}</style>
     </>
   );
 }

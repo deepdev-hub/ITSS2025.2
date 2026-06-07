@@ -1,6 +1,8 @@
 import { NavLink, Outlet } from 'react-router-dom';
+import { LifeBuoy, Menu, X } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { getMenuItems } from '../../utils/roles';
+import { getMenuIcon } from '../../utils/menuIcons';
 import { useEffect, useMemo, useState } from 'react';
 import { addAvatarCacheKey, getAvatarUrl, resolveAvatarUrl } from '../../utils/avatar';
 import NotificationBell from './NotificationBell';
@@ -68,31 +70,61 @@ export default function AppShell() {
   const { user, logout } = useAuth();
   const menuItems = getMenuItems(user?.roleName);
   const notificationsEnabled = ['CUSTOMER', 'RESCUE_STAFF'].includes(user?.roleName);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [user?.roleName]);
 
   return (
     <div className="app-shell">
-      <aside className="sidebar">
+      {sidebarOpen ? (
+        <button
+          type="button"
+          className="sidebar-backdrop"
+          aria-label="Close navigation"
+          onClick={() => setSidebarOpen(false)}
+        />
+      ) : null}
+
+      <aside className={`sidebar ${sidebarOpen ? 'sidebar-open' : ''}`}>
         <div className="sidebar-brand">
-          <span>VBAS</span>
-          <p>Vehicle Breakdown Assistance</p>
+          <span><LifeBuoy size={20} aria-hidden="true" /></span>
+          <div className="sidebar-brand-copy">
+            <strong>VBAS Rescue</strong>
+            <p>Cứu hộ xe 24/7</p>
+          </div>
         </div>
 
         <nav className="sidebar-nav">
-          {menuItems.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              className={({ isActive }) => (isActive ? 'sidebar-link active' : 'sidebar-link')}
-            >
-              {item.label}
-            </NavLink>
-          ))}
+          {menuItems.map((item) => {
+            const Icon = getMenuIcon(item.label);
+            return (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                className={({ isActive }) => (isActive ? 'sidebar-link active' : 'sidebar-link')}
+                onClick={() => setSidebarOpen(false)}
+              >
+                <Icon size={18} aria-hidden="true" />
+                {item.label}
+              </NavLink>
+            );
+          })}
         </nav>
       </aside>
 
       <div className="app-shell-content">
         <header className="topbar">
           <div className="topbar-user">
+            <button
+              type="button"
+              className="sidebar-toggle"
+              aria-label="Open navigation"
+              onClick={() => setSidebarOpen((open) => !open)}
+            >
+              {sidebarOpen ? <X size={18} /> : <Menu size={18} />}
+            </button>
             <UserAvatar user={user} size={46} />
             <div className="topbar-user-info">
               <strong>{user?.fullName}</strong>

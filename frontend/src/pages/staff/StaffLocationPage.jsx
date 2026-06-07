@@ -3,6 +3,14 @@ import { MapContainer, TileLayer, Marker, Circle, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
+import {
+  MapPin,
+  Navigation,
+  Save,
+  RefreshCw,
+  CheckCircle,
+  XCircle,
+} from 'lucide-react';
 import { companyApi } from '../../api/companyApi';
 import { getApiError } from '../../api/client';
 import PageHeader from '../../components/common/PageHeader';
@@ -81,71 +89,75 @@ export default function StaffLocationPage() {
 
   return (
     <>
-      <PageHeader 
-        title="Khu vực trực hiện hành" 
-        subtitle="Cập nhật tọa độ của bạn để hệ thống ưu tiên phân công các sự cố gần nhất." 
+      <PageHeader
+        title="Khu vực trực hiện hành"
+        subtitle="Cập nhật tọa độ của bạn để hệ thống ưu tiên phân công các sự cố gần nhất."
       />
 
       <div className="card">
         <h2 style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          📍 Cập nhật vị trí
+          <MapPin size={24} style={{ marginRight: '8px', verticalAlign: 'middle' }} />
+          Cập nhật vị trí
           <span className="status-badge status-active">Bán kính hoạt động: 5 km</span>
         </h2>
-        
+
         {locationNotice.text && (
           <div className={`notice ${locationNotice.type === 'error' ? 'error' : 'success'}`} style={{ marginBottom: '1rem' }}>
+            {locationNotice.type === 'error' ? <XCircle size={16} style={{ marginRight: '8px', verticalAlign: 'middle' }} /> : <CheckCircle size={16} style={{ marginRight: '8px', verticalAlign: 'middle' }} />}
             {locationNotice.text}
           </div>
         )}
-        
+
         <div className="grid-two" style={{ alignItems: 'flex-start' }}>
           {/* Cột 1: Các nút bấm điều khiển */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
             <div className="field">
-              <label>Tọa độ của bạn</label>
-              <div className="muted-line" style={{ marginBottom: '0.5rem' }}>
-                Lat: {location.lat.toFixed(5)} | Lng: {location.lng.toFixed(5)}
+              <label><Navigation size={16} style={{ marginRight: '8px', verticalAlign: 'middle' }} />Tọa độ của bạn</label>
+              <div className="muted-line" style={{ marginBottom: '0.5rem', fontSize: '0.95rem' }}>
+                <strong>Lat:</strong> {location.lat.toFixed(5)} | <strong>Lng:</strong> {location.lng.toFixed(5)}
               </div>
-              <button 
-                type="button" 
-                className="button button-secondary" 
-                onClick={handleGetCurrentLocation} 
+              <button
+                type="button"
+                className="button button-secondary"
+                onClick={handleGetCurrentLocation}
                 disabled={isLocating}
                 style={{ width: '100%' }}
               >
-                {isLocating ? 'Đang lấy tọa độ...' : '🔄 Lấy vị trí GPS mới nhất'}
+                <RefreshCw size={18} style={{ marginRight: '8px', verticalAlign: 'middle' }} />
+                {isLocating ? 'Đang lấy tọa độ...' : 'Lấy vị trí GPS mới nhất'}
               </button>
             </div>
 
-            <button 
-              type="button" 
-              className="button button-primary" 
-              onClick={handleSaveLocation} 
+            <button
+              type="button"
+              className="button button-primary"
+              onClick={handleSaveLocation}
               disabled={isSavingLocation}
               style={{ width: '100%', padding: '0.75rem' }}
             >
+              <Save size={18} style={{ marginRight: '8px', verticalAlign: 'middle' }} />
               {isSavingLocation ? 'Đang cập nhật lên máy chủ...' : 'Lưu vị trí hiện hành'}
             </button>
           </div>
 
           {/* Cột 2: Bản đồ */}
-          <div style={{ borderRadius: '8px', overflow: 'hidden', border: '1px solid #ddd' }}>
-             <MapContainer 
-                center={[location.lat, location.lng]} 
-                zoom={13} 
-                style={{ height: '300px', width: '100%', zIndex: 1 }}
+          <div style={{ borderRadius: '12px', overflow: 'hidden', border: '2px solid #e0e0e0', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+             <MapContainer
+                center={[location.lat, location.lng]}
+                zoom={13}
+                style={{ height: '350px', width: '100%', zIndex: 1 }}
              >
-                <TileLayer 
-                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" 
+                <TileLayer
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                   attribution='&copy; OpenStreetMap contributors'
                 />
                 <MapUpdater center={location} />
                 <Marker position={[location.lat, location.lng]} />
                 {/* 5000 mét = 5km */}
-                <Circle 
-                  center={[location.lat, location.lng]} 
-                  radius={5000} 
-                  pathOptions={{ fillColor: '#3b82f6', color: '#2563eb', weight: 1, fillOpacity: 0.15 }} 
+                <Circle
+                  center={[location.lat, location.lng]}
+                  radius={5000}
+                  pathOptions={{ fillColor: '#3b82f6', color: '#2563eb', weight: 2, fillOpacity: 0.15 }}
                 />
              </MapContainer>
           </div>

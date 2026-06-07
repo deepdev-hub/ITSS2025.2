@@ -1,11 +1,25 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import {
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  Info,
+  MapPin,
+  Send,
+  AlertTriangle,
+  Wrench,
+  Navigation,
+  FileCheck,
+} from 'lucide-react';
 import { authApi } from '../../api/authApi';
 import { customerApi } from '../../api/customerApi';
 import { requestApi } from '../../api/requestApi';
 import { locationApi } from '../../api/locationApi';
 import { getApiError } from '../../api/client';
+import Alert from '../../components/common/Alert';
 import PageHeader from '../../components/common/PageHeader';
+import Stepper from '../../components/common/Stepper';
 import LocationPickerMap from '../../components/common/LocationPickerMap';
 import { resolveRequestImageUrl } from '../../utils/requestImage';
 
@@ -13,9 +27,39 @@ const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gi
 const MAX_FILE_SIZE_MB = 5;
 
 const SUGGESTED_SERVICES_MAP = {
-  'FLAT_TIRE': ['ON_SITE_REPAIR', 'TOWING'],
-  'ENGINE_FAIL': ['TOWING'],
-  'BATTERY': ['BATTERY_SUPPORT', 'ON_SITE_REPAIR']
+  FLAT_TIRE: ['ON_SITE_REPAIR', 'TOWING'],
+  ENGINE_FAIL: ['TOWING'],
+  BATTERY: ['BATTERY_SUPPORT', 'ON_SITE_REPAIR'],
+};
+
+const WIZARD_STEPS = [
+  { id: 'situation', label: 'Tình trạng', hint: 'Xác nhận sự cố & mức ưu tiên' },
+  { id: 'details', label: 'Thông tin', hint: 'Xe, dịch vụ & mô tả' },
+  { id: 'location', label: 'Vị trí', hint: 'Chọn điểm cứu hộ' },
+  { id: 'confirm', label: 'Xác nhận', hint: 'Kiểm tra & gửi yêu cầu' },
+];
+
+const STEP_GUIDES = {
+  1: {
+    title: 'Bước 1 — Xác nhận tình trạng',
+    text: 'Chọn loại sự cố và mức độ ưu tiên. Chọn EMERGENCY nếu bạn đang gặp nguy hiểm.',
+    icon: AlertTriangle,
+  },
+  2: {
+    title: 'Bước 2 — Nhập thông tin cần thiết',
+    text: 'Chọn xe, dịch vụ cứu hộ, chi phí di chuyển và mô tả tình huống để đội hỗ trợ chuẩn bị tốt hơn.',
+    icon: Wrench,
+  },
+  3: {
+    title: 'Bước 3 — Xác nhận vị trí',
+    text: 'Nhấn trên bản đồ để chọn vị trí chính xác. Hệ thống sẽ tự điền địa chỉ nếu có thể.',
+    icon: MapPin,
+  },
+  4: {
+    title: 'Bước 4 — Gửi yêu cầu cứu hộ',
+    text: 'Kiểm tra lại toàn bộ thông tin và phí ước tính trước khi gửi. Sau khi gửi, bạn sẽ theo dõi tiến trình ở bước 5.',
+    icon: FileCheck,
+  },
 };
 
 const initialForm = {
@@ -100,7 +144,6 @@ function RequestImagePicker({ onFileSelected, onError }) {
               onError={() => setFailedPreviewUrl(resolvedDisplayUrl)}
             />
           </div>
-
           <div className="request-image-actions">
             <button type="button" className="button button-secondary" onClick={() => fileInputRef.current?.click()}>
               Change image
@@ -130,9 +173,27 @@ function RequestImagePicker({ onFileSelected, onError }) {
   );
 }
 
+function StepGuide({ step }) {
+  const guide = STEP_GUIDES[step];
+  if (!guide) return null;
+
+  const IconComponent = guide.icon || Info;
+
+  return (
+    <div className="wizard-step-guide">
+      <IconComponent size={24} aria-hidden="true" style={{ color: 'var(--primary)' }} />
+      <div>
+        <strong>{guide.title}</strong>
+        <p>{guide.text}</p>
+      </div>
+    </div>
+  );
+}
+
 export default function CreateRequestPage() {
   const navigate = useNavigate();
   const [form, setForm] = useState(initialForm);
+  const [currentStep, setCurrentStep] = useState(1);
   const [vehicles, setVehicles] = useState([]);
   const [incidentTypes, setIncidentTypes] = useState([]);
   const [serviceTypes, setServiceTypes] = useState([]);
@@ -192,9 +253,7 @@ export default function CreateRequestPage() {
     requestApi
       .predictFee(Number(form.serviceTypeId), cost)
       .then((data) => {
-        if (!cancelled) {
-          setFeeInfo(data);
-        }
+        if (!cancelled) setFeeInfo(data);
       })
       .catch((err) => {
         if (!cancelled) {
@@ -203,9 +262,7 @@ export default function CreateRequestPage() {
         }
       })
       .finally(() => {
-        if (!cancelled) {
-          setFeeLoading(false);
-        }
+        if (!cancelled) setFeeLoading(false);
       });
 
     return () => {
@@ -219,10 +276,7 @@ export default function CreateRequestPage() {
       const key = name.replace('location.', '');
       setForm((previous) => ({
         ...previous,
-        location: {
-          ...previous.location,
-          [key]: value,
-        },
+        location: { ...previous.location, [key]: value },
       }));
       return;
     }
@@ -232,10 +286,8 @@ export default function CreateRequestPage() {
       const suggestedCodes = selectedIncident ? (SUGGESTED_SERVICES_MAP[selectedIncident.code] || []) : [];
       let newServiceTypeId = form.serviceTypeId;
       if (suggestedCodes.length > 0) {
-         const firstSuggested = serviceTypes.find((s) => s.code === suggestedCodes[0]);
-         if (firstSuggested) {
-             newServiceTypeId = String(firstSuggested.id);
-         }
+        const firstSuggested = serviceTypes.find((s) => suggestedCodes.includes(s.code));
+        if (firstSuggested) newServiceTypeId = String(firstSuggested.id);
       }
       setForm((previous) => ({ ...previous, incidentTypeId: value, serviceTypeId: newServiceTypeId }));
       return;
@@ -268,7 +320,6 @@ export default function CreateRequestPage() {
       const geocodeData = await locationApi.reverseGeocode(latitude, longitude);
       applyGeocodeResult(geocodeData, latitude, longitude);
     } catch (err) {
-      // Still update lat/lng even if geocoding fails
       setForm((previous) => ({
         ...previous,
         location: {
@@ -287,18 +338,56 @@ export default function CreateRequestPage() {
     runReverseGeocode(latitude, longitude);
   };
 
+  const validateStep = (step) => {
+    if (step === 1) {
+      if (!form.incidentTypeId) {
+        setError('Vui lòng chọn loại sự cố.');
+        return false;
+      }
+      return true;
+    }
+    if (step === 2) {
+      if (!form.serviceTypeId) {
+        setError('Vui lòng chọn loại dịch vụ.');
+        return false;
+      }
+      const cost = Number(transportCost || 0);
+      if (Number.isNaN(cost) || cost < 0) {
+        setError('Chi phí di chuyển phải là số hợp lệ.');
+        return false;
+      }
+      return true;
+    }
+    if (step === 3) {
+      if (!form.location.province || !form.location.latitude || !form.location.longitude) {
+        setError('Vui lòng chọn vị trí trên bản đồ và điền tỉnh/thành.');
+        return false;
+      }
+      return true;
+    }
+    return true;
+  };
+
+  const goNext = () => {
+    setError('');
+    if (!validateStep(currentStep)) return;
+    setCurrentStep((step) => Math.min(step + 1, WIZARD_STEPS.length));
+  };
+
+  const goBack = () => {
+    setError('');
+    setCurrentStep((step) => Math.max(step - 1, 1));
+  };
+
   const handleSubmit = async (event) => {
     event.preventDefault();
+    if (!validateStep(4)) return;
+
     setSubmitting(true);
     setError('');
     setImageError('');
     try {
       const resolvedTransportCost = Number(transportCost || 0);
-      if (Number.isNaN(resolvedTransportCost) || resolvedTransportCost < 0) {
-        setError('Travel cost must be a valid non-negative number.');
-        return;
-      }
-
       const payload = {
         ...form,
         vehicleId: form.vehicleId ? Number(form.vehicleId) : null,
@@ -331,234 +420,260 @@ export default function CreateRequestPage() {
     }
   };
 
-const selectedIncidentId = Number(form.incidentTypeId);
+  const selectedIncidentId = Number(form.incidentTypeId);
+  const selectedIncident = incidentTypes.find((i) => i.id === selectedIncidentId);
+  const suggestedCodes = selectedIncident ? (SUGGESTED_SERVICES_MAP[selectedIncident.code] || []) : [];
+  const suggestedServices = serviceTypes.filter((s) => suggestedCodes.includes(s.code));
+  const otherServices = serviceTypes.filter((s) => !suggestedCodes.includes(s.code));
 
-const selectedIncident = incidentTypes.find((i) => i.id === selectedIncidentId);
+  const selectedVehicle = vehicles.find((v) => String(v.id) === String(form.vehicleId));
+  const selectedService = serviceTypes.find((s) => String(s.id) === String(form.serviceTypeId));
 
-const suggestedCodes = selectedIncident
-  ? SUGGESTED_SERVICES_MAP[selectedIncident.code] || []
-  : [];
-
-const suggestedServices = serviceTypes.filter((s) =>
-  suggestedCodes.includes(s.code),
-);
-
-const otherServices = serviceTypes.filter(
-  (s) => !suggestedCodes.includes(s.code),
-);
   return (
     <>
       <PageHeader
-        title="Create Rescue Request"
-        subtitle="Submit your incident, service type, travel cost, and location. The estimated quotation is calculated automatically before you submit."
+        title="Tạo yêu cầu cứu hộ"
+        subtitle="Hoàn thành từng bước để gửi yêu cầu nhanh và chính xác. Sau khi gửi, bạn sẽ theo dõi tiến trình ở trang chi tiết."
       />
 
-      {error ? <div className="notice error">{error}</div> : null}
-      {imageError ? <div className="notice notice-warning">{imageError}</div> : null}
+      {error ? <Alert variant="error" title="Không thể tiếp tục">{error}</Alert> : null}
+      {imageError ? <Alert variant="warning" title="Lưu ý">{imageError}</Alert> : null}
+      {form.priorityLevel === 'EMERGENCY' ? (
+        <Alert variant="warning" title="Tình huống khẩn cấp">
+          Bạn đã chọn mức ưu tiên EMERGENCY. Hãy đảm bảo vị trí chính xác và mô tả rõ tình trạng.
+        </Alert>
+      ) : null}
 
-      <form className="card" onSubmit={handleSubmit}>
-        {loading ? <p>Loading options...</p> : null}
-        <div className="form-grid">
-          <div className="field">
-            <label>Vehicle</label>
-            <select name="vehicleId" value={form.vehicleId} onChange={handleChange}>
-              <option value="">No linked vehicle</option>
-              {vehicles.map((vehicle) => (
-                <option key={vehicle.id} value={vehicle.id}>
-                  {vehicle.brand} {vehicle.model} - {vehicle.plateNumber}
-                </option>
-              ))}
-            </select>
-          </div>
+      <div className="wizard-shell">
+        <Stepper steps={WIZARD_STEPS} currentStep={currentStep} />
 
-          <div className="field">
-            <label>Incident Type</label>
-            <select name="incidentTypeId" value={form.incidentTypeId} onChange={handleChange} required>
-              <option value="">Select incident</option>
-              {incidentTypes.map((item) => (
-                <option key={item.id} value={item.id}>{item.name}</option>
-              ))}
-            </select>
-          </div>
+        <form className="card wizard-step-panel" onSubmit={handleSubmit}>
+          {loading ? <p>Đang tải dữ liệu...</p> : null}
 
-          <div className="field">
-            <label>Service Type</label>
-            <select name="serviceTypeId" value={form.serviceTypeId} onChange={handleChange} required>
-              <option value="">Select service</option>
-              {suggestedServices.length > 0 ? (
-                <>
-                  <optgroup label="Suggested">
-                    {suggestedServices.map((item) => (
-                      <option key={item.id} value={item.id}>{item.name} (Recommended)</option>
-                    ))}
-                  </optgroup>
-                  <optgroup label="Other Services">
-                    {otherServices.map((item) => (
+          {!loading && currentStep === 1 ? (
+            <>
+              <StepGuide step={1} />
+              <div className="form-grid">
+                <div className="field">
+                  <label>Loại sự cố</label>
+                  <select name="incidentTypeId" value={form.incidentTypeId} onChange={handleChange} required>
+                    <option value="">Chọn sự cố</option>
+                    {incidentTypes.map((item) => (
                       <option key={item.id} value={item.id}>{item.name}</option>
                     ))}
-                  </optgroup>
-                </>
-              ) : (
-                serviceTypes.map((item) => (
-                  <option key={item.id} value={item.id}>{item.name}</option>
-                ))
-              )}
-            </select>
-          </div>
+                  </select>
+                </div>
+                <div className="field">
+                  <label>Mức ưu tiên</label>
+                  <select name="priorityLevel" value={form.priorityLevel} onChange={handleChange}>
+                    <option value="LOW">LOW</option>
+                    <option value="NORMAL">NORMAL</option>
+                    <option value="HIGH">HIGH</option>
+                    <option value="EMERGENCY">EMERGENCY</option>
+                  </select>
+                </div>
+              </div>
+            </>
+          ) : null}
 
-          <div className="field">
-            <label>Travel Cost (VND)</label>
-            <input
-              type="number"
-              min="0"
-              step="1000"
-              placeholder="Example: 50000"
-              value={transportCost}
-              onChange={(event) => setTransportCost(event.target.value)}
-            />
-          </div>
+          {!loading && currentStep === 2 ? (
+            <>
+              <StepGuide step={2} />
+              <div className="form-grid">
+                <div className="field">
+                  <label>Xe</label>
+                  <select name="vehicleId" value={form.vehicleId} onChange={handleChange}>
+                    <option value="">Không liên kết xe</option>
+                    {vehicles.map((vehicle) => (
+                      <option key={vehicle.id} value={vehicle.id}>
+                        {vehicle.brand} {vehicle.model} - {vehicle.plateNumber}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="field">
+                  <label>Dịch vụ</label>
+                  <select name="serviceTypeId" value={form.serviceTypeId} onChange={handleChange} required>
+                    <option value="">Chọn dịch vụ</option>
+                    {suggestedServices.length > 0 ? (
+                      <>
+                        <optgroup label="Gợi ý">
+                          {suggestedServices.map((item) => (
+                            <option key={item.id} value={item.id}>{item.name} (Đề xuất)</option>
+                          ))}
+                        </optgroup>
+                        <optgroup label="Dịch vụ khác">
+                          {otherServices.map((item) => (
+                            <option key={item.id} value={item.id}>{item.name}</option>
+                          ))}
+                        </optgroup>
+                      </>
+                    ) : (
+                      serviceTypes.map((item) => (
+                        <option key={item.id} value={item.id}>{item.name}</option>
+                      ))
+                    )}
+                  </select>
+                </div>
+                <div className="field">
+                  <label>Chi phí di chuyển (VND)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1000"
+                    placeholder="Ví dụ: 50000"
+                    value={transportCost}
+                    onChange={(event) => setTransportCost(event.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="field">
+                <label>Mô tả tình huống</label>
+                <textarea
+                  name="description"
+                  value={form.description}
+                  onChange={handleChange}
+                  placeholder="Mô tả sự cố, tình trạng xe, yêu cầu hỗ trợ..."
+                />
+              </div>
+              <div className="field">
+                <label>Ảnh minh họa <span className="muted-line">(tùy chọn)</span></label>
+                <RequestImagePicker onFileSelected={setSelectedImageFile} onError={setImageError} />
+              </div>
+            </>
+          ) : null}
 
-          <div className="field">
-            <label>Priority</label>
-            <select name="priorityLevel" value={form.priorityLevel} onChange={handleChange}>
-              <option value="LOW">LOW</option>
-              <option value="NORMAL">NORMAL</option>
-              <option value="HIGH">HIGH</option>
-              <option value="EMERGENCY">EMERGENCY</option>
-            </select>
-          </div>
-        </div>
+          {!loading && currentStep === 3 ? (
+            <>
+              <StepGuide step={3} />
+              <div className="field">
+                <label><MapPin size={16} style={{ verticalAlign: 'middle' }} /> Bản đồ — nhấn để chọn vị trí</label>
+                <LocationPickerMap
+                  value={{
+                    latitude: form.location.latitude,
+                    longitude: form.location.longitude,
+                  }}
+                  onChange={handleLocationPick}
+                />
+              </div>
+              <div className="form-grid" style={{ marginTop: '1rem' }}>
+                <div className="field">
+                  <label>Tỉnh/Thành</label>
+                  <input name="location.province" value={form.location.province} onChange={handleChange} required disabled={geocoding} />
+                </div>
+                <div className="field">
+                  <label>Quận/Huyện</label>
+                  <input name="location.district" value={form.location.district} onChange={handleChange} disabled={geocoding} />
+                </div>
+                <div className="field">
+                  <label>Phường/Xã</label>
+                  <input name="location.ward" value={form.location.ward} onChange={handleChange} disabled={geocoding} />
+                </div>
+                <div className="field">
+                  <label>Đường</label>
+                  <input name="location.street" value={form.location.street} onChange={handleChange} disabled={geocoding} />
+                </div>
+                <div className="field">
+                  <label>Chi tiết</label>
+                  <input name="location.detail" value={form.location.detail} onChange={handleChange} disabled={geocoding} />
+                </div>
+                <div className="field">
+                  <label>Latitude</label>
+                  <input name="location.latitude" value={form.location.latitude} onChange={handleChange} disabled={geocoding} />
+                </div>
+                <div className="field">
+                  <label>Longitude</label>
+                  <input name="location.longitude" value={form.location.longitude} onChange={handleChange} disabled={geocoding} />
+                </div>
+              </div>
+            </>
+          ) : null}
 
-        <div className="field">
-          <label>Description</label>
-          <textarea name="description" value={form.description} onChange={handleChange} placeholder="Describe the breakdown or rescue situation..." />
-        </div>
+          {!loading && currentStep === 4 ? (
+            <>
+              <StepGuide step={4} />
+              <div className="wizard-review-grid">
+                <div className="wizard-review-item">
+                  <span>Sự cố</span>
+                  <strong>{selectedIncident?.name || '—'}</strong>
+                </div>
+                <div className="wizard-review-item">
+                  <span>Ưu tiên</span>
+                  <strong>{form.priorityLevel}</strong>
+                </div>
+                <div className="wizard-review-item">
+                  <span>Xe</span>
+                  <strong>
+                    {selectedVehicle
+                      ? `${selectedVehicle.brand} ${selectedVehicle.model}`
+                      : 'Không liên kết'}
+                  </strong>
+                </div>
+                <div className="wizard-review-item">
+                  <span>Dịch vụ</span>
+                  <strong>{selectedService?.name || '—'}</strong>
+                </div>
+                <div className="wizard-review-item">
+                  <span>Vị trí</span>
+                  <strong>{form.location.province || '—'}</strong>
+                </div>
+              </div>
 
-        <div className="field" style={{ marginTop: '0.5rem' }}>
-          <label>Request Image <span className="muted-line" style={{ fontWeight: 400 }}>(optional)</span></label>
-          <RequestImagePicker
-            onFileSelected={setSelectedImageFile}
-            onError={setImageError}
-          />
-        </div>
+              <div className={`fee-preview-panel ${feeInfo ? 'fee-preview-panel-ready' : ''}`} style={{ marginTop: '1rem' }}>
+                <div>
+                  <span>Phí ước tính</span>
+                  {feeLoading ? (
+                    <strong>Đang tính...</strong>
+                  ) : feeInfo ? (
+                    <strong>{formatMoney(feeInfo.estimatedFee)}</strong>
+                  ) : (
+                    <strong>Chưa tính được</strong>
+                  )}
+                </div>
+                {feeInfo ? (
+                  <p>
+                    Hệ số {feeInfo.coefficient} x (Giá dịch vụ {formatMoney(feeInfo.basePrice)} + Di chuyển {formatMoney(feeInfo.transportCost)})
+                  </p>
+                ) : (
+                  <p>{feeError || 'Chọn dịch vụ và nhập chi phí di chuyển để xem phí ước tính.'}</p>
+                )}
+              </div>
+            </>
+          ) : null}
 
-        <div className="field" style={{ gridColumn: '1 / -1' }}>
-          <label>Map — click to select location</label>
-          <LocationPickerMap
-            value={{
-              latitude: form.location.latitude,
-              longitude: form.location.longitude,
-            }}
-            onChange={handleLocationPick}
-          />
-        </div>
+          <div className="actions-row" style={{ marginTop: '1.25rem' }}>
+            {currentStep > 1 ? (
+              <button type="button" className="button button-secondary" onClick={goBack}>
+                <ChevronLeft size={18} aria-hidden="true" />
+                Quay lại
+              </button>
+            ) : null}
 
-        <div className="form-grid" style={{ marginTop: '1rem' }}>
-          <div className="field">
-            <label>Country</label>
-            <input
-              name="location.country"
-              value={form.location.country}
-              onChange={handleChange}
-              disabled={geocoding}
-            />
-          </div>
-          <div className="field">
-            <label>Province</label>
-            <input
-              name="location.province"
-              value={form.location.province}
-              onChange={handleChange}
-              required
-              disabled={geocoding}
-            />
-          </div>
-          <div className="field">
-            <label>District</label>
-            <input
-              name="location.district"
-              value={form.location.district}
-              onChange={handleChange}
-              disabled={geocoding}
-            />
-          </div>
-          <div className="field">
-            <label>Ward</label>
-            <input
-              name="location.ward"
-              value={form.location.ward}
-              onChange={handleChange}
-              disabled={geocoding}
-            />
-          </div>
-          <div className="field">
-            <label>Street</label>
-            <input
-              name="location.street"
-              value={form.location.street}
-              onChange={handleChange}
-              disabled={geocoding}
-            />
-          </div>
-          <div className="field">
-            <label>Detail</label>
-            <input
-              name="location.detail"
-              value={form.location.detail}
-              onChange={handleChange}
-              disabled={geocoding}
-            />
-          </div>
-          <div className="field">
-            <label>Latitude</label>
-            <input
-              name="location.latitude"
-              value={form.location.latitude}
-              onChange={handleChange}
-              disabled={geocoding}
-            />
-          </div>
-          <div className="field">
-            <label>Longitude</label>
-            <input
-              name="location.longitude"
-              value={form.location.longitude}
-              onChange={handleChange}
-              disabled={geocoding}
-            />
-          </div>
-        </div>
-
-        <div className={`fee-preview-panel ${feeInfo ? 'fee-preview-panel-ready' : ''}`}>
-          <div>
-            <span>Estimated fee</span>
-            {feeLoading ? (
-              <strong>Calculating...</strong>
-            ) : feeInfo ? (
-              <strong>{formatMoney(feeInfo.estimatedFee)}</strong>
+            {currentStep < WIZARD_STEPS.length ? (
+              <button type="button" className="button button-primary" onClick={goNext}>
+                Tiếp tục
+                <ChevronRight size={18} aria-hidden="true" />
+              </button>
             ) : (
-              <strong>Not calculated yet</strong>
+              <button
+                className={`button button-sos ${submitting ? 'button-loading' : ''}`}
+                type="submit"
+                disabled={submitting || geocoding}
+              >
+                <Send size={18} aria-hidden="true" />
+                {submitting ? 'Đang gửi...' : 'Gửi yêu cầu cứu hộ'}
+              </button>
             )}
           </div>
-          {feeInfo ? (
-            <p>
-              Coefficient {feeInfo.coefficient} x (Service price {formatMoney(feeInfo.basePrice)} + Travel cost {formatMoney(feeInfo.transportCost)})
-            </p>
-          ) : (
-            <p>{feeError || 'Select a service type and enter travel cost above, then the fee will appear here before you create the request.'}</p>
-          )}
-        </div>
+        </form>
 
-        <div className="actions-row">
-          <button
-            className="button button-primary"
-            type="submit"
-            disabled={submitting || geocoding}
-          >
-            {submitting ? 'Submitting...' : 'Create request'}
-          </button>
+        <div className="card card-muted" style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
+          <CheckCircle2 size={20} color="var(--success)" aria-hidden="true" />
+          <p className="muted-line" style={{ margin: 0 }}>
+            <strong>Bước 5 — Theo dõi:</strong> Sau khi gửi, hệ thống chuyển bạn đến trang chi tiết với timeline tiến trình xử lý.
+          </p>
         </div>
-      </form>
+      </div>
     </>
   );
 }

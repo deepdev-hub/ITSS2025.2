@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import { MessageCircle } from 'lucide-react';
 import { requestApi } from '../../api/requestApi';
 import { getApiError } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
@@ -7,7 +8,10 @@ import Countdown from '../../components/common/Countdown';
 import Loader from '../../components/common/Loader';
 import PageHeader from '../../components/common/PageHeader';
 import StatusBadge from '../../components/common/StatusBadge';
+import ChatModal from '../../components/common/ChatModal';
 import RequestTrackingMap from '../../components/requests/RequestTrackingMap';
+import RequestLifecycleStepper from '../../components/requests/RequestLifecycleStepper';
+import Alert from '../../components/common/Alert';
 import {
   canCustomerCancel,
   formatCurrency,
@@ -280,6 +284,7 @@ export default function RequestDetailPage() {
   const [rejectForm, setRejectForm] = useState(defaultDecisionForm);
   const [cancelForm, setCancelForm] = useState(defaultDecisionForm);
   const [reviewForm, setReviewForm] = useState(defaultReviewForm);
+  const [isChatOpen, setIsChatOpen] = useState(false);
   const refreshInFlightRef = useRef(false);
   const messageListRef = useRef(null);
   const shouldStickToBottomRef = useRef(true);
@@ -638,6 +643,17 @@ export default function RequestDetailPage() {
               <strong>{refreshing ? 'Refreshing…' : pollLabel}</strong>
               <span>{lastSyncedAt ? `Last sync ${formatDateTime(lastSyncedAt)}` : 'Waiting for first sync'}</span>
             </div>
+            {detail.assignedCompany && isCustomer && (
+              <button 
+                className="button button-secondary" 
+                type="button" 
+                onClick={() => setIsChatOpen(true)}
+                title="Chat với đội cứu hộ"
+              >
+                <MessageCircle size={16} />
+                Chat
+              </button>
+            )}
             <button className="button button-secondary" type="button" onClick={() => refreshData({ silent: true, force: true })}>
               Refresh now
             </button>
@@ -645,10 +661,12 @@ export default function RequestDetailPage() {
         )}
       />
 
+      <RequestLifecycleStepper status={detail.status} />
+
       {isCustomer ? <RequestTrackingMap requestId={id} requestStatus={detail.status} /> : null}
 
-      {notice ? <div className="notice">{notice}</div> : null}
-      {error ? <div className="notice error">{error}</div> : null}
+      {notice ? <Alert variant="success">{notice}</Alert> : null}
+      {error ? <Alert variant="error" title="Có lỗi xảy ra">{error}</Alert> : null}
 
       <div className="grid-two">
         <div className="card">
@@ -1268,8 +1286,8 @@ export default function RequestDetailPage() {
 
         <div className="card">
           <SectionHeader
-            title="Status History"
-            subtitle="Each request state change is recorded in order and refreshed automatically."
+            title="Timeline xử lý"
+            subtitle="Mỗi thay đổi trạng thái được ghi lại theo thứ tự và tự động cập nhật."
           />
 
           {(detail.history || []).length === 0 ? (
@@ -1296,6 +1314,16 @@ export default function RequestDetailPage() {
           )}
         </div>
       </div>
+
+      {isCustomer && detail.assignedCompany && (
+        <ChatModal
+          isOpen={isChatOpen}
+          onClose={() => setIsChatOpen(false)}
+          requestId={detail.id}
+          companyName={detail.assignedCompany?.companyName}
+          staffName={detail.assignedStaff?.fullName}
+        />
+      )}
     </>
   );
 }
