@@ -1,9 +1,11 @@
 import { apiClient, unwrap } from './client';
 
+const SESSION_CHECK_TIMEOUT_MS = 5000;
+
 export const authApi = {
   register: (payload) => unwrap(apiClient.post('/api/auth/register', payload)),
   login: (payload) => unwrap(apiClient.post('/api/auth/login', payload)),
-  me: () => unwrap(apiClient.get('/api/auth/me')),
+  me: () => unwrap(apiClient.get('/api/auth/me', { timeout: SESSION_CHECK_TIMEOUT_MS })),
   updateProfile: (payload) => unwrap(apiClient.put('/api/auth/profile', payload)),
   changePassword: (payload) => unwrap(apiClient.put('/api/auth/change-password', payload)),
   forgotPassword: (email) => apiClient
