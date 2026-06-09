@@ -499,8 +499,14 @@ public class AdminServiceImpl implements AdminService {
     // Logic tự động điều phối Staff
     @Override
     public RequestDto.AssignmentResponse autoAssignNearestStaff(Long requestId) {
+        return autoAssignNearestStaff(requestId, authContext.getCurrentAccount().getId());
+    }
+
+    @Override
+    public RequestDto.AssignmentResponse autoAssignNearestStaff(Long requestId, Long assignedByAccountId) {
         RescueRequest rescueRequest = rescueRequestRepository.findById(requestId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy yêu cầu ID: " + requestId));
+        Account assignedBy = findAccount(assignedByAccountId);
 
         if (rescueRequest.getLocation() == null || 
             rescueRequest.getLocation().getLatitude() == null || 
@@ -551,7 +557,7 @@ public class AdminServiceImpl implements AdminService {
                 .request(rescueRequest)
                 .company(nearestStaff.getCompany())
                 .staff(nearestStaff)
-                .assignedByUser(authContext.getCurrentAccount())
+                .assignedByUser(assignedBy)
                 .status(AssignmentStatus.PENDING)
                 .assignedAt(LocalDateTime.now())
                 .build();
@@ -566,7 +572,7 @@ public class AdminServiceImpl implements AdminService {
                 .request(rescueRequest)
                 .oldStatus(oldStatus)
                 .newStatus(RescueRequestStatus.MATCHED)
-                .changedByUser(authContext.getCurrentAccount())
+                .changedByUser(assignedBy)
                 .note("Hệ thống tự động gán nhân viên gần nhất: " + nearestStaff.getUser().getFullName())
                 .build());
 

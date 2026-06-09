@@ -88,8 +88,11 @@ public class AssignmentTimeoutServiceImpl implements AssignmentTimeoutService {
                 .note("Assignment timed out. Đang tự động tìm kiếm nhân viên tiếp theo...")
                 .build());
 
-        // TỰ ĐỘNG GỌI ĐIỀU PHỐI NGƯỜI TIẾP THEO
-        adminService.autoAssignNearestStaff(savedRequest.getId());
+        // Scheduler không có HTTP AuthContext, nên dùng lại account đã tạo assignment trước đó.
+        Long assignedByAccountId = assignment.getAssignedByUser() != null
+                ? assignment.getAssignedByUser().getId()
+                : savedRequest.getCustomer().getId();
+        adminService.autoAssignNearestStaff(savedRequest.getId(), assignedByAccountId);
     }
 
     @Override
