@@ -58,4 +58,6 @@ public interface AdminService {
     List<CompanyDto.StaffResponse> getActiveStaffLocations();
     
     RequestDto.AssignmentResponse autoAssignNearestStaff(Long requestId);
+
+    RequestDto.AssignmentResponse autoAssignNearestStaff(Long requestId, Long assignedByAccountId);
 }

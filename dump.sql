@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
--- Dumped from database version 16.13
+-- Dumped from database version 17.4
 -- Dumped by pg_dump version 17.4
 
 SET statement_timeout = 0;
@@ -18,16 +18,7 @@ SET client_min_messages = warning;
 SET row_security = off;
 
 --
--- Name: public; Type: SCHEMA; Schema: -; Owner: avnadmin
---
-
--- *not* creating schema, since initdb creates it
-
-
-ALTER SCHEMA public OWNER TO avnadmin;
-
---
--- Name: SCHEMA public; Type: COMMENT; Schema: -; Owner: avnadmin
+-- Name: SCHEMA public; Type: COMMENT; Schema: -; Owner: pg_database_owner
 --
 
 COMMENT ON SCHEMA public IS '';
@@ -38,7 +29,7 @@ SET default_tablespace = '';
 SET default_table_access_method = heap;
 
 --
--- Name: account; Type: TABLE; Schema: public; Owner: avnadmin
+-- Name: account; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE public.account (
@@ -55,14 +46,14 @@ CREATE TABLE public.account (
     gender character varying(20),
     default_address_id bigint,
     cccd character varying(20),
-    CONSTRAINT account_status_check CHECK (((status)::text = ANY ((ARRAY['ACTIVE'::character varying, 'INACTIVE'::character varying, 'BANNED'::character varying])::text[])))
+    CONSTRAINT account_status_check CHECK (((status)::text = ANY (ARRAY[('ACTIVE'::character varying)::text, ('INACTIVE'::character varying)::text, ('BANNED'::character varying)::text])))
 );
 
 
-ALTER TABLE public.account OWNER TO avnadmin;
+ALTER TABLE public.account OWNER TO postgres;
 
 --
--- Name: account_id_seq; Type: SEQUENCE; Schema: public; Owner: avnadmin
+-- Name: account_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
 --
 
 CREATE SEQUENCE public.account_id_seq
@@ -73,17 +64,17 @@ CREATE SEQUENCE public.account_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.account_id_seq OWNER TO avnadmin;
+ALTER SEQUENCE public.account_id_seq OWNER TO postgres;
 
 --
--- Name: account_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: avnadmin
+-- Name: account_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
 
 ALTER SEQUENCE public.account_id_seq OWNED BY public.account.id;
 
 
 --
--- Name: addresses; Type: TABLE; Schema: public; Owner: avnadmin
+-- Name: addresses; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE public.addresses (
@@ -99,10 +90,10 @@ CREATE TABLE public.addresses (
 );
 
 
-ALTER TABLE public.addresses OWNER TO avnadmin;
+ALTER TABLE public.addresses OWNER TO postgres;
 
 --
--- Name: addresses_id_seq; Type: SEQUENCE; Schema: public; Owner: avnadmin
+-- Name: addresses_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
 --
 
 CREATE SEQUENCE public.addresses_id_seq
@@ -113,17 +104,17 @@ CREATE SEQUENCE public.addresses_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.addresses_id_seq OWNER TO avnadmin;
+ALTER SEQUENCE public.addresses_id_seq OWNER TO postgres;
 
 --
--- Name: addresses_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: avnadmin
+-- Name: addresses_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
 
 ALTER SEQUENCE public.addresses_id_seq OWNED BY public.addresses.id;
 
 
 --
--- Name: customer_vehicles; Type: TABLE; Schema: public; Owner: avnadmin
+-- Name: customer_vehicles; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE public.customer_vehicles (
@@ -139,10 +130,10 @@ CREATE TABLE public.customer_vehicles (
 );
 
 
-ALTER TABLE public.customer_vehicles OWNER TO avnadmin;
+ALTER TABLE public.customer_vehicles OWNER TO postgres;
 
 --
--- Name: customer_vehicles_id_seq; Type: SEQUENCE; Schema: public; Owner: avnadmin
+-- Name: customer_vehicles_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
 --
 
 CREATE SEQUENCE public.customer_vehicles_id_seq
@@ -153,17 +144,17 @@ CREATE SEQUENCE public.customer_vehicles_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.customer_vehicles_id_seq OWNER TO avnadmin;
+ALTER SEQUENCE public.customer_vehicles_id_seq OWNER TO postgres;
 
 --
--- Name: customer_vehicles_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: avnadmin
+-- Name: customer_vehicles_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
 
 ALTER SEQUENCE public.customer_vehicles_id_seq OWNED BY public.customer_vehicles.id;
 
 
 --
--- Name: daily_statistics; Type: TABLE; Schema: public; Owner: avnadmin
+-- Name: daily_statistics; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE public.daily_statistics (
@@ -185,10 +176,10 @@ CREATE TABLE public.daily_statistics (
 );
 
 
-ALTER TABLE public.daily_statistics OWNER TO avnadmin;
+ALTER TABLE public.daily_statistics OWNER TO postgres;
 
 --
--- Name: daily_statistics_id_seq; Type: SEQUENCE; Schema: public; Owner: avnadmin
+-- Name: daily_statistics_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
 --
 
 CREATE SEQUENCE public.daily_statistics_id_seq
@@ -199,17 +190,17 @@ CREATE SEQUENCE public.daily_statistics_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.daily_statistics_id_seq OWNER TO avnadmin;
+ALTER SEQUENCE public.daily_statistics_id_seq OWNER TO postgres;
 
 --
--- Name: daily_statistics_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: avnadmin
+-- Name: daily_statistics_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
 
 ALTER SEQUENCE public.daily_statistics_id_seq OWNED BY public.daily_statistics.id;
 
 
 --
--- Name: incident_types; Type: TABLE; Schema: public; Owner: avnadmin
+-- Name: incident_types; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE public.incident_types (
@@ -220,10 +211,10 @@ CREATE TABLE public.incident_types (
 );
 
 
-ALTER TABLE public.incident_types OWNER TO avnadmin;
+ALTER TABLE public.incident_types OWNER TO postgres;
 
 --
--- Name: incident_types_id_seq; Type: SEQUENCE; Schema: public; Owner: avnadmin
+-- Name: incident_types_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
 --
 
 CREATE SEQUENCE public.incident_types_id_seq
@@ -234,17 +225,17 @@ CREATE SEQUENCE public.incident_types_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.incident_types_id_seq OWNER TO avnadmin;
+ALTER SEQUENCE public.incident_types_id_seq OWNER TO postgres;
 
 --
--- Name: incident_types_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: avnadmin
+-- Name: incident_types_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
 
 ALTER SEQUENCE public.incident_types_id_seq OWNED BY public.incident_types.id;
 
 
 --
--- Name: messages; Type: TABLE; Schema: public; Owner: avnadmin
+-- Name: messages; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE public.messages (
@@ -256,10 +247,10 @@ CREATE TABLE public.messages (
 );
 
 
-ALTER TABLE public.messages OWNER TO avnadmin;
+ALTER TABLE public.messages OWNER TO postgres;
 
 --
--- Name: messages_id_seq; Type: SEQUENCE; Schema: public; Owner: avnadmin
+-- Name: messages_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
 --
 
 CREATE SEQUENCE public.messages_id_seq
@@ -270,17 +261,17 @@ CREATE SEQUENCE public.messages_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.messages_id_seq OWNER TO avnadmin;
+ALTER SEQUENCE public.messages_id_seq OWNER TO postgres;
 
 --
--- Name: messages_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: avnadmin
+-- Name: messages_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
 
 ALTER SEQUENCE public.messages_id_seq OWNED BY public.messages.id;
 
 
 --
--- Name: password_reset_tokens; Type: TABLE; Schema: public; Owner: avnadmin
+-- Name: password_reset_tokens; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE public.password_reset_tokens (
@@ -292,10 +283,10 @@ CREATE TABLE public.password_reset_tokens (
 );
 
 
-ALTER TABLE public.password_reset_tokens OWNER TO avnadmin;
+ALTER TABLE public.password_reset_tokens OWNER TO postgres;
 
 --
--- Name: password_reset_tokens_id_seq; Type: SEQUENCE; Schema: public; Owner: avnadmin
+-- Name: password_reset_tokens_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
 --
 
 CREATE SEQUENCE public.password_reset_tokens_id_seq
@@ -306,17 +297,17 @@ CREATE SEQUENCE public.password_reset_tokens_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.password_reset_tokens_id_seq OWNER TO avnadmin;
+ALTER SEQUENCE public.password_reset_tokens_id_seq OWNER TO postgres;
 
 --
--- Name: password_reset_tokens_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: avnadmin
+-- Name: password_reset_tokens_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
 
 ALTER SEQUENCE public.password_reset_tokens_id_seq OWNED BY public.password_reset_tokens.id;
 
 
 --
--- Name: payments; Type: TABLE; Schema: public; Owner: avnadmin
+-- Name: payments; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE public.payments (
@@ -328,15 +319,15 @@ CREATE TABLE public.payments (
     payment_status character varying(20) DEFAULT 'PENDING'::character varying NOT NULL,
     paid_at timestamp without time zone,
     created_at timestamp(6) without time zone NOT NULL,
-    CONSTRAINT payments_payment_method_check CHECK (((payment_method)::text = ANY ((ARRAY['CASH'::character varying, 'BANK_TRANSFER'::character varying, 'MOMO'::character varying, 'VNPAY'::character varying, 'ZALOPAY'::character varying])::text[]))),
-    CONSTRAINT payments_payment_status_check CHECK (((payment_status)::text = ANY ((ARRAY['PENDING'::character varying, 'PAID'::character varying, 'FAILED'::character varying, 'REFUNDED'::character varying])::text[])))
+    CONSTRAINT payments_payment_method_check CHECK (((payment_method)::text = ANY (ARRAY[('CASH'::character varying)::text, ('BANK_TRANSFER'::character varying)::text, ('MOMO'::character varying)::text, ('VNPAY'::character varying)::text, ('ZALOPAY'::character varying)::text]))),
+    CONSTRAINT payments_payment_status_check CHECK (((payment_status)::text = ANY (ARRAY[('PENDING'::character varying)::text, ('PAID'::character varying)::text, ('FAILED'::character varying)::text, ('REFUNDED'::character varying)::text])))
 );
 
 
-ALTER TABLE public.payments OWNER TO avnadmin;
+ALTER TABLE public.payments OWNER TO postgres;
 
 --
--- Name: payments_id_seq; Type: SEQUENCE; Schema: public; Owner: avnadmin
+-- Name: payments_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
 --
 
 CREATE SEQUENCE public.payments_id_seq
@@ -347,17 +338,17 @@ CREATE SEQUENCE public.payments_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.payments_id_seq OWNER TO avnadmin;
+ALTER SEQUENCE public.payments_id_seq OWNER TO postgres;
 
 --
--- Name: payments_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: avnadmin
+-- Name: payments_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
 
 ALTER SEQUENCE public.payments_id_seq OWNED BY public.payments.id;
 
 
 --
--- Name: pricing_rules; Type: TABLE; Schema: public; Owner: avnadmin
+-- Name: pricing_rules; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE public.pricing_rules (
@@ -372,10 +363,10 @@ CREATE TABLE public.pricing_rules (
 );
 
 
-ALTER TABLE public.pricing_rules OWNER TO avnadmin;
+ALTER TABLE public.pricing_rules OWNER TO postgres;
 
 --
--- Name: pricing_rules_id_seq; Type: SEQUENCE; Schema: public; Owner: avnadmin
+-- Name: pricing_rules_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
 --
 
 CREATE SEQUENCE public.pricing_rules_id_seq
@@ -386,17 +377,17 @@ CREATE SEQUENCE public.pricing_rules_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.pricing_rules_id_seq OWNER TO avnadmin;
+ALTER SEQUENCE public.pricing_rules_id_seq OWNER TO postgres;
 
 --
--- Name: pricing_rules_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: avnadmin
+-- Name: pricing_rules_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
 
 ALTER SEQUENCE public.pricing_rules_id_seq OWNED BY public.pricing_rules.id;
 
 
 --
--- Name: quotes; Type: TABLE; Schema: public; Owner: avnadmin
+-- Name: quotes; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE public.quotes (
@@ -414,16 +405,16 @@ CREATE TABLE public.quotes (
     quantity integer,
     unit_price numeric(15,2),
     subtotal numeric(15,2),
-    note text,
     customer_note text,
-    CONSTRAINT quotes_status_check CHECK (((status)::text = ANY ((ARRAY['DRAFT'::character varying, 'SENT'::character varying, 'ACCEPTED'::character varying, 'REJECTED'::character varying, 'EXPIRED'::character varying])::text[])))
+    note text,
+    CONSTRAINT quotes_status_check CHECK (((status)::text = ANY (ARRAY[('DRAFT'::character varying)::text, ('SENT'::character varying)::text, ('ACCEPTED'::character varying)::text, ('REJECTED'::character varying)::text, ('EXPIRED'::character varying)::text])))
 );
 
 
-ALTER TABLE public.quotes OWNER TO avnadmin;
+ALTER TABLE public.quotes OWNER TO postgres;
 
 --
--- Name: quotes_id_seq; Type: SEQUENCE; Schema: public; Owner: avnadmin
+-- Name: quotes_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
 --
 
 CREATE SEQUENCE public.quotes_id_seq
@@ -434,17 +425,17 @@ CREATE SEQUENCE public.quotes_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.quotes_id_seq OWNER TO avnadmin;
+ALTER SEQUENCE public.quotes_id_seq OWNER TO postgres;
 
 --
--- Name: quotes_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: avnadmin
+-- Name: quotes_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
 
 ALTER SEQUENCE public.quotes_id_seq OWNED BY public.quotes.id;
 
 
 --
--- Name: request_assignments; Type: TABLE; Schema: public; Owner: avnadmin
+-- Name: request_assignments; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE public.request_assignments (
@@ -458,14 +449,14 @@ CREATE TABLE public.request_assignments (
     accepted_at timestamp without time zone,
     rejected_at timestamp without time zone,
     status character varying(20) DEFAULT 'PENDING'::character varying NOT NULL,
-    CONSTRAINT request_assignments_status_check CHECK (((status)::text = ANY ((ARRAY['PENDING'::character varying, 'ACCEPTED'::character varying, 'REJECTED'::character varying, 'COMPLETED'::character varying])::text[])))
+    CONSTRAINT request_assignments_status_check CHECK (((status)::text = ANY (ARRAY[('PENDING'::character varying)::text, ('ACCEPTED'::character varying)::text, ('REJECTED'::character varying)::text, ('COMPLETED'::character varying)::text])))
 );
 
 
-ALTER TABLE public.request_assignments OWNER TO avnadmin;
+ALTER TABLE public.request_assignments OWNER TO postgres;
 
 --
--- Name: request_assignments_id_seq; Type: SEQUENCE; Schema: public; Owner: avnadmin
+-- Name: request_assignments_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
 --
 
 CREATE SEQUENCE public.request_assignments_id_seq
@@ -476,17 +467,17 @@ CREATE SEQUENCE public.request_assignments_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.request_assignments_id_seq OWNER TO avnadmin;
+ALTER SEQUENCE public.request_assignments_id_seq OWNER TO postgres;
 
 --
--- Name: request_assignments_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: avnadmin
+-- Name: request_assignments_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
 
 ALTER SEQUENCE public.request_assignments_id_seq OWNED BY public.request_assignments.id;
 
 
 --
--- Name: request_status_history; Type: TABLE; Schema: public; Owner: avnadmin
+-- Name: request_status_history; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE public.request_status_history (
@@ -500,10 +491,10 @@ CREATE TABLE public.request_status_history (
 );
 
 
-ALTER TABLE public.request_status_history OWNER TO avnadmin;
+ALTER TABLE public.request_status_history OWNER TO postgres;
 
 --
--- Name: request_status_history_id_seq; Type: SEQUENCE; Schema: public; Owner: avnadmin
+-- Name: request_status_history_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
 --
 
 CREATE SEQUENCE public.request_status_history_id_seq
@@ -514,17 +505,17 @@ CREATE SEQUENCE public.request_status_history_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.request_status_history_id_seq OWNER TO avnadmin;
+ALTER SEQUENCE public.request_status_history_id_seq OWNER TO postgres;
 
 --
--- Name: request_status_history_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: avnadmin
+-- Name: request_status_history_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
 
 ALTER SEQUENCE public.request_status_history_id_seq OWNED BY public.request_status_history.id;
 
 
 --
--- Name: rescue_companies; Type: TABLE; Schema: public; Owner: avnadmin
+-- Name: rescue_companies; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE public.rescue_companies (
@@ -542,14 +533,14 @@ CREATE TABLE public.rescue_companies (
     address_id bigint,
     latitude numeric(10,7),
     longitude numeric(10,7),
-    CONSTRAINT rescue_companies_status_check CHECK (((status)::text = ANY ((ARRAY['PENDING'::character varying, 'APPROVED'::character varying, 'REJECTED'::character varying, 'SUSPENDED'::character varying])::text[])))
+    CONSTRAINT rescue_companies_status_check CHECK (((status)::text = ANY (ARRAY[('PENDING'::character varying)::text, ('APPROVED'::character varying)::text, ('REJECTED'::character varying)::text, ('SUSPENDED'::character varying)::text])))
 );
 
 
-ALTER TABLE public.rescue_companies OWNER TO avnadmin;
+ALTER TABLE public.rescue_companies OWNER TO postgres;
 
 --
--- Name: rescue_companies_id_seq; Type: SEQUENCE; Schema: public; Owner: avnadmin
+-- Name: rescue_companies_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
 --
 
 CREATE SEQUENCE public.rescue_companies_id_seq
@@ -560,17 +551,17 @@ CREATE SEQUENCE public.rescue_companies_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.rescue_companies_id_seq OWNER TO avnadmin;
+ALTER SEQUENCE public.rescue_companies_id_seq OWNER TO postgres;
 
 --
--- Name: rescue_companies_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: avnadmin
+-- Name: rescue_companies_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
 
 ALTER SEQUENCE public.rescue_companies_id_seq OWNED BY public.rescue_companies.id;
 
 
 --
--- Name: rescue_requests; Type: TABLE; Schema: public; Owner: avnadmin
+-- Name: rescue_requests; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE public.rescue_requests (
@@ -587,15 +578,19 @@ CREATE TABLE public.rescue_requests (
     created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     image_url text,
-    CONSTRAINT rescue_requests_priority_level_check CHECK (((priority_level)::text = ANY ((ARRAY['LOW'::character varying, 'NORMAL'::character varying, 'HIGH'::character varying, 'EMERGENCY'::character varying])::text[]))),
-    CONSTRAINT rescue_requests_status_check CHECK (((status)::text = ANY ((ARRAY['CREATED'::character varying, 'SEARCHING'::character varying, 'MATCHED'::character varying, 'ACCEPTED'::character varying, 'IN_PROGRESS'::character varying, 'COMPLETED'::character varying, 'CANCELED'::character varying])::text[])))
+    estimated_quotation_amount numeric(15,2),
+    fee_coefficient numeric(10,4),
+    service_price_snapshot numeric(15,2),
+    travel_cost numeric(15,2),
+    CONSTRAINT rescue_requests_priority_level_check CHECK (((priority_level)::text = ANY (ARRAY[('LOW'::character varying)::text, ('NORMAL'::character varying)::text, ('HIGH'::character varying)::text, ('EMERGENCY'::character varying)::text]))),
+    CONSTRAINT rescue_requests_status_check CHECK (((status)::text = ANY (ARRAY[('CREATED'::character varying)::text, ('SEARCHING'::character varying)::text, ('MATCHED'::character varying)::text, ('ACCEPTED'::character varying)::text, ('IN_PROGRESS'::character varying)::text, ('COMPLETED'::character varying)::text, ('CANCELED'::character varying)::text])))
 );
 
 
-ALTER TABLE public.rescue_requests OWNER TO avnadmin;
+ALTER TABLE public.rescue_requests OWNER TO postgres;
 
 --
--- Name: rescue_requests_id_seq; Type: SEQUENCE; Schema: public; Owner: avnadmin
+-- Name: rescue_requests_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
 --
 
 CREATE SEQUENCE public.rescue_requests_id_seq
@@ -606,17 +601,17 @@ CREATE SEQUENCE public.rescue_requests_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.rescue_requests_id_seq OWNER TO avnadmin;
+ALTER SEQUENCE public.rescue_requests_id_seq OWNER TO postgres;
 
 --
--- Name: rescue_requests_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: avnadmin
+-- Name: rescue_requests_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
 
 ALTER SEQUENCE public.rescue_requests_id_seq OWNED BY public.rescue_requests.id;
 
 
 --
--- Name: rescue_staff; Type: TABLE; Schema: public; Owner: avnadmin
+-- Name: rescue_staff; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE public.rescue_staff (
@@ -625,14 +620,16 @@ CREATE TABLE public.rescue_staff (
     company_id bigint NOT NULL,
     job_title character varying(255),
     status character varying(20) DEFAULT 'ACTIVE'::character varying NOT NULL,
-    CONSTRAINT rescue_staff_status_check CHECK (((status)::text = ANY ((ARRAY['ACTIVE'::character varying, 'OFFLINE'::character varying, 'BUSY'::character varying])::text[])))
+    bio text,
+    years_experience integer,
+    CONSTRAINT rescue_staff_status_check CHECK (((status)::text = ANY (ARRAY[('ACTIVE'::character varying)::text, ('OFFLINE'::character varying)::text, ('BUSY'::character varying)::text])))
 );
 
 
-ALTER TABLE public.rescue_staff OWNER TO avnadmin;
+ALTER TABLE public.rescue_staff OWNER TO postgres;
 
 --
--- Name: rescue_staff_id_seq; Type: SEQUENCE; Schema: public; Owner: avnadmin
+-- Name: rescue_staff_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
 --
 
 CREATE SEQUENCE public.rescue_staff_id_seq
@@ -643,17 +640,17 @@ CREATE SEQUENCE public.rescue_staff_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.rescue_staff_id_seq OWNER TO avnadmin;
+ALTER SEQUENCE public.rescue_staff_id_seq OWNER TO postgres;
 
 --
--- Name: rescue_staff_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: avnadmin
+-- Name: rescue_staff_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
 
 ALTER SEQUENCE public.rescue_staff_id_seq OWNED BY public.rescue_staff.id;
 
 
 --
--- Name: rescue_vehicles; Type: TABLE; Schema: public; Owner: avnadmin
+-- Name: rescue_vehicles; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE public.rescue_vehicles (
@@ -663,14 +660,14 @@ CREATE TABLE public.rescue_vehicles (
     plate_number character varying(50) NOT NULL,
     status character varying(20) DEFAULT 'AVAILABLE'::character varying NOT NULL,
     company_id bigint NOT NULL,
-    CONSTRAINT rescue_vehicles_status_check CHECK (((status)::text = ANY ((ARRAY['AVAILABLE'::character varying, 'IN_SERVICE'::character varying, 'MAINTENANCE'::character varying])::text[])))
+    CONSTRAINT rescue_vehicles_status_check CHECK (((status)::text = ANY (ARRAY[('AVAILABLE'::character varying)::text, ('IN_SERVICE'::character varying)::text, ('MAINTENANCE'::character varying)::text])))
 );
 
 
-ALTER TABLE public.rescue_vehicles OWNER TO avnadmin;
+ALTER TABLE public.rescue_vehicles OWNER TO postgres;
 
 --
--- Name: rescue_vehicles_id_seq; Type: SEQUENCE; Schema: public; Owner: avnadmin
+-- Name: rescue_vehicles_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
 --
 
 CREATE SEQUENCE public.rescue_vehicles_id_seq
@@ -681,17 +678,17 @@ CREATE SEQUENCE public.rescue_vehicles_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.rescue_vehicles_id_seq OWNER TO avnadmin;
+ALTER SEQUENCE public.rescue_vehicles_id_seq OWNER TO postgres;
 
 --
--- Name: rescue_vehicles_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: avnadmin
+-- Name: rescue_vehicles_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
 
 ALTER SEQUENCE public.rescue_vehicles_id_seq OWNED BY public.rescue_vehicles.id;
 
 
 --
--- Name: reviews; Type: TABLE; Schema: public; Owner: avnadmin
+-- Name: reviews; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE public.reviews (
@@ -707,10 +704,10 @@ CREATE TABLE public.reviews (
 );
 
 
-ALTER TABLE public.reviews OWNER TO avnadmin;
+ALTER TABLE public.reviews OWNER TO postgres;
 
 --
--- Name: reviews_id_seq; Type: SEQUENCE; Schema: public; Owner: avnadmin
+-- Name: reviews_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
 --
 
 CREATE SEQUENCE public.reviews_id_seq
@@ -721,17 +718,17 @@ CREATE SEQUENCE public.reviews_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.reviews_id_seq OWNER TO avnadmin;
+ALTER SEQUENCE public.reviews_id_seq OWNER TO postgres;
 
 --
--- Name: reviews_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: avnadmin
+-- Name: reviews_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
 
 ALTER SEQUENCE public.reviews_id_seq OWNED BY public.reviews.id;
 
 
 --
--- Name: roles; Type: TABLE; Schema: public; Owner: avnadmin
+-- Name: roles; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE public.roles (
@@ -740,10 +737,10 @@ CREATE TABLE public.roles (
 );
 
 
-ALTER TABLE public.roles OWNER TO avnadmin;
+ALTER TABLE public.roles OWNER TO postgres;
 
 --
--- Name: roles_id_seq; Type: SEQUENCE; Schema: public; Owner: avnadmin
+-- Name: roles_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
 --
 
 CREATE SEQUENCE public.roles_id_seq
@@ -754,31 +751,32 @@ CREATE SEQUENCE public.roles_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.roles_id_seq OWNER TO avnadmin;
+ALTER SEQUENCE public.roles_id_seq OWNER TO postgres;
 
 --
--- Name: roles_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: avnadmin
+-- Name: roles_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
 
 ALTER SEQUENCE public.roles_id_seq OWNED BY public.roles.id;
 
 
 --
--- Name: service_types; Type: TABLE; Schema: public; Owner: avnadmin
+-- Name: service_types; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE public.service_types (
     id bigint NOT NULL,
     service_code character varying(50) NOT NULL,
     service_name character varying(255) NOT NULL,
-    description text
+    description text,
+    base_price numeric(15,2) DEFAULT 0
 );
 
 
-ALTER TABLE public.service_types OWNER TO avnadmin;
+ALTER TABLE public.service_types OWNER TO postgres;
 
 --
--- Name: service_types_id_seq; Type: SEQUENCE; Schema: public; Owner: avnadmin
+-- Name: service_types_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
 --
 
 CREATE SEQUENCE public.service_types_id_seq
@@ -789,17 +787,17 @@ CREATE SEQUENCE public.service_types_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.service_types_id_seq OWNER TO avnadmin;
+ALTER SEQUENCE public.service_types_id_seq OWNER TO postgres;
 
 --
--- Name: service_types_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: avnadmin
+-- Name: service_types_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
 
 ALTER SEQUENCE public.service_types_id_seq OWNED BY public.service_types.id;
 
 
 --
--- Name: test; Type: TABLE; Schema: public; Owner: avnadmin
+-- Name: test; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE public.test (
@@ -808,10 +806,10 @@ CREATE TABLE public.test (
 );
 
 
-ALTER TABLE public.test OWNER TO avnadmin;
+ALTER TABLE public.test OWNER TO postgres;
 
 --
--- Name: test_id_seq; Type: SEQUENCE; Schema: public; Owner: avnadmin
+-- Name: test_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
 --
 
 CREATE SEQUENCE public.test_id_seq
@@ -823,17 +821,17 @@ CREATE SEQUENCE public.test_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.test_id_seq OWNER TO avnadmin;
+ALTER SEQUENCE public.test_id_seq OWNER TO postgres;
 
 --
--- Name: test_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: avnadmin
+-- Name: test_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
 
 ALTER SEQUENCE public.test_id_seq OWNED BY public.test.id;
 
 
 --
--- Name: test_item; Type: TABLE; Schema: public; Owner: avnadmin
+-- Name: test_item; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE public.test_item (
@@ -842,10 +840,10 @@ CREATE TABLE public.test_item (
 );
 
 
-ALTER TABLE public.test_item OWNER TO avnadmin;
+ALTER TABLE public.test_item OWNER TO postgres;
 
 --
--- Name: test_item_id_seq; Type: SEQUENCE; Schema: public; Owner: avnadmin
+-- Name: test_item_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
 --
 
 ALTER TABLE public.test_item ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY (
@@ -859,7 +857,7 @@ ALTER TABLE public.test_item ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTIT
 
 
 --
--- Name: users; Type: TABLE; Schema: public; Owner: avnadmin
+-- Name: users; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE public.users (
@@ -874,10 +872,10 @@ CREATE TABLE public.users (
 );
 
 
-ALTER TABLE public.users OWNER TO avnadmin;
+ALTER TABLE public.users OWNER TO postgres;
 
 --
--- Name: users_id_seq; Type: SEQUENCE; Schema: public; Owner: avnadmin
+-- Name: users_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
 --
 
 ALTER TABLE public.users ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY (
@@ -891,147 +889,147 @@ ALTER TABLE public.users ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY (
 
 
 --
--- Name: account id; Type: DEFAULT; Schema: public; Owner: avnadmin
+-- Name: account id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.account ALTER COLUMN id SET DEFAULT nextval('public.account_id_seq'::regclass);
 
 
 --
--- Name: addresses id; Type: DEFAULT; Schema: public; Owner: avnadmin
+-- Name: addresses id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.addresses ALTER COLUMN id SET DEFAULT nextval('public.addresses_id_seq'::regclass);
 
 
 --
--- Name: customer_vehicles id; Type: DEFAULT; Schema: public; Owner: avnadmin
+-- Name: customer_vehicles id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.customer_vehicles ALTER COLUMN id SET DEFAULT nextval('public.customer_vehicles_id_seq'::regclass);
 
 
 --
--- Name: daily_statistics id; Type: DEFAULT; Schema: public; Owner: avnadmin
+-- Name: daily_statistics id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.daily_statistics ALTER COLUMN id SET DEFAULT nextval('public.daily_statistics_id_seq'::regclass);
 
 
 --
--- Name: incident_types id; Type: DEFAULT; Schema: public; Owner: avnadmin
+-- Name: incident_types id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.incident_types ALTER COLUMN id SET DEFAULT nextval('public.incident_types_id_seq'::regclass);
 
 
 --
--- Name: messages id; Type: DEFAULT; Schema: public; Owner: avnadmin
+-- Name: messages id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.messages ALTER COLUMN id SET DEFAULT nextval('public.messages_id_seq'::regclass);
 
 
 --
--- Name: password_reset_tokens id; Type: DEFAULT; Schema: public; Owner: avnadmin
+-- Name: password_reset_tokens id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.password_reset_tokens ALTER COLUMN id SET DEFAULT nextval('public.password_reset_tokens_id_seq'::regclass);
 
 
 --
--- Name: payments id; Type: DEFAULT; Schema: public; Owner: avnadmin
+-- Name: payments id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.payments ALTER COLUMN id SET DEFAULT nextval('public.payments_id_seq'::regclass);
 
 
 --
--- Name: pricing_rules id; Type: DEFAULT; Schema: public; Owner: avnadmin
+-- Name: pricing_rules id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.pricing_rules ALTER COLUMN id SET DEFAULT nextval('public.pricing_rules_id_seq'::regclass);
 
 
 --
--- Name: quotes id; Type: DEFAULT; Schema: public; Owner: avnadmin
+-- Name: quotes id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.quotes ALTER COLUMN id SET DEFAULT nextval('public.quotes_id_seq'::regclass);
 
 
 --
--- Name: request_assignments id; Type: DEFAULT; Schema: public; Owner: avnadmin
+-- Name: request_assignments id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.request_assignments ALTER COLUMN id SET DEFAULT nextval('public.request_assignments_id_seq'::regclass);
 
 
 --
--- Name: request_status_history id; Type: DEFAULT; Schema: public; Owner: avnadmin
+-- Name: request_status_history id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.request_status_history ALTER COLUMN id SET DEFAULT nextval('public.request_status_history_id_seq'::regclass);
 
 
 --
--- Name: rescue_companies id; Type: DEFAULT; Schema: public; Owner: avnadmin
+-- Name: rescue_companies id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.rescue_companies ALTER COLUMN id SET DEFAULT nextval('public.rescue_companies_id_seq'::regclass);
 
 
 --
--- Name: rescue_requests id; Type: DEFAULT; Schema: public; Owner: avnadmin
+-- Name: rescue_requests id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.rescue_requests ALTER COLUMN id SET DEFAULT nextval('public.rescue_requests_id_seq'::regclass);
 
 
 --
--- Name: rescue_staff id; Type: DEFAULT; Schema: public; Owner: avnadmin
+-- Name: rescue_staff id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.rescue_staff ALTER COLUMN id SET DEFAULT nextval('public.rescue_staff_id_seq'::regclass);
 
 
 --
--- Name: rescue_vehicles id; Type: DEFAULT; Schema: public; Owner: avnadmin
+-- Name: rescue_vehicles id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.rescue_vehicles ALTER COLUMN id SET DEFAULT nextval('public.rescue_vehicles_id_seq'::regclass);
 
 
 --
--- Name: reviews id; Type: DEFAULT; Schema: public; Owner: avnadmin
+-- Name: reviews id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.reviews ALTER COLUMN id SET DEFAULT nextval('public.reviews_id_seq'::regclass);
 
 
 --
--- Name: roles id; Type: DEFAULT; Schema: public; Owner: avnadmin
+-- Name: roles id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.roles ALTER COLUMN id SET DEFAULT nextval('public.roles_id_seq'::regclass);
 
 
 --
--- Name: service_types id; Type: DEFAULT; Schema: public; Owner: avnadmin
+-- Name: service_types id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.service_types ALTER COLUMN id SET DEFAULT nextval('public.service_types_id_seq'::regclass);
 
 
 --
--- Name: test id; Type: DEFAULT; Schema: public; Owner: avnadmin
+-- Name: test id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.test ALTER COLUMN id SET DEFAULT nextval('public.test_id_seq'::regclass);
 
 
 --
--- Data for Name: account; Type: TABLE DATA; Schema: public; Owner: avnadmin
+-- Data for Name: account; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
 COPY public.account (id, email, password_hash, full_name, phone, avatar_url, status, created_at, role_id, date_of_birth, gender, default_address_id, cccd) FROM stdin;
@@ -1044,8 +1042,6 @@ COPY public.account (id, email, password_hash, full_name, phone, avatar_url, sta
 42	dam04@gmail.com	$2a$10$gTwyGcpzHPsCMoXhu0n9hunmBIIztteFqhZCuTTJTCdRINmez6Y4S	Staff Dam	\N	\N	ACTIVE	2026-04-09 20:15:49.665559	4	\N	\N	\N	\N
 73	admin@vbas.local	$2a$10$qanvJAbG.SetU9EJf.iCx.DmHuKNd3K./UF49zB2cnTH1j1w/Rqnq	System Admin	0900000001	\N	ACTIVE	2026-04-09 14:25:29.43875	2	\N	MALE	\N	\N
 74	customer@vbas.local	$2a$10$G.bQwF3fvlGgOLlhFzM31eguLkhbvON3O3CQ0B.RTovQrpj2zrC2C	Demo Customer	0900000002	\N	ACTIVE	2026-04-09 14:25:29.43875	1	\N	FEMALE	\N	\N
-75	company@vbas.local	$2a$10$rjHPQwx0fREqDoBTeNTStuK54bl.jGhfHO8QV/fotDrMlK5utkLOm	RapidTow Owner	0900000003	\N	ACTIVE	2026-04-09 14:25:29.43875	3	\N	MALE	\N	\N
-76	staff@vbas.local	$2a$10$7Q2uIg4PZN4te9memDTjD.x3egu0ZpuTBPX0zyYnNQrp71Rnj6Lmi	RapidTow Staff	0900000004	\N	ACTIVE	2026-04-09 14:25:29.43875	4	\N	MALE	\N	\N
 88	duyhung22102005@gmail.com	$2a$10$zLk7yh3fDblyy7pa9RqkS.sWxG0UPwaY/xIyAbg1ePPgq61AMYKAe	Trần Duy Hưng	0911905611	\N	ACTIVE	2026-04-15 18:30:54.8599	1	\N	\N	\N	\N
 85	abc111@gmail.com	$2a$10$zuZho1C7s/8SLBtO3ePzmOWcQ3Xe2.WhhF5bQUPE5uLO2RbEilhmu	Nguyen Van A	\N	\N	ACTIVE	2026-04-15 17:18:33.17839	1	\N	\N	\N	\N
 86	abc1112@gmail.com	$2a$10$NktNPvgHx6BKKYiCDiI5o.Hrksu0.VkM9vUdEnosQoK5isEoEG3t.	Nguyen Van A	\N	\N	ACTIVE	2026-04-15 17:26:55.981164	1	\N	\N	\N	\N
@@ -1057,11 +1053,13 @@ COPY public.account (id, email, password_hash, full_name, phone, avatar_url, sta
 93	thien113205@gmail.com	$2a$10$VetlWCsrNI0poUxQHXVgLOI/c0Barx6ytJA1kl39nIpzhZz0CV9UC	Nguyễn Quang Thiện	0329584430		BANNED	2026-04-15 20:44:06.563483	1	\N		96	12345678999
 91	nguyenquangthien1132005@gmail.com	$2a$10$GfuQJOqohdPxyWure1VLHOay01pO4u2AaKqv1UqexHfw.qLAbable	Nguyễn Quang Thiện	0329584430	\N	BANNED	2026-04-15 20:39:59.124745	4	\N	\N	\N	\N
 92	huyen29112002@gmail.com	$2a$10$IOjgmWg0qB/SCUbDS2meDu/LH8xSoPPGZtbpPD7WfJVzs6LEHGnL.	Nguyễn Quang Thiện	0329584430	\N	ACTIVE	2026-04-15 20:40:17.361165	4	\N	\N	110	\N
+75	company@vbas.local	$2a$10$rjHPQwx0fREqDoBTeNTStuK54bl.jGhfHO8QV/fotDrMlK5utkLOm	RapidTow Owner	0900000003	D:\\program\\itss\\ITSS2025.2\\uploads\\avatars\\95799a1d-68d0-42c6-a65a-95d61b9a5607.png	ACTIVE	2026-04-09 14:25:29.43875	3	\N	MALE	143	
+76	staff@vbas.local	$2a$10$7Q2uIg4PZN4te9memDTjD.x3egu0ZpuTBPX0zyYnNQrp71Rnj6Lmi	RapidTow Staff	0900000004	\N	ACTIVE	2026-04-09 14:25:29.43875	4	\N	MALE	145	\N
 \.
 
 
 --
--- Data for Name: addresses; Type: TABLE DATA; Schema: public; Owner: avnadmin
+-- Data for Name: addresses; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
 COPY public.addresses (id, country, province, district, ward, street, detail, latitude, longitude) FROM stdin;
@@ -1102,11 +1100,23 @@ COPY public.addresses (id, country, province, district, ward, street, detail, la
 108	Vietnam	thanh hóa					\N	\N
 109	Vietnam	Ha Noi	Hai Ba Trung	Bach Khoa	Dai Co Viet	Near HUST	21.0050000	105.8430000
 110	\N	\N	\N	\N	\N	\N	21.0027980	105.8509683
+143	Vietnam						\N	\N
+144	Vietnam	Ha Noi	Back mai	back khoa	ta quang buu	so 8, Tran Dai Nghia	21.0298249	105.8355869
+145	\N	\N	\N	\N	\N	\N	21.0049785	105.8458589
+146	Vietnam	Ha Noi					21.0049793	105.8458536
+147	Vietnam	Ha Noi	Hai Ba Trung	22	Bách Khoa	so 8, Tran Dai Nghia	21.0049781	105.8458524
+148	Vietnam	Ha Noi	Hai Ba Trung	22	Bách Khoa	so 8, Tran Dai Nghia	21.0049748	105.8458563
+149	Vietnam	Ha Noi	Hai Ba Trung	22	Bách Khoa	so 8, Tran Dai Nghia	21.0049731	105.8458510
+150	Vietnam	Ha Noi	Hai Ba Trung	22	Bách Khoa	so 8, Tran Dai Nghia	21.0049731	105.8458510
+151	Vietnam	Ha Noi	Hai Ba Trung	22	Bách Khoa	so 8, Tran Dai Nghia	21.0045870	105.8465320
+152	Vietnam	Ha Noi	Hai Ba Trung	22	Bách Khoa	so 8, Tran Dai Nghia	21.0045870	105.8465320
+153	Vietnam	Ha Noi	Hai Ba Trung	22	Bách Khoa	so 8, Tran Dai Nghia	21.0049800	105.8458603
+154	Vietnam	Ha Noi	Hai Ba Trung	22	Bách Khoa	so 8, Tran Dai Nghia	21.0049800	105.8458603
 \.
 
 
 --
--- Data for Name: customer_vehicles; Type: TABLE DATA; Schema: public; Owner: avnadmin
+-- Data for Name: customer_vehicles; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
 COPY public.customer_vehicles (id, customer_id, fuel_type, notes, brand, color, manufacture_year, model, plate_number) FROM stdin;
@@ -1115,20 +1125,22 @@ COPY public.customer_vehicles (id, customer_id, fuel_type, notes, brand, color, 
 35	74	Gasoline	Seed vehicle for demo customer	Toyota	White	2021	Vios	51A-888.88
 36	39			Tesla	đỏ	2023	Vin 2.5Q	29F - 123.45
 37	93	Dầu 	Xe gia đình 5 chỗ	Toyota	Đen	2019	Vios	29B-54321
+38	74	a	ậdf	a	a	2000	a	a
 \.
 
 
 --
--- Data for Name: daily_statistics; Type: TABLE DATA; Schema: public; Owner: avnadmin
+-- Data for Name: daily_statistics; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
 COPY public.daily_statistics (id, stat_date, request_count, completed_request_count, canceled_request_count, in_progress_request_count, paid_payment_count, revenue, review_count, average_rating, customer_count, staff_count, company_count, approved_company_count, calculated_at) FROM stdin;
-1	2026-05-06	26	5	2	6	3	1100000.00	2	5.00	9	4	3	3	2026-05-06 20:24:12.368794
+1	2026-05-06	26	5	2	6	3	1100000.00	2	5.00	9	4	3	3	2026-05-06 22:15:20.855265
+2	2026-05-27	34	6	2	7	8	5300000.00	3	4.67	9	4	3	3	2026-05-27 15:41:43.327328
 \.
 
 
 --
--- Data for Name: incident_types; Type: TABLE DATA; Schema: public; Owner: avnadmin
+-- Data for Name: incident_types; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
 COPY public.incident_types (id, incident_code, incident_name, description) FROM stdin;
@@ -1141,7 +1153,7 @@ COPY public.incident_types (id, incident_code, incident_name, description) FROM 
 
 
 --
--- Data for Name: messages; Type: TABLE DATA; Schema: public; Owner: avnadmin
+-- Data for Name: messages; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
 COPY public.messages (id, request_id, sender_id, content, sent_at) FROM stdin;
@@ -1159,11 +1171,18 @@ COPY public.messages (id, request_id, sender_id, content, sent_at) FROM stdin;
 76	69	74	helllo	2026-04-12 21:45:12.090858
 77	78	92	abc	2026-04-22 15:27:57.314651
 78	87	75	lo	2026-05-05 20:54:31.524768
+79	123	76	hello r u there?	2026-05-13 15:06:05.671548
+80	123	76	xâssasfdsds	2026-05-13 23:00:43.636115
+81	123	74	ajdfjdsjf]	2026-05-13 23:01:03.563188
+82	123	76	hfhf	2026-05-13 23:05:03.654132
+83	124	76	jladfl	2026-05-19 22:22:58.360249
+84	125	74	;skfdf	2026-05-20 20:47:12.035368
+85	128	74	ljl	2026-05-20 22:54:04.191754
 \.
 
 
 --
--- Data for Name: password_reset_tokens; Type: TABLE DATA; Schema: public; Owner: avnadmin
+-- Data for Name: password_reset_tokens; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
 COPY public.password_reset_tokens (id, user_id, token, expires_at, used_at) FROM stdin;
@@ -1178,7 +1197,7 @@ COPY public.password_reset_tokens (id, user_id, token, expires_at, used_at) FROM
 
 
 --
--- Data for Name: payments; Type: TABLE DATA; Schema: public; Owner: avnadmin
+-- Data for Name: payments; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
 COPY public.payments (id, request_id, customer_id, amount, payment_method, payment_status, paid_at, created_at) FROM stdin;
@@ -1186,11 +1205,18 @@ COPY public.payments (id, request_id, customer_id, amount, payment_method, payme
 34	67	1	500000.00	CASH	PAID	2026-04-09 21:39:23.693534	2026-04-09 21:36:28.311302
 35	68	39	100000.00	VNPAY	PAID	2026-04-11 22:04:36.219619	2026-04-11 22:04:29.315343
 36	70	39	50000.00	ZALOPAY	PENDING	\N	2026-04-12 21:51:37.643089
+37	69	74	100000.00	CASH	PENDING	\N	2026-05-06 23:20:38.079493
+40	125	74	100000.00	CASH	PAID	2026-05-20 21:12:50.31926	2026-05-20 21:12:29.715156
+41	126	74	1000000.00	CASH	PAID	2026-05-20 21:36:53.863676	2026-05-20 21:36:49.453352
+42	124	74	300000.00	CASH	PENDING	\N	2026-05-20 21:38:48.366468
+43	127	74	1000000.00	VNPAY	PAID	2026-05-20 22:19:49.240641	2026-05-20 22:19:45.685208
+44	129	74	2000000.00	CASH	PAID	2026-05-27 14:57:30.440603	2026-05-27 14:57:26.713357
+45	130	74	100000.00	CASH	PAID	2026-05-27 15:33:51.101577	2026-05-27 15:33:49.679262
 \.
 
 
 --
--- Data for Name: pricing_rules; Type: TABLE DATA; Schema: public; Owner: avnadmin
+-- Data for Name: pricing_rules; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
 COPY public.pricing_rules (id, company_id, service_type_id, distance_from_km, distance_to_km, price_per_km, night_surcharge, holiday_surcharge) FROM stdin;
@@ -1198,20 +1224,26 @@ COPY public.pricing_rules (id, company_id, service_type_id, distance_from_km, di
 
 
 --
--- Data for Name: quotes; Type: TABLE DATA; Schema: public; Owner: avnadmin
+-- Data for Name: quotes; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.quotes (id, request_id, company_id, staff_id, quote_code, estimated_amount, final_amount, status, created_at, expires_at, service_name, quantity, unit_price, subtotal) FROM stdin;
-1	1	1	\N	QTE-20260409074815-DEE5CC	600000.00	600000.00	ACCEPTED	2026-04-09 07:48:15.643537	2026-10-04 14:30:00	Va xam	1	1.00	600000.00
-34	67	1	\N	QTE-20260409213819-B7CACD	600000.00	60000.00	ACCEPTED	2026-04-09 21:38:19.387216	2026-04-09 23:00:00	Va xam	1	1.00	600000.00
-35	71	34	34	QTE-20260414203120-B9F305	500000.00	500000.00	SENT	2026-04-14 20:31:20.617753	2026-04-14 20:31:00	Towing	1	\N	\N
-36	72	34	\N	QTE-20260414221200-D0A1E2	10000.00	10000.00	SENT	2026-04-14 22:12:00.054445	2026-04-14 22:11:00	Do day binh	1	\N	\N
-37	78	35	36	QTE-20260415210536-22A8E5	1000000.00	800000.00	SENT	2026-04-15 21:05:36.093127	\N	Va xam	1	\N	0.00
+COPY public.quotes (id, request_id, company_id, staff_id, quote_code, estimated_amount, final_amount, status, created_at, expires_at, service_name, quantity, unit_price, subtotal, customer_note, note) FROM stdin;
+1	1	1	\N	QTE-20260409074815-DEE5CC	600000.00	600000.00	ACCEPTED	2026-04-09 07:48:15.643537	2026-10-04 14:30:00	Va xam	1	1.00	600000.00	\N	\N
+34	67	1	\N	QTE-20260409213819-B7CACD	600000.00	60000.00	ACCEPTED	2026-04-09 21:38:19.387216	2026-04-09 23:00:00	Va xam	1	1.00	600000.00	\N	\N
+35	71	34	34	QTE-20260414203120-B9F305	500000.00	500000.00	SENT	2026-04-14 20:31:20.617753	2026-04-14 20:31:00	Towing	1	\N	\N	\N	\N
+36	72	34	\N	QTE-20260414221200-D0A1E2	10000.00	10000.00	SENT	2026-04-14 22:12:00.054445	2026-04-14 22:11:00	Do day binh	1	\N	\N	\N	\N
+37	78	35	36	QTE-20260415210536-22A8E5	1000000.00	800000.00	SENT	2026-04-15 21:05:36.093127	\N	Va xam	1	\N	0.00	\N	\N
+43	125	34	34	QTE-20260520211124-EB86E4	100000.00	100000.00	ACCEPTED	2026-05-20 21:11:24.242528	\N	Battery Support	1	100000.00	100000.00	\N	
+44	126	34	34	QTE-20260520213512-CD97F8	1000000.00	1000000.00	ACCEPTED	2026-05-20 21:35:12.023926	\N	Battery Support	1	1000000.00	1000000.00	\N	gggg
+38	124	34	34	QTE-20260519223432-A3F602	300000.00	300000.00	ACCEPTED	2026-05-19 22:34:32.76018	\N	Battery Support	1	300000.00	300000.00	\N	Smoke test deal price update
+45	127	34	34	QTE-20260520221908-AE9E1B	1000000.00	1000000.00	ACCEPTED	2026-05-20 22:19:08.617378	\N	Battery Support	1	1000000.00	1000000.00	\N	alidsfdsklf
+46	129	34	34	QTE-20260527145558-5A2460	2000000.00	2000000.00	ACCEPTED	2026-05-27 14:55:58.060356	\N	On-site Repair	1	2000000.00	2000000.00	\N	giá đợt 1
+47	130	34	34	QTE-20260527153337-269A85	100000.00	100000.00	ACCEPTED	2026-05-27 15:33:37.569754	\N	Towing	1	100000.00	100000.00	\N	dsflkdsfl
 \.
 
 
 --
--- Data for Name: request_assignments; Type: TABLE DATA; Schema: public; Owner: avnadmin
+-- Data for Name: request_assignments; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
 COPY public.request_assignments (id, request_id, company_id, staff_id, vehicle_id, assigned_by_user_id, assigned_at, accepted_at, rejected_at, status) FROM stdin;
@@ -1243,11 +1275,21 @@ COPY public.request_assignments (id, request_id, company_id, staff_id, vehicle_i
 90	89	34	\N	\N	73	2026-05-05 21:26:35.311008	\N	2026-05-05 21:32:22.564247	REJECTED
 91	89	34	\N	\N	73	2026-05-05 23:46:29.216981	\N	2026-05-05 23:52:04.896689	REJECTED
 92	89	34	34	34	75	2026-05-06 00:02:57.507105	2026-05-06 00:05:13.316466	\N	ACCEPTED
+93	123	34	34	34	75	2026-05-13 15:04:04.384868	2026-05-13 15:05:01.81665	\N	COMPLETED
+94	124	34	34	\N	73	2026-05-19 21:30:43.477073	2026-05-19 21:31:23.266342	\N	COMPLETED
+95	125	34	34	\N	73	2026-05-20 19:27:05.015347	2026-05-20 19:27:37.664005	\N	ACCEPTED
+96	126	34	34	\N	73	2026-05-20 21:33:22.329057	2026-05-20 21:34:07.531565	\N	ACCEPTED
+97	127	34	34	\N	73	2026-05-20 22:18:07.727212	2026-05-20 22:18:49.715419	\N	ACCEPTED
+98	128	34	34	\N	73	2026-05-20 22:48:18.749949	2026-05-20 22:48:30.524274	\N	ACCEPTED
+99	129	34	34	\N	73	2026-05-27 14:54:25.845309	2026-05-27 14:54:40.420946	\N	ACCEPTED
+100	130	34	34	\N	73	2026-05-27 15:24:30.707354	2026-05-27 15:24:42.282205	\N	ACCEPTED
+101	131	34	34	\N	73	2026-05-27 22:20:17.029602	2026-05-27 22:20:32.645571	\N	ACCEPTED
+102	132	34	34	\N	73	2026-05-27 22:22:55.354578	2026-05-27 22:25:02.093371	\N	ACCEPTED
 \.
 
 
 --
--- Data for Name: request_status_history; Type: TABLE DATA; Schema: public; Owner: avnadmin
+-- Data for Name: request_status_history; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
 COPY public.request_status_history (id, request_id, old_status, new_status, changed_by_user_id, note, changed_at) FROM stdin;
@@ -1325,11 +1367,40 @@ COPY public.request_status_history (id, request_id, old_status, new_status, chan
 135	89	MATCHED	SEARCHING	73	Assignment timed out	2026-05-05 23:52:05.20034
 136	89	SEARCHING	MATCHED	73	Assigned from admin dashboard	2026-05-06 00:02:57.680255
 137	90	\N	CREATED	39	Request created	2026-05-06 13:12:49.857088
+170	123	\N	CREATED	74	Request created	2026-05-13 13:40:34.532277
+171	123	CREATED	MATCHED	73	Assigned from admin requests page	2026-05-13 15:04:04.434507
+172	123	MATCHED	COMPLETED	76		2026-05-13 23:00:13.682602
+173	124	\N	CREATED	74	Request created	2026-05-19 21:29:23.772097
+174	124	CREATED	MATCHED	73	Hệ thống tự động gán nhân viên gần nhất: RapidTow Staff	2026-05-19 21:30:43.489121
+175	124	ACCEPTED	COMPLETED	76		2026-05-20 19:25:32.525625
+176	125	\N	CREATED	74	Request created	2026-05-20 19:26:21.489942
+177	125	CREATED	MATCHED	73	Hệ thống tự động gán nhân viên gần nhất: RapidTow Staff	2026-05-20 19:27:05.023921
+178	124	COMPLETED	ACCEPTED	75	Deal price accepted	2026-05-20 19:37:39.666793
+179	126	\N	CREATED	74	Request created	2026-05-20 21:32:06.338748
+180	126	CREATED	MATCHED	73	Hệ thống tự động gán nhân viên gần nhất: RapidTow Staff	2026-05-20 21:33:22.345626
+181	126	ACCEPTED	MATCHED	74	Deal price rejected	2026-05-20 21:36:13.303484
+182	126	MATCHED	ACCEPTED	74	Deal price accepted	2026-05-20 21:36:41.08392
+183	127	\N	CREATED	74	Request created	2026-05-20 22:17:17.841906
+184	127	CREATED	MATCHED	73	Hệ thống tự động gán nhân viên gần nhất: RapidTow Staff	2026-05-20 22:18:07.737353
+185	128	\N	CREATED	74	Request created	2026-05-20 22:47:34.750021
+186	128	CREATED	MATCHED	73	Hệ thống tự động gán nhân viên gần nhất: RapidTow Staff	2026-05-20 22:48:18.758002
+187	129	\N	CREATED	74	Request created	2026-05-27 14:54:07.984071
+188	129	CREATED	MATCHED	73	Hệ thống tự động gán nhân viên gần nhất: RapidTow Staff	2026-05-27 14:54:25.848601
+189	130	\N	CREATED	74	Request created	2026-05-27 15:22:20.880597
+190	130	CREATED	MATCHED	73	Hệ thống tự động gán nhân viên gần nhất: RapidTow Staff	2026-05-27 15:24:30.729059
+191	130	ACCEPTED	IN_PROGRESS	76	Staff checked in at customer location	2026-05-27 15:26:12.80401
+192	129	ACCEPTED	IN_PROGRESS	76	Staff checked in at customer location	2026-05-27 15:30:12.806073
+193	130	IN_PROGRESS	ACCEPTED	74	Deal price accepted	2026-05-27 15:33:45.93576
+194	131	\N	CREATED	74	Request created	2026-05-27 22:20:02.883401
+195	131	CREATED	MATCHED	73	Hệ thống tự động gán nhân viên gần nhất: RapidTow Staff	2026-05-27 22:20:17.040562
+196	131	ACCEPTED	IN_PROGRESS	76	Staff checked in at customer location	2026-05-27 22:21:40.387543
+197	132	\N	CREATED	74	Request created	2026-05-27 22:22:40.145594
+198	132	CREATED	MATCHED	73	Hệ thống tự động gán nhân viên gần nhất: RapidTow Staff	2026-05-27 22:22:55.356594
 \.
 
 
 --
--- Data for Name: rescue_companies; Type: TABLE DATA; Schema: public; Owner: avnadmin
+-- Data for Name: rescue_companies; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
 COPY public.rescue_companies (id, company_name, tax_code, license_number, email, phone, description, status, created_at, updated_at, owner_account_id, address_id, latitude, longitude) FROM stdin;
@@ -1340,53 +1411,63 @@ COPY public.rescue_companies (id, company_name, tax_code, license_number, email,
 
 
 --
--- Data for Name: rescue_requests; Type: TABLE DATA; Schema: public; Owner: avnadmin
+-- Data for Name: rescue_requests; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.rescue_requests (id, request_code, customer_id, vehicle_id, incident_type_id, service_type_id, location_id, description, priority_level, status, created_at, updated_at, image_url) FROM stdin;
-1	REQ-20260409073241-7B2C98	1	1	2	2	7	abcxyz	EMERGENCY	COMPLETED	2026-04-09 07:32:41.406868	2026-04-09 07:52:32.761773	\N
-34	REQ-20260409195837-852823	39	\N	2	1	40	haizzzz	NORMAL	MATCHED	2026-04-09 19:58:37.77118	2026-04-09 20:23:49.965442	\N
-67	REQ-20260409212729-D51458	1	1	2	2	74	Emergence	EMERGENCY	COMPLETED	2026-04-09 21:27:29.99243	2026-04-09 21:40:33.10779	\N
-70	REQ-20260412215122-2FAF08	39	2	36	36	77	wwhyyyy	EMERGENCY	MATCHED	2026-04-12 21:51:22.557994	2026-04-12 21:54:26.965095	\N
-85	REQ-20260505184057-8579C3	39	2	35	1	104		HIGH	IN_PROGRESS	2026-05-05 18:40:57.422031	2026-05-05 20:25:10.727373	\N
-71	REQ-20260414202744-A39B98	39	2	35	34	78	fuuu	EMERGENCY	IN_PROGRESS	2026-04-14 20:27:44.722912	2026-04-14 20:30:05.693073	\N
-69	REQ-20260412214436-E0858E	74	35	35	34	76	helllooo	HIGH	MATCHED	2026-04-12 21:44:36.577113	2026-04-14 23:14:20.069736	\N
-68	REQ-20260411220410-FDC13B	39	2	34	1	75	hiaazzz	HIGH	MATCHED	2026-04-11 22:04:10.329348	2026-04-14 23:14:39.583454	\N
-72	REQ-20260414221004-1CE96A	39	36	1	1	79	gg	HIGH	COMPLETED	2026-04-14 22:10:04.48447	2026-04-14 23:16:20.410397	\N
-73	REQ-20260414232157-F2877E	39	36	2	2	80		LOW	CANCELED	2026-04-14 23:21:58.091311	2026-04-14 23:36:12.881801	\N
-74	REQ-20260414233637-7C54B0	39	36	36	1	81		NORMAL	IN_PROGRESS	2026-04-14 23:36:38.148402	2026-04-14 23:38:46.997942	\N
-75	REQ-20260415143539-65BE81	39	36	1	1	82		NORMAL	MATCHED	2026-04-15 14:35:39.998125	2026-04-15 14:36:21.608318	\N
-76	REQ-20260415143840-14585C	39	2	36	2	83		HIGH	IN_PROGRESS	2026-04-15 14:38:40.631732	2026-04-15 14:40:32.649071	\N
-77	REQ-20260415174609-05B0A1	39	36	36	1	92	fdf	HIGH	CREATED	2026-04-15 17:46:09.396706	2026-04-15 17:46:09.396706	\N
-87	REQ-20260505205220-C6EAA1	39	2	36	2	106		HIGH	COMPLETED	2026-05-05 20:52:20.993227	2026-05-05 20:56:57.083165	\N
-78	REQ-20260415205214-040A76	93	37	2	2	97	Tôi bị thủng xăm trên đường 	HIGH	COMPLETED	2026-04-15 20:52:15.150052	2026-04-15 21:06:04.368211	\N
-79	REQ-20260415221056-2FCDBE	39	36	1	36	98	rhr	HIGH	MATCHED	2026-04-15 22:10:56.426394	2026-04-15 22:11:39.647377	\N
-80	REQ-20260415223505-2238AC	39	36	36	36	99		LOW	MATCHED	2026-04-15 22:35:05.5378	2026-04-15 22:35:36.284526	\N
-81	REQ-20260415225803-5B2A81	1	1	36	36	100	adfsa	NORMAL	CREATED	2026-04-15 22:58:03.198159	2026-04-15 22:58:03.198159	\N
-82	REQ-20260417150648-3CF106	39	36	34	2	101		HIGH	MATCHED	2026-04-17 15:06:48.696396	2026-04-17 15:07:33.465839	\N
-83	REQ-20260422153153-03F68F	93	37	1	1	102	abcxyz	HIGH	IN_PROGRESS	2026-04-22 15:31:53.770877	2026-04-22 15:34:50.253957	\N
-84	REQ-20260426155832-A1CFB5	93	37	2	1	103		HIGH	IN_PROGRESS	2026-04-26 15:58:33.015201	2026-04-26 16:04:59.477192	\N
-86	REQ-20260505205152-880A03	39	36	2	1	105		HIGH	CANCELED	2026-05-05 20:51:53.159802	2026-05-05 21:02:55.720498	\N
-88	REQ-20260505210328-1D083A	39	2	34	36	107		HIGH	SEARCHING	2026-05-05 21:03:28.597929	2026-05-05 21:10:10.194692	\N
-89	REQ-20260505210355-DDBC0E	39	36	1	2	108		HIGH	MATCHED	2026-05-05 21:03:55.499937	2026-05-06 00:02:57.844706	\N
-90	REQ-20260506131249-10C809	39	\N	1	\N	109	Air conditioner not working	HIGH	CREATED	2026-05-06 13:12:49.682748	2026-05-06 13:15:11.966215	/uploads/request-images/916b83bd-ff90-454a-b65e-210f8ee494c0.png
+COPY public.rescue_requests (id, request_code, customer_id, vehicle_id, incident_type_id, service_type_id, location_id, description, priority_level, status, created_at, updated_at, image_url, estimated_quotation_amount, fee_coefficient, service_price_snapshot, travel_cost) FROM stdin;
+1	REQ-20260409073241-7B2C98	1	1	2	2	7	abcxyz	EMERGENCY	COMPLETED	2026-04-09 07:32:41.406868	2026-04-09 07:52:32.761773	\N	\N	\N	\N	\N
+34	REQ-20260409195837-852823	39	\N	2	1	40	haizzzz	NORMAL	MATCHED	2026-04-09 19:58:37.77118	2026-04-09 20:23:49.965442	\N	\N	\N	\N	\N
+67	REQ-20260409212729-D51458	1	1	2	2	74	Emergence	EMERGENCY	COMPLETED	2026-04-09 21:27:29.99243	2026-04-09 21:40:33.10779	\N	\N	\N	\N	\N
+70	REQ-20260412215122-2FAF08	39	2	36	36	77	wwhyyyy	EMERGENCY	MATCHED	2026-04-12 21:51:22.557994	2026-04-12 21:54:26.965095	\N	\N	\N	\N	\N
+85	REQ-20260505184057-8579C3	39	2	35	1	104		HIGH	IN_PROGRESS	2026-05-05 18:40:57.422031	2026-05-05 20:25:10.727373	\N	\N	\N	\N	\N
+71	REQ-20260414202744-A39B98	39	2	35	34	78	fuuu	EMERGENCY	IN_PROGRESS	2026-04-14 20:27:44.722912	2026-04-14 20:30:05.693073	\N	\N	\N	\N	\N
+69	REQ-20260412214436-E0858E	74	35	35	34	76	helllooo	HIGH	MATCHED	2026-04-12 21:44:36.577113	2026-04-14 23:14:20.069736	\N	\N	\N	\N	\N
+68	REQ-20260411220410-FDC13B	39	2	34	1	75	hiaazzz	HIGH	MATCHED	2026-04-11 22:04:10.329348	2026-04-14 23:14:39.583454	\N	\N	\N	\N	\N
+72	REQ-20260414221004-1CE96A	39	36	1	1	79	gg	HIGH	COMPLETED	2026-04-14 22:10:04.48447	2026-04-14 23:16:20.410397	\N	\N	\N	\N	\N
+73	REQ-20260414232157-F2877E	39	36	2	2	80		LOW	CANCELED	2026-04-14 23:21:58.091311	2026-04-14 23:36:12.881801	\N	\N	\N	\N	\N
+74	REQ-20260414233637-7C54B0	39	36	36	1	81		NORMAL	IN_PROGRESS	2026-04-14 23:36:38.148402	2026-04-14 23:38:46.997942	\N	\N	\N	\N	\N
+75	REQ-20260415143539-65BE81	39	36	1	1	82		NORMAL	MATCHED	2026-04-15 14:35:39.998125	2026-04-15 14:36:21.608318	\N	\N	\N	\N	\N
+76	REQ-20260415143840-14585C	39	2	36	2	83		HIGH	IN_PROGRESS	2026-04-15 14:38:40.631732	2026-04-15 14:40:32.649071	\N	\N	\N	\N	\N
+77	REQ-20260415174609-05B0A1	39	36	36	1	92	fdf	HIGH	CREATED	2026-04-15 17:46:09.396706	2026-04-15 17:46:09.396706	\N	\N	\N	\N	\N
+87	REQ-20260505205220-C6EAA1	39	2	36	2	106		HIGH	COMPLETED	2026-05-05 20:52:20.993227	2026-05-05 20:56:57.083165	\N	\N	\N	\N	\N
+78	REQ-20260415205214-040A76	93	37	2	2	97	Tôi bị thủng xăm trên đường 	HIGH	COMPLETED	2026-04-15 20:52:15.150052	2026-04-15 21:06:04.368211	\N	\N	\N	\N	\N
+79	REQ-20260415221056-2FCDBE	39	36	1	36	98	rhr	HIGH	MATCHED	2026-04-15 22:10:56.426394	2026-04-15 22:11:39.647377	\N	\N	\N	\N	\N
+80	REQ-20260415223505-2238AC	39	36	36	36	99		LOW	MATCHED	2026-04-15 22:35:05.5378	2026-04-15 22:35:36.284526	\N	\N	\N	\N	\N
+81	REQ-20260415225803-5B2A81	1	1	36	36	100	adfsa	NORMAL	CREATED	2026-04-15 22:58:03.198159	2026-04-15 22:58:03.198159	\N	\N	\N	\N	\N
+82	REQ-20260417150648-3CF106	39	36	34	2	101		HIGH	MATCHED	2026-04-17 15:06:48.696396	2026-04-17 15:07:33.465839	\N	\N	\N	\N	\N
+83	REQ-20260422153153-03F68F	93	37	1	1	102	abcxyz	HIGH	IN_PROGRESS	2026-04-22 15:31:53.770877	2026-04-22 15:34:50.253957	\N	\N	\N	\N	\N
+84	REQ-20260426155832-A1CFB5	93	37	2	1	103		HIGH	IN_PROGRESS	2026-04-26 15:58:33.015201	2026-04-26 16:04:59.477192	\N	\N	\N	\N	\N
+86	REQ-20260505205152-880A03	39	36	2	1	105		HIGH	CANCELED	2026-05-05 20:51:53.159802	2026-05-05 21:02:55.720498	\N	\N	\N	\N	\N
+88	REQ-20260505210328-1D083A	39	2	34	36	107		HIGH	SEARCHING	2026-05-05 21:03:28.597929	2026-05-05 21:10:10.194692	\N	\N	\N	\N	\N
+89	REQ-20260505210355-DDBC0E	39	36	1	2	108		HIGH	MATCHED	2026-05-05 21:03:55.499937	2026-05-06 00:02:57.844706	\N	\N	\N	\N	\N
+90	REQ-20260506131249-10C809	39	\N	1	\N	109	Air conditioner not working	HIGH	CREATED	2026-05-06 13:12:49.682748	2026-05-06 13:15:11.966215	/uploads/request-images/916b83bd-ff90-454a-b65e-210f8ee494c0.png	\N	\N	\N	\N
+123	REQ-20260513134034-BFE3DC	74	35	36	36	144	mau mau mau, oi oi oi	NORMAL	COMPLETED	2026-05-13 13:40:34.515475	2026-05-13 23:00:13.730477	\N	\N	\N	\N	\N
+131	REQ-20260527222002-9ABC7A	74	35	35	36	153		NORMAL	IN_PROGRESS	2026-05-27 22:20:02.868373	2026-05-27 22:21:40.394358	\N	24000.00	1.2000	0.00	20000.00
+126	REQ-20260520213206-9460AA	74	38	36	36	148	kjhjjjjj	NORMAL	ACCEPTED	2026-05-20 21:32:06.322856	2026-05-20 21:36:41.089125	/uploads/request-images/0a74b856-7276-4b3b-a4ad-29f8a7bfc2da.png	\N	\N	\N	\N
+132	REQ-20260527222240-E769DE	74	35	35	1	154		NORMAL	ACCEPTED	2026-05-27 22:22:40.143595	2026-05-27 22:25:02.10099	\N	24000.00	1.2000	0.00	20000.00
+127	REQ-20260520221717-9FE986	74	38	36	36	149		NORMAL	ACCEPTED	2026-05-20 22:17:17.82288	2026-05-20 22:18:49.718993	\N	\N	\N	\N	\N
+124	REQ-20260519212923-4F6FF1	74	35	36	36	146	alffd	NORMAL	ACCEPTED	2026-05-19 21:29:23.760445	2026-05-20 19:37:39.684816	/uploads/request-images/e665b259-02bb-41a5-9eb4-e05a3c8b9f35.jpg	\N	\N	\N	\N
+129	REQ-20260527145407-C3ED37	74	35	35	35	151	sfdffaa	NORMAL	IN_PROGRESS	2026-05-27 14:54:07.98113	2026-05-27 15:30:12.829155	/uploads/request-images/17ef8407-83b3-4733-8d21-eb6c66e6199b.jpg	1200.00	1.2000	0.00	1000.00
+128	REQ-20260520224734-2A9544	74	38	36	36	150	àdaf	NORMAL	ACCEPTED	2026-05-20 22:47:34.724943	2026-05-20 22:48:30.531924	\N	\N	\N	\N	\N
+125	REQ-20260520192621-15A391	74	35	36	36	147		NORMAL	ACCEPTED	2026-05-20 19:26:21.479135	2026-05-20 19:27:37.671324	\N	\N	\N	\N	\N
+130	REQ-20260527152220-4E2270	74	35	34	34	152		NORMAL	ACCEPTED	2026-05-27 15:22:20.843672	2026-05-27 15:33:45.939316	\N	24000.00	1.2000	0.00	20000.00
 \.
 
 
 --
--- Data for Name: rescue_staff; Type: TABLE DATA; Schema: public; Owner: avnadmin
+-- Data for Name: rescue_staff; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.rescue_staff (id, user_id, company_id, job_title, status) FROM stdin;
-1	6	1	Tow operator	ACTIVE
-34	76	34	Field Technician	ACTIVE
-35	91	35	Trưởng nhóm	ACTIVE
-36	92	35	Thành viên	ACTIVE
+COPY public.rescue_staff (id, user_id, company_id, job_title, status, bio, years_experience) FROM stdin;
+1	6	1	Tow operator	ACTIVE	\N	\N
+34	76	34	Field Technician	ACTIVE	\N	\N
+35	91	35	Trưởng nhóm	ACTIVE	\N	\N
+36	92	35	Thành viên	ACTIVE	\N	\N
 \.
 
 
 --
--- Data for Name: rescue_vehicles; Type: TABLE DATA; Schema: public; Owner: avnadmin
+-- Data for Name: rescue_vehicles; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
 COPY public.rescue_vehicles (id, vehicle_code, vehicle_type, plate_number, status, company_id) FROM stdin;
@@ -1397,17 +1478,18 @@ COPY public.rescue_vehicles (id, vehicle_code, vehicle_type, plate_number, statu
 
 
 --
--- Data for Name: reviews; Type: TABLE DATA; Schema: public; Owner: avnadmin
+-- Data for Name: reviews; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
 COPY public.reviews (id, request_id, customer_id, company_id, staff_id, rating_score, comment, created_at) FROM stdin;
 1	1	1	1	1	5	Dich vu tuyet voi	2026-04-09 07:53:21.615083
 34	67	1	1	1	5	dich vu tuyet voi, nhanh chong	2026-04-09 21:41:55.625873
+35	123	74	34	34	4	sgjkdsjkfdhijf	2026-05-13 23:01:14.821708
 \.
 
 
 --
--- Data for Name: roles; Type: TABLE DATA; Schema: public; Owner: avnadmin
+-- Data for Name: roles; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
 COPY public.roles (id, role_name) FROM stdin;
@@ -1419,20 +1501,20 @@ COPY public.roles (id, role_name) FROM stdin;
 
 
 --
--- Data for Name: service_types; Type: TABLE DATA; Schema: public; Owner: avnadmin
+-- Data for Name: service_types; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.service_types (id, service_code, service_name, description) FROM stdin;
-1	001	Do day binh	Do day binh
-2	002	Va xam	Va xam
-34	TOWING	Towing	Tow the vehicle to a garage or safe location
-35	ON_SITE_REPAIR	On-site Repair	Provide quick rescue or fix at the incident location
-36	BATTERY_SUPPORT	Battery Support	Jump start or battery emergency handling
+COPY public.service_types (id, service_code, service_name, description, base_price) FROM stdin;
+1	001	Do day binh	Do day binh	0.00
+2	002	Va xam	Va xam	0.00
+34	TOWING	Towing	Tow the vehicle to a garage or safe location	0.00
+35	ON_SITE_REPAIR	On-site Repair	Provide quick rescue or fix at the incident location	0.00
+36	BATTERY_SUPPORT	Battery Support	Jump start or battery emergency handling	0.00
 \.
 
 
 --
--- Data for Name: test; Type: TABLE DATA; Schema: public; Owner: avnadmin
+-- Data for Name: test; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
 COPY public.test (id, name) FROM stdin;
@@ -1442,7 +1524,7 @@ COPY public.test (id, name) FROM stdin;
 
 
 --
--- Data for Name: test_item; Type: TABLE DATA; Schema: public; Owner: avnadmin
+-- Data for Name: test_item; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
 COPY public.test_item (id, name) FROM stdin;
@@ -1450,7 +1532,7 @@ COPY public.test_item (id, name) FROM stdin;
 
 
 --
--- Data for Name: users; Type: TABLE DATA; Schema: public; Owner: avnadmin
+-- Data for Name: users; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
 COPY public.users (id, email, full_name, phone, avatar_url, created_at, role, status) FROM stdin;
@@ -1460,161 +1542,161 @@ COPY public.users (id, email, full_name, phone, avatar_url, created_at, role, st
 
 
 --
--- Name: account_id_seq; Type: SEQUENCE SET; Schema: public; Owner: avnadmin
+-- Name: account_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
 SELECT pg_catalog.setval('public.account_id_seq', 93, true);
 
 
 --
--- Name: addresses_id_seq; Type: SEQUENCE SET; Schema: public; Owner: avnadmin
+-- Name: addresses_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.addresses_id_seq', 142, true);
-
-
---
--- Name: customer_vehicles_id_seq; Type: SEQUENCE SET; Schema: public; Owner: avnadmin
---
-
-SELECT pg_catalog.setval('public.customer_vehicles_id_seq', 37, true);
+SELECT pg_catalog.setval('public.addresses_id_seq', 154, true);
 
 
 --
--- Name: daily_statistics_id_seq; Type: SEQUENCE SET; Schema: public; Owner: avnadmin
+-- Name: customer_vehicles_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.daily_statistics_id_seq', 1, true);
+SELECT pg_catalog.setval('public.customer_vehicles_id_seq', 38, true);
 
 
 --
--- Name: incident_types_id_seq; Type: SEQUENCE SET; Schema: public; Owner: avnadmin
+-- Name: daily_statistics_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.daily_statistics_id_seq', 2, true);
+
+
+--
+-- Name: incident_types_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
 SELECT pg_catalog.setval('public.incident_types_id_seq', 36, true);
 
 
 --
--- Name: messages_id_seq; Type: SEQUENCE SET; Schema: public; Owner: avnadmin
+-- Name: messages_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.messages_id_seq', 78, true);
+SELECT pg_catalog.setval('public.messages_id_seq', 85, true);
 
 
 --
--- Name: password_reset_tokens_id_seq; Type: SEQUENCE SET; Schema: public; Owner: avnadmin
+-- Name: password_reset_tokens_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
 SELECT pg_catalog.setval('public.password_reset_tokens_id_seq', 7, true);
 
 
 --
--- Name: payments_id_seq; Type: SEQUENCE SET; Schema: public; Owner: avnadmin
+-- Name: payments_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.payments_id_seq', 36, true);
+SELECT pg_catalog.setval('public.payments_id_seq', 45, true);
 
 
 --
--- Name: pricing_rules_id_seq; Type: SEQUENCE SET; Schema: public; Owner: avnadmin
+-- Name: pricing_rules_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
 SELECT pg_catalog.setval('public.pricing_rules_id_seq', 1, false);
 
 
 --
--- Name: quotes_id_seq; Type: SEQUENCE SET; Schema: public; Owner: avnadmin
+-- Name: quotes_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.quotes_id_seq', 37, true);
-
-
---
--- Name: request_assignments_id_seq; Type: SEQUENCE SET; Schema: public; Owner: avnadmin
---
-
-SELECT pg_catalog.setval('public.request_assignments_id_seq', 92, true);
+SELECT pg_catalog.setval('public.quotes_id_seq', 47, true);
 
 
 --
--- Name: request_status_history_id_seq; Type: SEQUENCE SET; Schema: public; Owner: avnadmin
+-- Name: request_assignments_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.request_status_history_id_seq', 169, true);
+SELECT pg_catalog.setval('public.request_assignments_id_seq', 102, true);
 
 
 --
--- Name: rescue_companies_id_seq; Type: SEQUENCE SET; Schema: public; Owner: avnadmin
+-- Name: request_status_history_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.request_status_history_id_seq', 198, true);
+
+
+--
+-- Name: rescue_companies_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
 SELECT pg_catalog.setval('public.rescue_companies_id_seq', 35, true);
 
 
 --
--- Name: rescue_requests_id_seq; Type: SEQUENCE SET; Schema: public; Owner: avnadmin
+-- Name: rescue_requests_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.rescue_requests_id_seq', 122, true);
+SELECT pg_catalog.setval('public.rescue_requests_id_seq', 132, true);
 
 
 --
--- Name: rescue_staff_id_seq; Type: SEQUENCE SET; Schema: public; Owner: avnadmin
+-- Name: rescue_staff_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
 SELECT pg_catalog.setval('public.rescue_staff_id_seq', 36, true);
 
 
 --
--- Name: rescue_vehicles_id_seq; Type: SEQUENCE SET; Schema: public; Owner: avnadmin
+-- Name: rescue_vehicles_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
 SELECT pg_catalog.setval('public.rescue_vehicles_id_seq', 35, true);
 
 
 --
--- Name: reviews_id_seq; Type: SEQUENCE SET; Schema: public; Owner: avnadmin
+-- Name: reviews_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.reviews_id_seq', 34, true);
+SELECT pg_catalog.setval('public.reviews_id_seq', 35, true);
 
 
 --
--- Name: roles_id_seq; Type: SEQUENCE SET; Schema: public; Owner: avnadmin
+-- Name: roles_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
 SELECT pg_catalog.setval('public.roles_id_seq', 8, true);
 
 
 --
--- Name: service_types_id_seq; Type: SEQUENCE SET; Schema: public; Owner: avnadmin
+-- Name: service_types_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
 SELECT pg_catalog.setval('public.service_types_id_seq', 36, true);
 
 
 --
--- Name: test_id_seq; Type: SEQUENCE SET; Schema: public; Owner: avnadmin
+-- Name: test_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
 SELECT pg_catalog.setval('public.test_id_seq', 2, true);
 
 
 --
--- Name: test_item_id_seq; Type: SEQUENCE SET; Schema: public; Owner: avnadmin
+-- Name: test_item_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
 SELECT pg_catalog.setval('public.test_item_id_seq', 1, false);
 
 
 --
--- Name: users_id_seq; Type: SEQUENCE SET; Schema: public; Owner: avnadmin
+-- Name: users_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
 SELECT pg_catalog.setval('public.users_id_seq', 2, true);
 
 
 --
--- Name: account account_email_key; Type: CONSTRAINT; Schema: public; Owner: avnadmin
+-- Name: account account_email_key; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.account
@@ -1622,7 +1704,7 @@ ALTER TABLE ONLY public.account
 
 
 --
--- Name: account account_pkey; Type: CONSTRAINT; Schema: public; Owner: avnadmin
+-- Name: account account_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.account
@@ -1630,7 +1712,7 @@ ALTER TABLE ONLY public.account
 
 
 --
--- Name: addresses addresses_pkey; Type: CONSTRAINT; Schema: public; Owner: avnadmin
+-- Name: addresses addresses_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.addresses
@@ -1638,7 +1720,7 @@ ALTER TABLE ONLY public.addresses
 
 
 --
--- Name: customer_vehicles customer_vehicles_pkey; Type: CONSTRAINT; Schema: public; Owner: avnadmin
+-- Name: customer_vehicles customer_vehicles_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.customer_vehicles
@@ -1646,7 +1728,7 @@ ALTER TABLE ONLY public.customer_vehicles
 
 
 --
--- Name: daily_statistics daily_statistics_pkey; Type: CONSTRAINT; Schema: public; Owner: avnadmin
+-- Name: daily_statistics daily_statistics_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.daily_statistics
@@ -1654,7 +1736,7 @@ ALTER TABLE ONLY public.daily_statistics
 
 
 --
--- Name: daily_statistics daily_statistics_stat_date_key; Type: CONSTRAINT; Schema: public; Owner: avnadmin
+-- Name: daily_statistics daily_statistics_stat_date_key; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.daily_statistics
@@ -1662,7 +1744,7 @@ ALTER TABLE ONLY public.daily_statistics
 
 
 --
--- Name: incident_types incident_types_incident_code_key; Type: CONSTRAINT; Schema: public; Owner: avnadmin
+-- Name: incident_types incident_types_incident_code_key; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.incident_types
@@ -1670,7 +1752,7 @@ ALTER TABLE ONLY public.incident_types
 
 
 --
--- Name: incident_types incident_types_pkey; Type: CONSTRAINT; Schema: public; Owner: avnadmin
+-- Name: incident_types incident_types_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.incident_types
@@ -1678,7 +1760,7 @@ ALTER TABLE ONLY public.incident_types
 
 
 --
--- Name: messages messages_pkey; Type: CONSTRAINT; Schema: public; Owner: avnadmin
+-- Name: messages messages_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.messages
@@ -1686,7 +1768,7 @@ ALTER TABLE ONLY public.messages
 
 
 --
--- Name: password_reset_tokens password_reset_tokens_pkey; Type: CONSTRAINT; Schema: public; Owner: avnadmin
+-- Name: password_reset_tokens password_reset_tokens_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.password_reset_tokens
@@ -1694,7 +1776,7 @@ ALTER TABLE ONLY public.password_reset_tokens
 
 
 --
--- Name: payments payments_pkey; Type: CONSTRAINT; Schema: public; Owner: avnadmin
+-- Name: payments payments_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.payments
@@ -1702,7 +1784,7 @@ ALTER TABLE ONLY public.payments
 
 
 --
--- Name: pricing_rules pricing_rules_pkey; Type: CONSTRAINT; Schema: public; Owner: avnadmin
+-- Name: pricing_rules pricing_rules_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.pricing_rules
@@ -1710,7 +1792,7 @@ ALTER TABLE ONLY public.pricing_rules
 
 
 --
--- Name: quotes quotes_pkey; Type: CONSTRAINT; Schema: public; Owner: avnadmin
+-- Name: quotes quotes_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.quotes
@@ -1718,7 +1800,7 @@ ALTER TABLE ONLY public.quotes
 
 
 --
--- Name: quotes quotes_quote_code_key; Type: CONSTRAINT; Schema: public; Owner: avnadmin
+-- Name: quotes quotes_quote_code_key; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.quotes
@@ -1726,7 +1808,7 @@ ALTER TABLE ONLY public.quotes
 
 
 --
--- Name: request_assignments request_assignments_pkey; Type: CONSTRAINT; Schema: public; Owner: avnadmin
+-- Name: request_assignments request_assignments_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.request_assignments
@@ -1734,7 +1816,7 @@ ALTER TABLE ONLY public.request_assignments
 
 
 --
--- Name: request_status_history request_status_history_pkey; Type: CONSTRAINT; Schema: public; Owner: avnadmin
+-- Name: request_status_history request_status_history_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.request_status_history
@@ -1742,7 +1824,7 @@ ALTER TABLE ONLY public.request_status_history
 
 
 --
--- Name: rescue_companies rescue_companies_pkey; Type: CONSTRAINT; Schema: public; Owner: avnadmin
+-- Name: rescue_companies rescue_companies_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.rescue_companies
@@ -1750,7 +1832,7 @@ ALTER TABLE ONLY public.rescue_companies
 
 
 --
--- Name: rescue_requests rescue_requests_pkey; Type: CONSTRAINT; Schema: public; Owner: avnadmin
+-- Name: rescue_requests rescue_requests_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.rescue_requests
@@ -1758,7 +1840,7 @@ ALTER TABLE ONLY public.rescue_requests
 
 
 --
--- Name: rescue_requests rescue_requests_request_code_key; Type: CONSTRAINT; Schema: public; Owner: avnadmin
+-- Name: rescue_requests rescue_requests_request_code_key; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.rescue_requests
@@ -1766,7 +1848,7 @@ ALTER TABLE ONLY public.rescue_requests
 
 
 --
--- Name: rescue_staff rescue_staff_pkey; Type: CONSTRAINT; Schema: public; Owner: avnadmin
+-- Name: rescue_staff rescue_staff_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.rescue_staff
@@ -1774,7 +1856,7 @@ ALTER TABLE ONLY public.rescue_staff
 
 
 --
--- Name: rescue_staff rescue_staff_user_id_key; Type: CONSTRAINT; Schema: public; Owner: avnadmin
+-- Name: rescue_staff rescue_staff_user_id_key; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.rescue_staff
@@ -1782,7 +1864,7 @@ ALTER TABLE ONLY public.rescue_staff
 
 
 --
--- Name: rescue_vehicles rescue_vehicles_pkey; Type: CONSTRAINT; Schema: public; Owner: avnadmin
+-- Name: rescue_vehicles rescue_vehicles_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.rescue_vehicles
@@ -1790,7 +1872,7 @@ ALTER TABLE ONLY public.rescue_vehicles
 
 
 --
--- Name: reviews reviews_pkey; Type: CONSTRAINT; Schema: public; Owner: avnadmin
+-- Name: reviews reviews_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.reviews
@@ -1798,7 +1880,7 @@ ALTER TABLE ONLY public.reviews
 
 
 --
--- Name: roles roles_pkey; Type: CONSTRAINT; Schema: public; Owner: avnadmin
+-- Name: roles roles_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.roles
@@ -1806,7 +1888,7 @@ ALTER TABLE ONLY public.roles
 
 
 --
--- Name: roles roles_role_name_key; Type: CONSTRAINT; Schema: public; Owner: avnadmin
+-- Name: roles roles_role_name_key; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.roles
@@ -1814,7 +1896,7 @@ ALTER TABLE ONLY public.roles
 
 
 --
--- Name: service_types service_types_pkey; Type: CONSTRAINT; Schema: public; Owner: avnadmin
+-- Name: service_types service_types_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.service_types
@@ -1822,7 +1904,7 @@ ALTER TABLE ONLY public.service_types
 
 
 --
--- Name: service_types service_types_service_code_key; Type: CONSTRAINT; Schema: public; Owner: avnadmin
+-- Name: service_types service_types_service_code_key; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.service_types
@@ -1830,7 +1912,7 @@ ALTER TABLE ONLY public.service_types
 
 
 --
--- Name: test_item test_item_pkey; Type: CONSTRAINT; Schema: public; Owner: avnadmin
+-- Name: test_item test_item_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.test_item
@@ -1838,7 +1920,7 @@ ALTER TABLE ONLY public.test_item
 
 
 --
--- Name: test test_pkey; Type: CONSTRAINT; Schema: public; Owner: avnadmin
+-- Name: test test_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.test
@@ -1846,7 +1928,7 @@ ALTER TABLE ONLY public.test
 
 
 --
--- Name: users uk6dotkott2kjsp8vw4d0m25fb7; Type: CONSTRAINT; Schema: public; Owner: avnadmin
+-- Name: users uk6dotkott2kjsp8vw4d0m25fb7; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.users
@@ -1854,7 +1936,7 @@ ALTER TABLE ONLY public.users
 
 
 --
--- Name: rescue_companies uk_88vu5jnswpiykx9r5lbtd2c7e; Type: CONSTRAINT; Schema: public; Owner: avnadmin
+-- Name: rescue_companies uk_88vu5jnswpiykx9r5lbtd2c7e; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.rescue_companies
@@ -1862,7 +1944,7 @@ ALTER TABLE ONLY public.rescue_companies
 
 
 --
--- Name: customer_vehicles uk_ovuveuhfabs76oeq824hjsa92; Type: CONSTRAINT; Schema: public; Owner: avnadmin
+-- Name: customer_vehicles uk_ovuveuhfabs76oeq824hjsa92; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.customer_vehicles
@@ -1870,7 +1952,7 @@ ALTER TABLE ONLY public.customer_vehicles
 
 
 --
--- Name: users users_pkey; Type: CONSTRAINT; Schema: public; Owner: avnadmin
+-- Name: users users_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.users
@@ -1878,7 +1960,7 @@ ALTER TABLE ONLY public.users
 
 
 --
--- Name: rescue_companies fk1v9mpcqxufg76nd699ydb5j41; Type: FK CONSTRAINT; Schema: public; Owner: avnadmin
+-- Name: rescue_companies fk1v9mpcqxufg76nd699ydb5j41; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.rescue_companies
@@ -1886,7 +1968,7 @@ ALTER TABLE ONLY public.rescue_companies
 
 
 --
--- Name: account fk_account_default_address; Type: FK CONSTRAINT; Schema: public; Owner: avnadmin
+-- Name: account fk_account_default_address; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.account
@@ -1894,7 +1976,7 @@ ALTER TABLE ONLY public.account
 
 
 --
--- Name: account fk_account_role; Type: FK CONSTRAINT; Schema: public; Owner: avnadmin
+-- Name: account fk_account_role; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.account
@@ -1902,7 +1984,7 @@ ALTER TABLE ONLY public.account
 
 
 --
--- Name: request_assignments fk_assignment_assigned_by; Type: FK CONSTRAINT; Schema: public; Owner: avnadmin
+-- Name: request_assignments fk_assignment_assigned_by; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.request_assignments
@@ -1910,7 +1992,7 @@ ALTER TABLE ONLY public.request_assignments
 
 
 --
--- Name: request_assignments fk_assignment_company; Type: FK CONSTRAINT; Schema: public; Owner: avnadmin
+-- Name: request_assignments fk_assignment_company; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.request_assignments
@@ -1918,7 +2000,7 @@ ALTER TABLE ONLY public.request_assignments
 
 
 --
--- Name: request_assignments fk_assignment_request; Type: FK CONSTRAINT; Schema: public; Owner: avnadmin
+-- Name: request_assignments fk_assignment_request; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.request_assignments
@@ -1926,7 +2008,7 @@ ALTER TABLE ONLY public.request_assignments
 
 
 --
--- Name: request_assignments fk_assignment_staff; Type: FK CONSTRAINT; Schema: public; Owner: avnadmin
+-- Name: request_assignments fk_assignment_staff; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.request_assignments
@@ -1934,7 +2016,7 @@ ALTER TABLE ONLY public.request_assignments
 
 
 --
--- Name: request_assignments fk_assignment_vehicle; Type: FK CONSTRAINT; Schema: public; Owner: avnadmin
+-- Name: request_assignments fk_assignment_vehicle; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.request_assignments
@@ -1942,7 +2024,7 @@ ALTER TABLE ONLY public.request_assignments
 
 
 --
--- Name: customer_vehicles fk_customer_vehicle_customer; Type: FK CONSTRAINT; Schema: public; Owner: avnadmin
+-- Name: customer_vehicles fk_customer_vehicle_customer; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.customer_vehicles
@@ -1950,7 +2032,7 @@ ALTER TABLE ONLY public.customer_vehicles
 
 
 --
--- Name: messages fk_message_request; Type: FK CONSTRAINT; Schema: public; Owner: avnadmin
+-- Name: messages fk_message_request; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.messages
@@ -1958,7 +2040,7 @@ ALTER TABLE ONLY public.messages
 
 
 --
--- Name: messages fk_message_sender; Type: FK CONSTRAINT; Schema: public; Owner: avnadmin
+-- Name: messages fk_message_sender; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.messages
@@ -1966,7 +2048,7 @@ ALTER TABLE ONLY public.messages
 
 
 --
--- Name: password_reset_tokens fk_password_reset_user; Type: FK CONSTRAINT; Schema: public; Owner: avnadmin
+-- Name: password_reset_tokens fk_password_reset_user; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.password_reset_tokens
@@ -1974,7 +2056,7 @@ ALTER TABLE ONLY public.password_reset_tokens
 
 
 --
--- Name: payments fk_payment_customer; Type: FK CONSTRAINT; Schema: public; Owner: avnadmin
+-- Name: payments fk_payment_customer; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.payments
@@ -1982,7 +2064,7 @@ ALTER TABLE ONLY public.payments
 
 
 --
--- Name: payments fk_payment_request; Type: FK CONSTRAINT; Schema: public; Owner: avnadmin
+-- Name: payments fk_payment_request; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.payments
@@ -1990,7 +2072,7 @@ ALTER TABLE ONLY public.payments
 
 
 --
--- Name: pricing_rules fk_pricing_company; Type: FK CONSTRAINT; Schema: public; Owner: avnadmin
+-- Name: pricing_rules fk_pricing_company; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.pricing_rules
@@ -1998,7 +2080,7 @@ ALTER TABLE ONLY public.pricing_rules
 
 
 --
--- Name: pricing_rules fk_pricing_service_type; Type: FK CONSTRAINT; Schema: public; Owner: avnadmin
+-- Name: pricing_rules fk_pricing_service_type; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.pricing_rules
@@ -2006,7 +2088,7 @@ ALTER TABLE ONLY public.pricing_rules
 
 
 --
--- Name: quotes fk_quote_company; Type: FK CONSTRAINT; Schema: public; Owner: avnadmin
+-- Name: quotes fk_quote_company; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.quotes
@@ -2014,7 +2096,7 @@ ALTER TABLE ONLY public.quotes
 
 
 --
--- Name: quotes fk_quote_request; Type: FK CONSTRAINT; Schema: public; Owner: avnadmin
+-- Name: quotes fk_quote_request; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.quotes
@@ -2022,7 +2104,7 @@ ALTER TABLE ONLY public.quotes
 
 
 --
--- Name: quotes fk_quote_staff; Type: FK CONSTRAINT; Schema: public; Owner: avnadmin
+-- Name: quotes fk_quote_staff; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.quotes
@@ -2030,7 +2112,7 @@ ALTER TABLE ONLY public.quotes
 
 
 --
--- Name: rescue_requests fk_request_customer; Type: FK CONSTRAINT; Schema: public; Owner: avnadmin
+-- Name: rescue_requests fk_request_customer; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.rescue_requests
@@ -2038,7 +2120,7 @@ ALTER TABLE ONLY public.rescue_requests
 
 
 --
--- Name: rescue_requests fk_request_incident_type; Type: FK CONSTRAINT; Schema: public; Owner: avnadmin
+-- Name: rescue_requests fk_request_incident_type; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.rescue_requests
@@ -2046,7 +2128,7 @@ ALTER TABLE ONLY public.rescue_requests
 
 
 --
--- Name: rescue_requests fk_request_location; Type: FK CONSTRAINT; Schema: public; Owner: avnadmin
+-- Name: rescue_requests fk_request_location; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.rescue_requests
@@ -2054,7 +2136,7 @@ ALTER TABLE ONLY public.rescue_requests
 
 
 --
--- Name: rescue_requests fk_request_service_type; Type: FK CONSTRAINT; Schema: public; Owner: avnadmin
+-- Name: rescue_requests fk_request_service_type; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.rescue_requests
@@ -2062,7 +2144,7 @@ ALTER TABLE ONLY public.rescue_requests
 
 
 --
--- Name: rescue_requests fk_request_vehicle; Type: FK CONSTRAINT; Schema: public; Owner: avnadmin
+-- Name: rescue_requests fk_request_vehicle; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.rescue_requests
@@ -2070,7 +2152,7 @@ ALTER TABLE ONLY public.rescue_requests
 
 
 --
--- Name: rescue_companies fk_rescue_company_address; Type: FK CONSTRAINT; Schema: public; Owner: avnadmin
+-- Name: rescue_companies fk_rescue_company_address; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.rescue_companies
@@ -2078,7 +2160,7 @@ ALTER TABLE ONLY public.rescue_companies
 
 
 --
--- Name: rescue_vehicles fk_rescue_vehicle_company; Type: FK CONSTRAINT; Schema: public; Owner: avnadmin
+-- Name: rescue_vehicles fk_rescue_vehicle_company; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.rescue_vehicles
@@ -2086,7 +2168,7 @@ ALTER TABLE ONLY public.rescue_vehicles
 
 
 --
--- Name: reviews fk_review_company; Type: FK CONSTRAINT; Schema: public; Owner: avnadmin
+-- Name: reviews fk_review_company; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.reviews
@@ -2094,7 +2176,7 @@ ALTER TABLE ONLY public.reviews
 
 
 --
--- Name: reviews fk_review_customer; Type: FK CONSTRAINT; Schema: public; Owner: avnadmin
+-- Name: reviews fk_review_customer; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.reviews
@@ -2102,7 +2184,7 @@ ALTER TABLE ONLY public.reviews
 
 
 --
--- Name: reviews fk_review_request; Type: FK CONSTRAINT; Schema: public; Owner: avnadmin
+-- Name: reviews fk_review_request; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.reviews
@@ -2110,7 +2192,7 @@ ALTER TABLE ONLY public.reviews
 
 
 --
--- Name: reviews fk_review_staff; Type: FK CONSTRAINT; Schema: public; Owner: avnadmin
+-- Name: reviews fk_review_staff; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.reviews
@@ -2118,7 +2200,7 @@ ALTER TABLE ONLY public.reviews
 
 
 --
--- Name: rescue_staff fk_staff_company; Type: FK CONSTRAINT; Schema: public; Owner: avnadmin
+-- Name: rescue_staff fk_staff_company; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.rescue_staff
@@ -2126,7 +2208,7 @@ ALTER TABLE ONLY public.rescue_staff
 
 
 --
--- Name: rescue_staff fk_staff_user; Type: FK CONSTRAINT; Schema: public; Owner: avnadmin
+-- Name: rescue_staff fk_staff_user; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.rescue_staff
@@ -2134,7 +2216,7 @@ ALTER TABLE ONLY public.rescue_staff
 
 
 --
--- Name: request_status_history fk_status_history_request; Type: FK CONSTRAINT; Schema: public; Owner: avnadmin
+-- Name: request_status_history fk_status_history_request; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.request_status_history
@@ -2142,7 +2224,7 @@ ALTER TABLE ONLY public.request_status_history
 
 
 --
--- Name: request_status_history fk_status_history_user; Type: FK CONSTRAINT; Schema: public; Owner: avnadmin
+-- Name: request_status_history fk_status_history_user; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.request_status_history
@@ -2150,7 +2232,7 @@ ALTER TABLE ONLY public.request_status_history
 
 
 --
--- Name: SCHEMA public; Type: ACL; Schema: -; Owner: avnadmin
+-- Name: SCHEMA public; Type: ACL; Schema: -; Owner: pg_database_owner
 --
 
 REVOKE USAGE ON SCHEMA public FROM PUBLIC;
@@ -2160,3 +2242,4 @@ GRANT ALL ON SCHEMA public TO PUBLIC;
 --
 -- PostgreSQL database dump complete
 --
+
