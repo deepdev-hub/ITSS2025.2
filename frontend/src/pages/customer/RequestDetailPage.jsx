@@ -12,6 +12,7 @@ import ChatModal from '../../components/common/ChatModal';
 import RequestTrackingMap from '../../components/requests/RequestTrackingMap';
 import RequestLifecycleStepper from '../../components/requests/RequestLifecycleStepper';
 import Alert from '../../components/common/Alert';
+import ImageUploadZone from '../../components/common/ImageUploadZone';
 import {
   canCustomerCancel,
   formatCurrency,
@@ -202,66 +203,39 @@ function RequestImage({ imageUrl, updatedAt }) {
   );
 }
 
-// Upload widget for customers to attach/change image on existing request
-function RequestImageUpload({ requestId, currentImageUrl, onUploadSuccess, onError }) {
-  const fileInputRef = useRef(null);
+function RequestImageUpload({ requestId, currentImageUrl, imageUpdatedAt, onUploadSuccess, onError }) {
   const [uploading, setUploading] = useState(false);
+  const previewSrc = currentImageUrl
+    ? addRequestImageCacheKey(resolveRequestImageUrl(currentImageUrl), imageUpdatedAt)
+    : null;
 
-  const handleFileChange = async (event) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
-      onError('Please select a valid image file (JPEG, PNG, WebP, or GIF).');
-      event.target.value = '';
-      return;
-    }
-
-    if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
-      onError(`Image must be smaller than ${MAX_FILE_SIZE_MB}MB.`);
-      event.target.value = '';
-      return;
-    }
-
+  const handleUpload = async (file) => {
     setUploading(true);
-
     try {
       const formData = new FormData();
       formData.append('file', file);
-
       const result = await requestApi.uploadRequestImage(requestId, formData);
       const newUrl = getRequestImageUrlFromUploadResponse(result);
-
-      onUploadSuccess('Request image updated successfully.', newUrl);
+      onUploadSuccess('Cập nhật ảnh yêu cầu thành công.', newUrl);
     } catch (err) {
       onError(getApiError(err));
+      throw err;
     } finally {
       setUploading(false);
-      event.target.value = '';
     }
   };
 
   return (
-    <div className="request-image-actions">
-      <button
-        type="button"
-        className="button button-secondary"
-        disabled={uploading}
-        onClick={() => fileInputRef.current?.click()}
-      >
-        {uploading
-          ? 'Uploading...'
-          : (currentImageUrl ? 'Change image' : 'Upload image')}
-      </button>
-
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept={ACCEPTED_IMAGE_TYPES.join(',')}
-        style={{ display: 'none' }}
-        onChange={handleFileChange}
-      />
-    </div>
+    <ImageUploadZone
+      previewSrc={previewSrc}
+      label={currentImageUrl ? 'Đổi ảnh yêu cầu' : 'Tải ảnh lên'}
+      hint={`JPEG, PNG, WebP, GIF — tối đa ${MAX_FILE_SIZE_MB}MB`}
+      accept={ACCEPTED_IMAGE_TYPES}
+      maxSizeMb={MAX_FILE_SIZE_MB}
+      uploading={uploading}
+      onUpload={handleUpload}
+      onError={onError}
+    />
   );
 }
 
@@ -774,6 +748,7 @@ export default function RequestDetailPage() {
               <RequestImageUpload
                 requestId={id}
                 currentImageUrl={detail.imageUrl}
+                imageUpdatedAt={detail.updatedAt}
                 onUploadSuccess={(msg) => {
                   setNotice(msg);
                   setError('');

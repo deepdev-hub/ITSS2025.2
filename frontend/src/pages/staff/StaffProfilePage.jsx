@@ -18,6 +18,7 @@ import Loader from '../../components/common/Loader';
 import PageHeader from '../../components/common/PageHeader';
 import StatCard from '../../components/common/StatCard';
 import StatusBadge from '../../components/common/StatusBadge';
+import { resolveAvatarUrl } from '../../utils/avatar';
 
 function getInitials(name = '') {
   return name
@@ -57,6 +58,11 @@ export default function StaffProfilePage() {
       : `${Number(profile.averageRating).toFixed(2)}/5`
   ), [profile?.averageRating]);
 
+  const staffAvatarSrc = useMemo(
+    () => (profile?.avatarUrl ? resolveAvatarUrl(profile.avatarUrl) : null),
+    [profile?.avatarUrl],
+  );
+
   if (loading) {
     return <Loader label="Loading staff profile..." />;
   }
@@ -81,7 +87,7 @@ export default function StaffProfilePage() {
         {/* Profile Header with Avatar */}
         <div className="staff-profile-hero">
           <div className="staff-profile-avatar">
-            {profile.avatarUrl ? <img src={profile.avatarUrl} alt="" /> : <span>{getInitials(profile.fullName)}</span>}
+            {staffAvatarSrc ? <img src={staffAvatarSrc} alt="" /> : <span>{getInitials(profile.fullName)}</span>}
           </div>
           <div className="staff-profile-info">
             <h2>{profile.fullName}</h2>

@@ -1,4 +1,5 @@
 import {
+  AlertTriangle,
   Building2,
   Car,
   ClipboardList,
@@ -19,7 +20,7 @@ const ICONS = {
   Roles: Shield,
   Companies: Building2,
   'Company Staff': Users,
-  'Incident Types': Wrench,
+  'Incident Types': AlertTriangle,
   'Service Types': Wrench,
   'Company Profile': Building2,
   'Assigned Requests': ClipboardList,

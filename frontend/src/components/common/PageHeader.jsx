@@ -1,7 +1,8 @@
-export default function PageHeader({ title, subtitle, actions, eyebrow }) {
+export default function PageHeader({ title, subtitle, actions, eyebrow, icon }) {
   return (
-    <div className="page-header">
+    <div className="page-header page-header-premium">
       <div>
+        {icon ? <span className="page-header-icon">{icon}</span> : null}
         {eyebrow ? <span className="request-lifecycle-eyebrow">{eyebrow}</span> : null}
         <h1>{title}</h1>
         {subtitle ? <p>{subtitle}</p> : null}

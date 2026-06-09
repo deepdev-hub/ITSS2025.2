@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   CheckCircle2,
@@ -20,8 +20,8 @@ import { getApiError } from '../../api/client';
 import Alert from '../../components/common/Alert';
 import PageHeader from '../../components/common/PageHeader';
 import Stepper from '../../components/common/Stepper';
+import ImageUploadZone from '../../components/common/ImageUploadZone';
 import LocationPickerMap from '../../components/common/LocationPickerMap';
-import { resolveRequestImageUrl } from '../../utils/requestImage';
 
 const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 const MAX_FILE_SIZE_MB = 5;
@@ -82,95 +82,6 @@ const initialForm = {
 
 function formatMoney(value) {
   return `${Number(value || 0).toLocaleString('vi-VN')} VND`;
-}
-
-function RequestImagePicker({ onFileSelected, onError }) {
-  const fileInputRef = useRef(null);
-  const [previewUrl, setPreviewUrl] = useState(null);
-  const [failedPreviewUrl, setFailedPreviewUrl] = useState(null);
-
-  const resolvedDisplayUrl = resolveRequestImageUrl(previewUrl || '');
-  const displayUrl = failedPreviewUrl === resolvedDisplayUrl ? null : resolvedDisplayUrl;
-
-  useEffect(() => () => {
-    if (previewUrl?.startsWith('blob:')) {
-      URL.revokeObjectURL(previewUrl);
-    }
-  }, [previewUrl]);
-
-  const handleFileChange = (event) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
-      onError('Please select a valid image file (JPEG, PNG, WebP, or GIF).');
-      event.target.value = '';
-      return;
-    }
-
-    if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
-      onError(`Image must be smaller than ${MAX_FILE_SIZE_MB}MB.`);
-      event.target.value = '';
-      return;
-    }
-
-    const objectUrl = URL.createObjectURL(file);
-    setPreviewUrl((previous) => {
-      if (previous?.startsWith('blob:')) URL.revokeObjectURL(previous);
-      return objectUrl;
-    });
-    onError('');
-    onFileSelected(file);
-  };
-
-  const handleRemove = () => {
-    setPreviewUrl((previous) => {
-      if (previous?.startsWith('blob:')) URL.revokeObjectURL(previous);
-      return null;
-    });
-    onFileSelected(null);
-    if (fileInputRef.current) fileInputRef.current.value = '';
-  };
-
-  return (
-    <div className="request-image-picker">
-      {displayUrl ? (
-        <>
-          <div className="request-image-preview-wrap">
-            <img
-              src={displayUrl}
-              alt="Request preview"
-              className="request-image-preview"
-              onError={() => setFailedPreviewUrl(resolvedDisplayUrl)}
-            />
-          </div>
-          <div className="request-image-actions">
-            <button type="button" className="button button-secondary" onClick={() => fileInputRef.current?.click()}>
-              Change image
-            </button>
-            <button type="button" className="button button-danger" onClick={handleRemove}>
-              Remove
-            </button>
-          </div>
-        </>
-      ) : (
-        <div className="request-image-placeholder">
-          <p className="muted-line">No image selected. JPEG, PNG, WebP or GIF - Max {MAX_FILE_SIZE_MB}MB</p>
-          <button type="button" className="button button-secondary" onClick={() => fileInputRef.current?.click()}>
-            Choose image
-          </button>
-        </div>
-      )}
-
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept={ACCEPTED_IMAGE_TYPES.join(',')}
-        style={{ display: 'none' }}
-        onChange={handleFileChange}
-      />
-    </div>
-  );
 }
 
 function StepGuide({ step }) {
@@ -538,7 +449,16 @@ export default function CreateRequestPage() {
               </div>
               <div className="field">
                 <label>Ảnh minh họa <span className="muted-line">(tùy chọn)</span></label>
-                <RequestImagePicker onFileSelected={setSelectedImageFile} onError={setImageError} />
+                <ImageUploadZone
+                  label="Thêm ảnh minh họa"
+                  hint={`JPEG, PNG, WebP, GIF — tối đa ${MAX_FILE_SIZE_MB}MB`}
+                  accept={ACCEPTED_IMAGE_TYPES}
+                  maxSizeMb={MAX_FILE_SIZE_MB}
+                  showRemove
+                  onFileSelected={setSelectedImageFile}
+                  onRemove={() => setSelectedImageFile(null)}
+                  onError={setImageError}
+                />
               </div>
             </>
           ) : null}

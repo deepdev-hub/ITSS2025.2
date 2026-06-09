@@ -1,4 +1,4 @@
-import { API_ORIGIN } from '../api/client';
+import { API_BASE_URL, API_ORIGIN } from '../api/client';
 
 export function getAvatarUrl(user) {
   if (!user || typeof user !== 'object') return '';
@@ -22,6 +22,16 @@ export function normalizeUser(user) {
   return normalized;
 }
 
+function getAssetBaseUrl() {
+  if (API_BASE_URL) {
+    return API_BASE_URL;
+  }
+  if (import.meta.env.DEV) {
+    return window.location.origin;
+  }
+  return API_ORIGIN || window.location.origin;
+}
+
 export function resolveAvatarUrl(value) {
   const rawAvatar = normalizeAvatarUrl(value);
   if (!rawAvatar) return null;
@@ -31,7 +41,7 @@ export function resolveAvatarUrl(value) {
   }
 
   try {
-    return new URL(rawAvatar, API_ORIGIN || window.location.origin).toString();
+    return new URL(rawAvatar, getAssetBaseUrl()).toString();
   } catch {
     return null;
   }

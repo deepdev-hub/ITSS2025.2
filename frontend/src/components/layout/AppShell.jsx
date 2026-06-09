@@ -1,5 +1,5 @@
-import { NavLink, Outlet } from 'react-router-dom';
-import { LifeBuoy, Menu, X } from 'lucide-react';
+import { Link, NavLink, Outlet } from 'react-router-dom';
+import { LifeBuoy, Menu, PhoneCall, X } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { getMenuItems } from '../../utils/roles';
 import { getMenuIcon } from '../../utils/menuIcons';
@@ -112,6 +112,15 @@ export default function AppShell() {
             );
           })}
         </nav>
+
+        {user?.roleName === 'CUSTOMER' ? (
+          <div className="sidebar-footer">
+            <Link className="sidebar-sos-link" to="/customer/requests/new" onClick={() => setSidebarOpen(false)}>
+              <PhoneCall size={18} aria-hidden="true" />
+              SOS — Cứu hộ ngay
+            </Link>
+          </div>
+        ) : null}
       </aside>
 
       <div className="app-shell-content">

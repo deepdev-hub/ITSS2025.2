@@ -1,5 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import {
+  Building2,
+  ClipboardList,
+  FileText,
+  LayoutDashboard,
+  Star,
+  Truck,
+  Users,
+} from 'lucide-react';
 import { companyApi } from '../../api/companyApi';
 import { getApiError } from '../../api/client';
 import Loader from '../../components/common/Loader';
@@ -43,6 +52,8 @@ export default function CompanyDashboardPage() {
   return (
     <>
       <PageHeader
+        icon={<LayoutDashboard size={22} />}
+        eyebrow="Công ty cứu hộ"
         title="Company Dashboard"
         subtitle="Track assigned rescue work, dispatch resources quickly, and review customer feedback from one place."
         actions={<Link className="button button-secondary" to="/company/requests">Open dispatch workspace</Link>}
@@ -55,13 +66,13 @@ export default function CompanyDashboardPage() {
       {!loading ? (
         <>
           <div className="stats-grid">
-            <StatCard label="Assigned Requests" value={dashboard?.assignedRequests ?? 0} />
-            <StatCard label="In Progress" value={dashboard?.inProgressRequests ?? 0} />
-            <StatCard label="Staff" value={dashboard?.totalStaff ?? 0} />
-            <StatCard label="Vehicles" value={dashboard?.totalVehicles ?? 0} />
-            <StatCard label="Quotes" value={dashboard?.totalQuotes ?? 0} />
-            <StatCard label="Pending Quotes" value={dashboard?.pendingQuotes ?? 0} />
-            <StatCard label="Reviews" value={dashboard?.totalReviews ?? 0} />
+            <StatCard label="Assigned" value={dashboard?.assignedRequests ?? 0} icon={<ClipboardList size={20} />} variant="info" />
+            <StatCard label="In Progress" value={dashboard?.inProgressRequests ?? 0} icon={<Building2 size={20} />} variant="warning" />
+            <StatCard label="Staff" value={dashboard?.totalStaff ?? 0} icon={<Users size={20} />} />
+            <StatCard label="Vehicles" value={dashboard?.totalVehicles ?? 0} icon={<Truck size={20} />} variant="info" />
+            <StatCard label="Quotes" value={dashboard?.totalQuotes ?? 0} icon={<FileText size={20} />} />
+            <StatCard label="Pending Quotes" value={dashboard?.pendingQuotes ?? 0} icon={<FileText size={20} />} variant="warning" />
+            <StatCard label="Reviews" value={dashboard?.totalReviews ?? 0} icon={<Star size={20} />} variant="success" />
           </div>
 
           <div className="grid-two">

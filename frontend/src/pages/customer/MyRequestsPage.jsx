@@ -70,6 +70,8 @@ export default function MyRequestsPage() {
   return (
     <>
       <PageHeader
+        icon={<History size={22} />}
+        eyebrow="Khách hàng"
         title="Lịch sử yêu cầu cứu hộ"
         subtitle="Theo dõi các yêu cầu đang xử lý và xem lại lịch sử cứu hộ trước đây."
         actions={
