@@ -10,6 +10,7 @@ import {
   AlertTriangle,
   Wrench,
   FileCheck,
+  Calculator,
 } from 'lucide-react';
 import { authApi } from '../../api/authApi';
 import { customerApi } from '../../api/customerApi';
@@ -35,6 +36,7 @@ const WIZARD_STEPS = [
   { id: 'situation', label: 'Tinh trang', hint: 'Xac nhan su co & muc uu tien' },
   { id: 'details', label: 'Thong tin', hint: 'Xe, dich vu & mo ta' },
   { id: 'location', label: 'Vi tri', hint: 'Chon diem cuu ho' },
+  { id: 'quotation', label: 'Tinh phi', hint: 'Phi tu dong' },
   { id: 'confirm', label: 'Xac nhan', hint: 'Kiem tra & gui yeu cau' },
 ];
 
@@ -55,8 +57,13 @@ const STEP_GUIDES = {
     icon: MapPin,
   },
   4: {
-    title: 'Buoc 4 - Gui yeu cau cuu ho',
-    text: 'Kiem tra lai toan bo thong tin va phi uoc tinh truoc khi gui. Sau khi gui, ban se theo doi tien trinh o buoc 5.',
+    title: 'Buoc 4 - Tinh phi tu dong',
+    text: 'He thong tinh phi tu dong tu gia dich vu va chi phi di chuyen gan nhat theo vi tri ban da chon.',
+    icon: Calculator,
+  },
+  5: {
+    title: 'Buoc 5 - Xac nhan va gui yeu cau',
+    text: 'Kiem tra lai toan bo thong tin va phi uoc tinh truoc khi gui. Sau khi gui, ban se theo doi tien trinh o trang chi tiet.',
     icon: FileCheck,
   },
 };
@@ -280,6 +287,17 @@ export default function CreateRequestPage() {
       }
       return true;
     }
+    if (step === 4) {
+      if (feeLoading) {
+        setError('Vui long doi he thong tinh phi tu dong.');
+        return false;
+      }
+      if (!feeInfo) {
+        setError(feeError || 'Chua tinh duoc phi tu dong. Vui long kiem tra dich vu va vi tri.');
+        return false;
+      }
+      return true;
+    }
     return true;
   };
 
@@ -295,8 +313,13 @@ export default function CreateRequestPage() {
   };
 
   const handleSubmit = async (event) => {
-    event.preventDefault();
-    if (!validateStep(4)) return;
+    event?.preventDefault?.();
+    if (currentStep < WIZARD_STEPS.length) {
+      goNext();
+      return;
+    }
+
+    if (!validateStep(1) || !validateStep(2) || !validateStep(3) || !validateStep(4)) return;
 
     setSubmitting(true);
     setError('');
@@ -368,7 +391,7 @@ export default function CreateRequestPage() {
       <div className="wizard-shell">
         <Stepper steps={WIZARD_STEPS} currentStep={currentStep} />
 
-        <form className="card wizard-step-panel" onSubmit={handleSubmit}>
+        <div className="card wizard-step-panel">
           {loading ? <p>Dang tai du lieu...</p> : null}
 
           {!loading && currentStep === 1 ? (
@@ -513,6 +536,41 @@ export default function CreateRequestPage() {
               <StepGuide step={4} />
               <div className="wizard-review-grid">
                 <div className="wizard-review-item">
+                  <span>Dich vu</span>
+                  <strong>{selectedService?.name || '-'}</strong>
+                </div>
+                <div className="wizard-review-item">
+                  <span>Vi tri</span>
+                  <strong>{form.location.province || '-'}</strong>
+                </div>
+              </div>
+              <div className={`fee-preview-panel ${feeInfo ? 'fee-preview-panel-ready' : ''}`}>
+                <div>
+                  <span>Phi uoc tinh</span>
+                  {feeLoading ? (
+                    <strong>Dang tinh...</strong>
+                  ) : feeInfo ? (
+                    <strong>{formatMoney(feeInfo.estimatedFee)}</strong>
+                  ) : (
+                    <strong>Chua tinh duoc</strong>
+                  )}
+                </div>
+                {feeInfo ? (
+                  <p>
+                    He so {feeInfo.coefficient} x (Gia dich vu {formatMoney(feeInfo.basePrice)} + Phi di chuyen tu dong {formatMoney(feeInfo.travelCost)})
+                  </p>
+                ) : (
+                  <p>{feeError || 'Chon dich vu va vi tri tren ban do de xem phi uoc tinh.'}</p>
+                )}
+              </div>
+            </>
+          ) : null}
+
+          {!loading && currentStep === 5 ? (
+            <>
+              <StepGuide step={5} />
+              <div className="wizard-review-grid">
+                <div className="wizard-review-item">
                   <span>Su co</span>
                   <strong>{selectedIncident?.name || '-'}</strong>
                 </div>
@@ -536,26 +594,10 @@ export default function CreateRequestPage() {
                   <span>Vi tri</span>
                   <strong>{form.location.province || '-'}</strong>
                 </div>
-              </div>
-
-              <div className={`fee-preview-panel ${feeInfo ? 'fee-preview-panel-ready' : ''}`} style={{ marginTop: '1rem' }}>
-                <div>
+                <div className="wizard-review-item">
                   <span>Phi uoc tinh</span>
-                  {feeLoading ? (
-                    <strong>Dang tinh...</strong>
-                  ) : feeInfo ? (
-                    <strong>{formatMoney(feeInfo.estimatedFee)}</strong>
-                  ) : (
-                    <strong>Chua tinh duoc</strong>
-                  )}
+                  <strong>{feeInfo ? formatMoney(feeInfo.estimatedFee) : 'Chua tinh duoc'}</strong>
                 </div>
-                {feeInfo ? (
-                  <p>
-                    He so {feeInfo.coefficient} x (Gia dich vu {formatMoney(feeInfo.basePrice)} + Phi di chuyen tu dong {formatMoney(feeInfo.travelCost)})
-                  </p>
-                ) : (
-                  <p>{feeError || 'Chon dich vu va vi tri tren ban do de xem phi uoc tinh.'}</p>
-                )}
               </div>
             </>
           ) : null}
@@ -576,20 +618,21 @@ export default function CreateRequestPage() {
             ) : (
               <button
                 className={`button button-sos ${submitting ? 'button-loading' : ''}`}
-                type="submit"
+                type="button"
                 disabled={submitting || geocoding}
+                onClick={handleSubmit}
               >
                 <Send size={18} aria-hidden="true" />
                 {submitting ? 'Dang gui...' : 'Gui yeu cau cuu ho'}
               </button>
             )}
           </div>
-        </form>
+        </div>
 
         <div className="card card-muted" style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
           <CheckCircle2 size={20} color="var(--success)" aria-hidden="true" />
           <p className="muted-line" style={{ margin: 0 }}>
-            <strong>Buoc 5 - Theo doi:</strong> Sau khi gui, he thong chuyen ban den trang chi tiet voi timeline tien trinh xu ly.
+            <strong>Sau khi gui:</strong> He thong chuyen ban den trang chi tiet voi timeline tien trinh xu ly.
           </p>
         </div>
       </div>
