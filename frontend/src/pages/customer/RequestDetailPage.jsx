@@ -1,12 +1,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
+import { MessageCircle } from 'lucide-react';
 import { requestApi } from '../../api/requestApi';
 import { getApiError } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import Loader from '../../components/common/Loader';
 import PageHeader from '../../components/common/PageHeader';
 import StatusBadge from '../../components/common/StatusBadge';
+import ChatModal from '../../components/common/ChatModal';
 import RequestTrackingMap from '../../components/requests/RequestTrackingMap';
+import RequestLifecycleStepper from '../../components/requests/RequestLifecycleStepper';
+import Alert from '../../components/common/Alert';
+import ImageUploadZone from '../../components/common/ImageUploadZone';
 import {
   canCustomerCancel,
   formatCurrency,
@@ -188,66 +193,39 @@ function RequestImage({ imageUrl, updatedAt }) {
   );
 }
 
-// Upload widget for customers to attach/change image on existing request
-function RequestImageUpload({ requestId, currentImageUrl, onUploadSuccess, onError }) {
-  const fileInputRef = useRef(null);
+function RequestImageUpload({ requestId, currentImageUrl, imageUpdatedAt, onUploadSuccess, onError }) {
   const [uploading, setUploading] = useState(false);
+  const previewSrc = currentImageUrl
+    ? addRequestImageCacheKey(resolveRequestImageUrl(currentImageUrl), imageUpdatedAt)
+    : null;
 
-  const handleFileChange = async (event) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
-      onError('Please select a valid image file (JPEG, PNG, WebP, or GIF).');
-      event.target.value = '';
-      return;
-    }
-
-    if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
-      onError(`Image must be smaller than ${MAX_FILE_SIZE_MB}MB.`);
-      event.target.value = '';
-      return;
-    }
-
+  const handleUpload = async (file) => {
     setUploading(true);
-
     try {
       const formData = new FormData();
       formData.append('file', file);
-
       const result = await requestApi.uploadRequestImage(requestId, formData);
       const newUrl = getRequestImageUrlFromUploadResponse(result);
-
-      onUploadSuccess('Request image updated successfully.', newUrl);
+      onUploadSuccess('Cập nhật ảnh yêu cầu thành công.', newUrl);
     } catch (err) {
       onError(getApiError(err));
+      throw err;
     } finally {
       setUploading(false);
-      event.target.value = '';
     }
   };
 
   return (
-    <div className="request-image-actions">
-      <button
-        type="button"
-        className="button button-secondary"
-        disabled={uploading}
-        onClick={() => fileInputRef.current?.click()}
-      >
-        {uploading
-          ? 'Uploading...'
-          : (currentImageUrl ? 'Change image' : 'Upload image')}
-      </button>
-
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept={ACCEPTED_IMAGE_TYPES.join(',')}
-        style={{ display: 'none' }}
-        onChange={handleFileChange}
-      />
-    </div>
+    <ImageUploadZone
+      previewSrc={previewSrc}
+      label={currentImageUrl ? 'Đổi ảnh yêu cầu' : 'Tải ảnh lên'}
+      hint={`JPEG, PNG, WebP, GIF — tối đa ${MAX_FILE_SIZE_MB}MB`}
+      accept={ACCEPTED_IMAGE_TYPES}
+      maxSizeMb={MAX_FILE_SIZE_MB}
+      uploading={uploading}
+      onUpload={handleUpload}
+      onError={onError}
+    />
   );
 }
 
@@ -270,6 +248,7 @@ export default function RequestDetailPage() {
   const [rejectForm, setRejectForm] = useState(defaultDecisionForm);
   const [cancelForm, setCancelForm] = useState(defaultDecisionForm);
   const [reviewForm, setReviewForm] = useState(defaultReviewForm);
+  const [isChatOpen, setIsChatOpen] = useState(false);
   const refreshInFlightRef = useRef(false);
   const messageListRef = useRef(null);
   const shouldStickToBottomRef = useRef(true);
@@ -628,12 +607,25 @@ export default function RequestDetailPage() {
               <strong>{refreshing ? 'Refreshing…' : pollLabel}</strong>
               <span>{lastSyncedAt ? `Last sync ${formatDateTime(lastSyncedAt)}` : 'Waiting for first sync'}</span>
             </div>
+            {detail.assignedCompany && isCustomer && (
+              <button
+                className="button button-secondary"
+                type="button"
+                onClick={() => setIsChatOpen(true)}
+                title="Chat với đội cứu hộ"
+              >
+                <MessageCircle size={16} />
+                Chat
+              </button>
+            )}
             <button className="button button-secondary" type="button" onClick={() => refreshData({ silent: true, force: true })}>
               Refresh now
             </button>
           </div>
         )}
       />
+
+      <RequestLifecycleStepper status={detail.status} />
 
       {isCustomer ? (
         <RequestTrackingMap
@@ -643,8 +635,8 @@ export default function RequestDetailPage() {
         />
       ) : null}
 
-      {notice ? <div className="notice">{notice}</div> : null}
-      {error ? <div className="notice error">{error}</div> : null}
+      {notice ? <Alert variant="success">{notice}</Alert> : null}
+      {error ? <Alert variant="error" title="Có lỗi xảy ra">{error}</Alert> : null}
 
       <div className="grid-two">
         <div className="card">
@@ -752,6 +744,7 @@ export default function RequestDetailPage() {
               <RequestImageUpload
                 requestId={id}
                 currentImageUrl={detail.imageUrl}
+                imageUpdatedAt={detail.updatedAt}
                 onUploadSuccess={(msg) => {
                   setNotice(msg);
                   setError('');
@@ -1238,8 +1231,8 @@ export default function RequestDetailPage() {
 
         <div className="card">
           <SectionHeader
-            title="Status History"
-            subtitle="Each request state change is recorded in order and refreshed automatically."
+            title="Timeline xử lý"
+            subtitle="Mỗi thay đổi trạng thái được ghi lại theo thứ tự và tự động cập nhật."
           />
 
           {(detail.history || []).length === 0 ? (
@@ -1266,6 +1259,16 @@ export default function RequestDetailPage() {
           )}
         </div>
       </div>
+
+      {isCustomer && detail.assignedCompany && (
+        <ChatModal
+          isOpen={isChatOpen}
+          onClose={() => setIsChatOpen(false)}
+          requestId={detail.id}
+          companyName={detail.assignedCompany?.companyName}
+          staffName={detail.assignedStaff?.fullName}
+        />
+      )}
     </>
   );
 }

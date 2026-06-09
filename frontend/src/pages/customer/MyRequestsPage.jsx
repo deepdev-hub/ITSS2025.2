@@ -1,11 +1,23 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import {
+  FilePlus2,
+  History,
+  MapPin,
+  PhoneCall,
+  MessageCircle,
+  Truck,
+  Clock,
+  AlertCircle,
+} from 'lucide-react';
 import { requestApi } from '../../api/requestApi';
 import { getApiError } from '../../api/client';
+import Alert from '../../components/common/Alert';
 import Countdown from '../../components/common/Countdown';
 import Loader from '../../components/common/Loader';
 import PageHeader from '../../components/common/PageHeader';
 import StatusBadge from '../../components/common/StatusBadge';
+import ChatModal from '../../components/common/ChatModal';
 import { canCustomerCancel, formatDateTime, getRequestLocationLabel } from '../../utils/requestUi';
 
 export default function MyRequestsPage() {
@@ -14,6 +26,8 @@ export default function MyRequestsPage() {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [actionId, setActionId] = useState(null);
+  const [chatRequest, setChatRequest] = useState(null);
+  const [isChatOpen, setIsChatOpen] = useState(false);
 
   const loadRequests = async () => {
     setLoading(true);
@@ -37,7 +51,7 @@ export default function MyRequestsPage() {
     setNotice('');
     try {
       await requestApi.cancelRequest(requestId, { note: 'Canceled by customer from My Requests page' });
-      setNotice('Request canceled successfully.');
+      setNotice('Đã hủy yêu cầu thành công.');
       await loadRequests();
     } catch (err) {
       setError(getApiError(err));
@@ -46,83 +60,194 @@ export default function MyRequestsPage() {
     }
   };
 
+  const handleOpenChat = (request) => {
+    setChatRequest(request);
+    setIsChatOpen(true);
+  };
+
+  const activeCount = requests.filter((r) => !['COMPLETED', 'CANCELED'].includes(r.status)).length;
+
   return (
     <>
       <PageHeader
-        title="My Rescue Requests"
-        subtitle="Review everything you have reported, then continue the flow with quote, payment, and review actions."
-        actions={<Link className="button button-primary" to="/customer/requests/new">Create request</Link>}
+        icon={<History size={22} />}
+        eyebrow="Khách hàng"
+        title="Lịch sử yêu cầu cứu hộ"
+        subtitle="Theo dõi các yêu cầu đang xử lý và xem lại lịch sử cứu hộ trước đây."
+        actions={
+          <Link className="button button-sos" to="/customer/requests/new">
+            <PhoneCall size={18} aria-hidden="true" />
+            SOS — Tạo yêu cầu
+          </Link>
+        }
       />
 
-      {notice ? <div className="notice">{notice}</div> : null}
-      {error ? <div className="notice error">{error}</div> : null}
+      <div className="stats-grid" style={{ marginBottom: '1rem' }}>
+        <div className="stat-card stat-card-info">
+          <Clock size={18} style={{ marginRight: '8px' }} />
+          <div>
+            <span className="stat-card-label">Đang xử lý</span>
+            <strong className="stat-card-value">{activeCount}</strong>
+          </div>
+        </div>
+        <div className="stat-card">
+          <AlertCircle size={18} style={{ marginRight: '8px' }} />
+          <div>
+            <span className="stat-card-label">Tổng yêu cầu</span>
+            <strong className="stat-card-value">{requests.length}</strong>
+          </div>
+        </div>
+      </div>
 
-      {loading ? <Loader label="Loading your rescue requests..." /> : null}
+      {notice ? <Alert variant="success">{notice}</Alert> : null}
+      {error ? <Alert variant="error" title="Có lỗi xảy ra">{error}</Alert> : null}
+
+      {loading ? <Loader label="Đang tải lịch sử yêu cầu..." /> : null}
 
       {!loading ? (
-        <div className="card">
+        <div className="history-list">
           {requests.length === 0 ? (
-            <p>No rescue requests found yet.</p>
-          ) : (
-            <div className="table-wrapper">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Request</th>
-                    <th>Incident / Service</th>
-                    <th>Location</th>
-                    <th>Priority</th>
-                    <th>Status</th>
-                    <th>Created</th>
-                    <th>Assigned Company</th>
-                    <th>Countdown</th>
-                    <th />
-                  </tr>
-                </thead>
-                <tbody>
-                  {requests.map((request) => (
-                    <tr key={request.id}>
-                      <td>
-                        <strong>{request.requestCode}</strong>
-                        <div className="muted-line">ID #{request.id}</div>
-                      </td>
-                      <td>
-                        <strong>{request.incidentTypeName}</strong>
-                        <div className="muted-line">{request.serviceTypeName || 'Service not selected'}</div>
-                      </td>
-                      <td>{getRequestLocationLabel(request)}</td>
-                      <td><StatusBadge value={request.priorityLevel} /></td>
-                      <td><StatusBadge value={request.status} /></td>
-                      <td>{formatDateTime(request.createdAt)}</td>
-                      <td>{request.assignedCompany?.companyName || 'Waiting for assignment'}</td>
-                      <td>
-                        <Countdown expiresAt={request.expiresAt} status={request.assignmentStatus} label="" />
-                      </td>
-                      <td>
-                        <div className="actions-row">
-                          <Link className="button button-secondary" to={`/requests/${request.id}`}>
-                            Open detail
-                          </Link>
-                          {canCustomerCancel(request.status) ? (
-                            <button
-                              className="button button-danger"
-                              type="button"
-                              disabled={actionId === request.id}
-                              onClick={() => handleCancel(request.id)}
-                            >
-                              {actionId === request.id ? 'Canceling...' : 'Cancel'}
-                            </button>
-                          ) : null}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="card empty-state">
+              <History size={32} color="var(--primary)" aria-hidden="true" />
+              <h2>Chưa có yêu cầu cứu hộ</h2>
+              <p className="muted-line">Khi gặp sự cố, nhấn SOS để gửi yêu cầu hỗ trợ ngay.</p>
+              <Link className="button button-sos" to="/customer/requests/new">
+                <FilePlus2 size={18} aria-hidden="true" />
+                Tạo yêu cầu đầu tiên
+              </Link>
             </div>
+          ) : (
+            requests.map((request) => (
+              <article key={request.id} className="history-card">
+                <div className="history-card-header">
+                  <div>
+                    <strong>{request.requestCode}</strong>
+                    <div className="muted-line">
+                      ID #{request.id} · {formatDateTime(request.createdAt)}
+                    </div>
+                  </div>
+                  <div className="history-card-meta">
+                    <StatusBadge value={request.priorityLevel} />
+                    <StatusBadge value={request.status} />
+                  </div>
+                </div>
+
+                <div className="wizard-review-grid">
+                  <div className="wizard-review-item">
+                    <span>
+                      <AlertCircle size={14} style={{ marginRight: '4px', verticalAlign: 'middle' }} />
+                      Sự cố / Dịch vụ
+                    </span>
+                    <strong>{request.incidentTypeName}</strong>
+                    <div className="muted-line">{request.serviceTypeName || 'Chưa chọn dịch vụ'}</div>
+                  </div>
+                  <div className="wizard-review-item">
+                    <span>
+                      <MapPin size={14} style={{ marginRight: '4px', verticalAlign: 'middle' }} />
+                      Vị trí
+                    </span>
+                    <strong>{getRequestLocationLabel(request)}</strong>
+                  </div>
+                  <div className="wizard-review-item">
+                    <span>
+                      <Truck size={14} style={{ marginRight: '4px', verticalAlign: 'middle' }} />
+                      Đội cứu hộ
+                    </span>
+                    <strong>{request.assignedCompany?.companyName || 'Đang chờ phân công'}</strong>
+                    <Countdown
+                      expiresAt={request.expiresAt}
+                      status={request.assignmentStatus}
+                      label="Còn lại"
+                    />
+                  </div>
+                </div>
+
+                <div className="history-card-actions">
+                  <Link className="button button-primary" to={`/requests/${request.id}`}>
+                    Theo dõi tiến trình
+                  </Link>
+
+                  {request.assignedCompany && (
+                    <button
+                      className="button button-secondary"
+                      type="button"
+                      onClick={() => handleOpenChat(request)}
+                      title="Chat với đội cứu hộ"
+                    >
+                      <MessageCircle size={16} />
+                      Chat
+                    </button>
+                  )}
+
+                  {canCustomerCancel(request.status) ? (
+                    <button
+                      className="button button-danger"
+                      type="button"
+                      disabled={actionId === request.id}
+                      onClick={() => handleCancel(request.id)}
+                    >
+                      {actionId === request.id ? 'Đang hủy...' : 'Hủy yêu cầu'}
+                    </button>
+                  ) : null}
+                </div>
+              </article>
+            ))
           )}
         </div>
       ) : null}
+
+      {chatRequest && (
+        <ChatModal
+          isOpen={isChatOpen}
+          onClose={() => {
+            setIsChatOpen(false);
+            setChatRequest(null);
+          }}
+          requestId={chatRequest.id}
+          companyName={chatRequest.assignedCompany?.companyName}
+          staffName={chatRequest.assignedStaff?.fullName}
+        />
+      )}
+
+      {/* Floating Chat Button for General Support */}
+      <button
+        className="floating-chat-button"
+        onClick={() => {
+          setChatRequest({ id: null, assignedCompany: { companyName: 'Support Team' }, assignedStaff: { fullName: 'Support Agent' } });
+          setIsChatOpen(true);
+        }}
+        title="Chat with support"
+      >
+        <MessageCircle size={24} />
+      </button>
+
+      <style>{`
+        .floating-chat-button {
+          position: fixed;
+          bottom: 30px;
+          right: 30px;
+          width: 60px;
+          height: 60px;
+          border-radius: 50%;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          color: white;
+          border: none;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+          transition: all 0.3s ease;
+          z-index: 1000;
+        }
+        .floating-chat-button:hover {
+          transform: translateY(-3px);
+          box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+        .floating-chat-button:active {
+          transform: translateY(-1px);
+        }
+      `}</style>
     </>
   );
 }

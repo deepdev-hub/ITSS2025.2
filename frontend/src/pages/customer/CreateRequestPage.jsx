@@ -1,21 +1,64 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import {
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  Info,
+  MapPin,
+  Send,
+  AlertTriangle,
+  Wrench,
+  FileCheck,
+} from 'lucide-react';
 import { authApi } from '../../api/authApi';
 import { customerApi } from '../../api/customerApi';
 import { requestApi } from '../../api/requestApi';
 import { locationApi } from '../../api/locationApi';
 import { getApiError } from '../../api/client';
+import Alert from '../../components/common/Alert';
 import PageHeader from '../../components/common/PageHeader';
+import Stepper from '../../components/common/Stepper';
+import ImageUploadZone from '../../components/common/ImageUploadZone';
 import LocationPickerMap from '../../components/common/LocationPickerMap';
-import { resolveRequestImageUrl } from '../../utils/requestImage';
 
 const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 const MAX_FILE_SIZE_MB = 5;
 
 const SUGGESTED_SERVICES_MAP = {
-  'FLAT_TIRE': ['ON_SITE_REPAIR', 'TOWING'],
-  'ENGINE_FAIL': ['TOWING'],
-  'BATTERY': ['BATTERY_SUPPORT', 'ON_SITE_REPAIR']
+  FLAT_TIRE: ['ON_SITE_REPAIR', 'TOWING'],
+  ENGINE_FAIL: ['TOWING'],
+  BATTERY: ['BATTERY_SUPPORT', 'ON_SITE_REPAIR'],
+};
+
+const WIZARD_STEPS = [
+  { id: 'situation', label: 'Tinh trang', hint: 'Xac nhan su co & muc uu tien' },
+  { id: 'details', label: 'Thong tin', hint: 'Xe, dich vu & mo ta' },
+  { id: 'location', label: 'Vi tri', hint: 'Chon diem cuu ho' },
+  { id: 'confirm', label: 'Xac nhan', hint: 'Kiem tra & gui yeu cau' },
+];
+
+const STEP_GUIDES = {
+  1: {
+    title: 'Buoc 1 - Xac nhan tinh trang',
+    text: 'Chon loai su co va muc do uu tien. Chon EMERGENCY neu ban dang gap nguy hiem.',
+    icon: AlertTriangle,
+  },
+  2: {
+    title: 'Buoc 2 - Nhap thong tin can thiet',
+    text: 'Chon xe, dich vu cuu ho va mo ta tinh huong de doi ho tro chuan bi tot hon.',
+    icon: Wrench,
+  },
+  3: {
+    title: 'Buoc 3 - Xac nhan vi tri',
+    text: 'Nhan tren ban do de chon vi tri chinh xac. He thong se tu dien dia chi neu co the.',
+    icon: MapPin,
+  },
+  4: {
+    title: 'Buoc 4 - Gui yeu cau cuu ho',
+    text: 'Kiem tra lai toan bo thong tin va phi uoc tinh truoc khi gui. Sau khi gui, ban se theo doi tien trinh o buoc 5.',
+    icon: FileCheck,
+  },
 };
 
 const initialForm = {
@@ -45,92 +88,19 @@ function isValidCoordinate(value, min, max) {
   return Number.isFinite(numericValue) && numericValue >= min && numericValue <= max;
 }
 
-function RequestImagePicker({ onFileSelected, onError }) {
-  const fileInputRef = useRef(null);
-  const [previewUrl, setPreviewUrl] = useState(null);
-  const [failedPreviewUrl, setFailedPreviewUrl] = useState(null);
+function StepGuide({ step }) {
+  const guide = STEP_GUIDES[step];
+  if (!guide) return null;
 
-  const resolvedDisplayUrl = resolveRequestImageUrl(previewUrl || '');
-  const displayUrl = failedPreviewUrl === resolvedDisplayUrl ? null : resolvedDisplayUrl;
-
-  useEffect(() => () => {
-    if (previewUrl?.startsWith('blob:')) {
-      URL.revokeObjectURL(previewUrl);
-    }
-  }, [previewUrl]);
-
-  const handleFileChange = (event) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
-      onError('Please select a valid image file (JPEG, PNG, WebP, or GIF).');
-      event.target.value = '';
-      return;
-    }
-
-    if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
-      onError(`Image must be smaller than ${MAX_FILE_SIZE_MB}MB.`);
-      event.target.value = '';
-      return;
-    }
-
-    const objectUrl = URL.createObjectURL(file);
-    setPreviewUrl((previous) => {
-      if (previous?.startsWith('blob:')) URL.revokeObjectURL(previous);
-      return objectUrl;
-    });
-    onError('');
-    onFileSelected(file);
-  };
-
-  const handleRemove = () => {
-    setPreviewUrl((previous) => {
-      if (previous?.startsWith('blob:')) URL.revokeObjectURL(previous);
-      return null;
-    });
-    onFileSelected(null);
-    if (fileInputRef.current) fileInputRef.current.value = '';
-  };
+  const IconComponent = guide.icon || Info;
 
   return (
-    <div className="request-image-picker">
-      {displayUrl ? (
-        <>
-          <div className="request-image-preview-wrap">
-            <img
-              src={displayUrl}
-              alt="Request preview"
-              className="request-image-preview"
-              onError={() => setFailedPreviewUrl(resolvedDisplayUrl)}
-            />
-          </div>
-
-          <div className="request-image-actions">
-            <button type="button" className="button button-secondary" onClick={() => fileInputRef.current?.click()}>
-              Change image
-            </button>
-            <button type="button" className="button button-danger" onClick={handleRemove}>
-              Remove
-            </button>
-          </div>
-        </>
-      ) : (
-        <div className="request-image-placeholder">
-          <p className="muted-line">No image selected. JPEG, PNG, WebP or GIF - Max {MAX_FILE_SIZE_MB}MB</p>
-          <button type="button" className="button button-secondary" onClick={() => fileInputRef.current?.click()}>
-            Choose image
-          </button>
-        </div>
-      )}
-
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept={ACCEPTED_IMAGE_TYPES.join(',')}
-        style={{ display: 'none' }}
-        onChange={handleFileChange}
-      />
+    <div className="wizard-step-guide">
+      <IconComponent size={24} aria-hidden="true" style={{ color: 'var(--primary)' }} />
+      <div>
+        <strong>{guide.title}</strong>
+        <p>{guide.text}</p>
+      </div>
     </div>
   );
 }
@@ -138,6 +108,7 @@ function RequestImagePicker({ onFileSelected, onError }) {
 export default function CreateRequestPage() {
   const navigate = useNavigate();
   const [form, setForm] = useState(initialForm);
+  const [currentStep, setCurrentStep] = useState(1);
   const [vehicles, setVehicles] = useState([]);
   const [incidentTypes, setIncidentTypes] = useState([]);
   const [serviceTypes, setServiceTypes] = useState([]);
@@ -184,7 +155,7 @@ export default function CreateRequestPage() {
     if (!isValidCoordinate(form.location.latitude, -90, 90)
         || !isValidCoordinate(form.location.longitude, -180, 180)) {
       setFeeInfo(null);
-      setFeeError('Select a location on the map to calculate automatic travel cost.');
+      setFeeError('Chon vi tri tren ban do de tinh phi di chuyen tu dong.');
       setFeeLoading(false);
       return;
     }
@@ -200,9 +171,7 @@ export default function CreateRequestPage() {
         Number(form.location.longitude),
       )
       .then((data) => {
-        if (!cancelled) {
-          setFeeInfo(data);
-        }
+        if (!cancelled) setFeeInfo(data);
       })
       .catch((err) => {
         if (!cancelled) {
@@ -211,9 +180,7 @@ export default function CreateRequestPage() {
         }
       })
       .finally(() => {
-        if (!cancelled) {
-          setFeeLoading(false);
-        }
+        if (!cancelled) setFeeLoading(false);
       });
 
     return () => {
@@ -227,10 +194,7 @@ export default function CreateRequestPage() {
       const key = name.replace('location.', '');
       setForm((previous) => ({
         ...previous,
-        location: {
-          ...previous.location,
-          [key]: value,
-        },
+        location: { ...previous.location, [key]: value },
       }));
       return;
     }
@@ -240,10 +204,8 @@ export default function CreateRequestPage() {
       const suggestedCodes = selectedIncident ? (SUGGESTED_SERVICES_MAP[selectedIncident.code] || []) : [];
       let newServiceTypeId = form.serviceTypeId;
       if (suggestedCodes.length > 0) {
-         const firstSuggested = serviceTypes.find((s) => s.code === suggestedCodes[0]);
-         if (firstSuggested) {
-             newServiceTypeId = String(firstSuggested.id);
-         }
+        const firstSuggested = serviceTypes.find((s) => suggestedCodes.includes(s.code));
+        if (firstSuggested) newServiceTypeId = String(firstSuggested.id);
       }
       setForm((previous) => ({ ...previous, incidentTypeId: value, serviceTypeId: newServiceTypeId }));
       return;
@@ -276,7 +238,6 @@ export default function CreateRequestPage() {
       const geocodeData = await locationApi.reverseGeocode(latitude, longitude);
       applyGeocodeResult(geocodeData, latitude, longitude);
     } catch (err) {
-      // Still update lat/lng even if geocoding fails
       setForm((previous) => ({
         ...previous,
         location: {
@@ -295,15 +256,55 @@ export default function CreateRequestPage() {
     runReverseGeocode(latitude, longitude);
   };
 
+  const validateStep = (step) => {
+    if (step === 1) {
+      if (!form.incidentTypeId) {
+        setError('Vui long chon loai su co.');
+        return false;
+      }
+      return true;
+    }
+    if (step === 2) {
+      if (!form.serviceTypeId) {
+        setError('Vui long chon loai dich vu.');
+        return false;
+      }
+      return true;
+    }
+    if (step === 3) {
+      if (!form.location.province
+          || !isValidCoordinate(form.location.latitude, -90, 90)
+          || !isValidCoordinate(form.location.longitude, -180, 180)) {
+        setError('Vui long chon vi tri tren ban do va dien tinh/thanh.');
+        return false;
+      }
+      return true;
+    }
+    return true;
+  };
+
+  const goNext = () => {
+    setError('');
+    if (!validateStep(currentStep)) return;
+    setCurrentStep((step) => Math.min(step + 1, WIZARD_STEPS.length));
+  };
+
+  const goBack = () => {
+    setError('');
+    setCurrentStep((step) => Math.max(step - 1, 1));
+  };
+
   const handleSubmit = async (event) => {
     event.preventDefault();
+    if (!validateStep(4)) return;
+
     setSubmitting(true);
     setError('');
     setImageError('');
     try {
       if (!isValidCoordinate(form.location.latitude, -90, 90)
           || !isValidCoordinate(form.location.longitude, -180, 180)) {
-        setError('Please select a valid location on the map before creating the request.');
+        setError('Vui long chon vi tri hop le tren ban do truoc khi tao request.');
         return;
       }
 
@@ -340,222 +341,258 @@ export default function CreateRequestPage() {
     }
   };
 
-const selectedIncidentId = Number(form.incidentTypeId);
+  const selectedIncidentId = Number(form.incidentTypeId);
+  const selectedIncident = incidentTypes.find((i) => i.id === selectedIncidentId);
+  const suggestedCodes = selectedIncident ? (SUGGESTED_SERVICES_MAP[selectedIncident.code] || []) : [];
+  const suggestedServices = serviceTypes.filter((s) => suggestedCodes.includes(s.code));
+  const otherServices = serviceTypes.filter((s) => !suggestedCodes.includes(s.code));
 
-const selectedIncident = incidentTypes.find((i) => i.id === selectedIncidentId);
+  const selectedVehicle = vehicles.find((v) => String(v.id) === String(form.vehicleId));
+  const selectedService = serviceTypes.find((s) => String(s.id) === String(form.serviceTypeId));
 
-const suggestedCodes = selectedIncident
-  ? SUGGESTED_SERVICES_MAP[selectedIncident.code] || []
-  : [];
-
-const suggestedServices = serviceTypes.filter((s) =>
-  suggestedCodes.includes(s.code),
-);
-
-const otherServices = serviceTypes.filter(
-  (s) => !suggestedCodes.includes(s.code),
-);
   return (
     <>
       <PageHeader
-        title="Create Rescue Request"
-        subtitle="Submit your incident, service type, and location. The estimated quotation is calculated automatically before you submit."
+        title="Tao yeu cau cuu ho"
+        subtitle="Hoan thanh tung buoc de gui yeu cau nhanh va chinh xac. Phi uoc tinh duoc tinh tu dong theo vi tri."
       />
 
-      {error ? <div className="notice error">{error}</div> : null}
-      {imageError ? <div className="notice notice-warning">{imageError}</div> : null}
+      {error ? <Alert variant="error" title="Khong the tiep tuc">{error}</Alert> : null}
+      {imageError ? <Alert variant="warning" title="Luu y">{imageError}</Alert> : null}
+      {form.priorityLevel === 'EMERGENCY' ? (
+        <Alert variant="warning" title="Tinh huong khan cap">
+          Ban da chon muc uu tien EMERGENCY. Hay dam bao vi tri chinh xac va mo ta ro tinh trang.
+        </Alert>
+      ) : null}
 
-      <form className="card" onSubmit={handleSubmit}>
-        {loading ? <p>Loading options...</p> : null}
-        <div className="form-grid">
-          <div className="field">
-            <label>Vehicle</label>
-            <select name="vehicleId" value={form.vehicleId} onChange={handleChange}>
-              <option value="">No linked vehicle</option>
-              {vehicles.map((vehicle) => (
-                <option key={vehicle.id} value={vehicle.id}>
-                  {vehicle.brand} {vehicle.model} - {vehicle.plateNumber}
-                </option>
-              ))}
-            </select>
-          </div>
+      <div className="wizard-shell">
+        <Stepper steps={WIZARD_STEPS} currentStep={currentStep} />
 
-          <div className="field">
-            <label>Incident Type</label>
-            <select name="incidentTypeId" value={form.incidentTypeId} onChange={handleChange} required>
-              <option value="">Select incident</option>
-              {incidentTypes.map((item) => (
-                <option key={item.id} value={item.id}>{item.name}</option>
-              ))}
-            </select>
-          </div>
+        <form className="card wizard-step-panel" onSubmit={handleSubmit}>
+          {loading ? <p>Dang tai du lieu...</p> : null}
 
-          <div className="field">
-            <label>Service Type</label>
-            <select name="serviceTypeId" value={form.serviceTypeId} onChange={handleChange} required>
-              <option value="">Select service</option>
-              {suggestedServices.length > 0 ? (
-                <>
-                  <optgroup label="Suggested">
-                    {suggestedServices.map((item) => (
-                      <option key={item.id} value={item.id}>{item.name} (Recommended)</option>
-                    ))}
-                  </optgroup>
-                  <optgroup label="Other Services">
-                    {otherServices.map((item) => (
+          {!loading && currentStep === 1 ? (
+            <>
+              <StepGuide step={1} />
+              <div className="form-grid">
+                <div className="field">
+                  <label>Loai su co</label>
+                  <select name="incidentTypeId" value={form.incidentTypeId} onChange={handleChange} required>
+                    <option value="">Chon su co</option>
+                    {incidentTypes.map((item) => (
                       <option key={item.id} value={item.id}>{item.name}</option>
                     ))}
-                  </optgroup>
-                </>
-              ) : (
-                serviceTypes.map((item) => (
-                  <option key={item.id} value={item.id}>{item.name}</option>
-                ))
-              )}
-            </select>
-          </div>
+                  </select>
+                </div>
+                <div className="field">
+                  <label>Muc uu tien</label>
+                  <select name="priorityLevel" value={form.priorityLevel} onChange={handleChange}>
+                    <option value="LOW">LOW</option>
+                    <option value="NORMAL">NORMAL</option>
+                    <option value="HIGH">HIGH</option>
+                    <option value="EMERGENCY">EMERGENCY</option>
+                  </select>
+                </div>
+              </div>
+            </>
+          ) : null}
 
-          <div className="field">
-            <label>Priority</label>
-            <select name="priorityLevel" value={form.priorityLevel} onChange={handleChange}>
-              <option value="LOW">LOW</option>
-              <option value="NORMAL">NORMAL</option>
-              <option value="HIGH">HIGH</option>
-              <option value="EMERGENCY">EMERGENCY</option>
-            </select>
-          </div>
-        </div>
+          {!loading && currentStep === 2 ? (
+            <>
+              <StepGuide step={2} />
+              <div className="form-grid">
+                <div className="field">
+                  <label>Xe</label>
+                  <select name="vehicleId" value={form.vehicleId} onChange={handleChange}>
+                    <option value="">Khong lien ket xe</option>
+                    {vehicles.map((vehicle) => (
+                      <option key={vehicle.id} value={vehicle.id}>
+                        {vehicle.brand} {vehicle.model} - {vehicle.plateNumber}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="field">
+                  <label>Dich vu</label>
+                  <select name="serviceTypeId" value={form.serviceTypeId} onChange={handleChange} required>
+                    <option value="">Chon dich vu</option>
+                    {suggestedServices.length > 0 ? (
+                      <>
+                        <optgroup label="Goi y">
+                          {suggestedServices.map((item) => (
+                            <option key={item.id} value={item.id}>{item.name} (De xuat)</option>
+                          ))}
+                        </optgroup>
+                        <optgroup label="Dich vu khac">
+                          {otherServices.map((item) => (
+                            <option key={item.id} value={item.id}>{item.name}</option>
+                          ))}
+                        </optgroup>
+                      </>
+                    ) : (
+                      serviceTypes.map((item) => (
+                        <option key={item.id} value={item.id}>{item.name}</option>
+                      ))
+                    )}
+                  </select>
+                </div>
+              </div>
+              <div className="field">
+                <label>Mo ta tinh huong</label>
+                <textarea
+                  name="description"
+                  value={form.description}
+                  onChange={handleChange}
+                  placeholder="Mo ta su co, tinh trang xe, yeu cau ho tro..."
+                />
+              </div>
+              <div className="field">
+                <label>Anh minh hoa <span className="muted-line">(tuy chon)</span></label>
+                <ImageUploadZone
+                  label="Them anh minh hoa"
+                  hint={`JPEG, PNG, WebP, GIF - toi da ${MAX_FILE_SIZE_MB}MB`}
+                  accept={ACCEPTED_IMAGE_TYPES}
+                  maxSizeMb={MAX_FILE_SIZE_MB}
+                  showRemove
+                  onFileSelected={setSelectedImageFile}
+                  onRemove={() => setSelectedImageFile(null)}
+                  onError={setImageError}
+                />
+              </div>
+            </>
+          ) : null}
 
-        <div className="field">
-          <label>Description</label>
-          <textarea name="description" value={form.description} onChange={handleChange} placeholder="Describe the breakdown or rescue situation..." />
-        </div>
+          {!loading && currentStep === 3 ? (
+            <>
+              <StepGuide step={3} />
+              <div className="field">
+                <label><MapPin size={16} style={{ verticalAlign: 'middle' }} /> Ban do - nhan de chon vi tri</label>
+                <LocationPickerMap
+                  value={{
+                    latitude: form.location.latitude,
+                    longitude: form.location.longitude,
+                  }}
+                  onChange={handleLocationPick}
+                />
+              </div>
+              <div className="form-grid" style={{ marginTop: '1rem' }}>
+                <div className="field">
+                  <label>Tinh/Thanh</label>
+                  <input name="location.province" value={form.location.province} onChange={handleChange} required disabled={geocoding} />
+                </div>
+                <div className="field">
+                  <label>Quan/Huyen</label>
+                  <input name="location.district" value={form.location.district} onChange={handleChange} disabled={geocoding} />
+                </div>
+                <div className="field">
+                  <label>Phuong/Xa</label>
+                  <input name="location.ward" value={form.location.ward} onChange={handleChange} disabled={geocoding} />
+                </div>
+                <div className="field">
+                  <label>Duong</label>
+                  <input name="location.street" value={form.location.street} onChange={handleChange} disabled={geocoding} />
+                </div>
+                <div className="field">
+                  <label>Chi tiet</label>
+                  <input name="location.detail" value={form.location.detail} onChange={handleChange} disabled={geocoding} />
+                </div>
+                <div className="field">
+                  <label>Latitude</label>
+                  <input name="location.latitude" value={form.location.latitude} onChange={handleChange} disabled={geocoding} />
+                </div>
+                <div className="field">
+                  <label>Longitude</label>
+                  <input name="location.longitude" value={form.location.longitude} onChange={handleChange} disabled={geocoding} />
+                </div>
+              </div>
+            </>
+          ) : null}
 
-        <div className="field" style={{ marginTop: '0.5rem' }}>
-          <label>Request Image <span className="muted-line" style={{ fontWeight: 400 }}>(optional)</span></label>
-          <RequestImagePicker
-            onFileSelected={setSelectedImageFile}
-            onError={setImageError}
-          />
-        </div>
+          {!loading && currentStep === 4 ? (
+            <>
+              <StepGuide step={4} />
+              <div className="wizard-review-grid">
+                <div className="wizard-review-item">
+                  <span>Su co</span>
+                  <strong>{selectedIncident?.name || '-'}</strong>
+                </div>
+                <div className="wizard-review-item">
+                  <span>Uu tien</span>
+                  <strong>{form.priorityLevel}</strong>
+                </div>
+                <div className="wizard-review-item">
+                  <span>Xe</span>
+                  <strong>
+                    {selectedVehicle
+                      ? `${selectedVehicle.brand} ${selectedVehicle.model}`
+                      : 'Khong lien ket'}
+                  </strong>
+                </div>
+                <div className="wizard-review-item">
+                  <span>Dich vu</span>
+                  <strong>{selectedService?.name || '-'}</strong>
+                </div>
+                <div className="wizard-review-item">
+                  <span>Vi tri</span>
+                  <strong>{form.location.province || '-'}</strong>
+                </div>
+              </div>
 
-        <div className="field" style={{ gridColumn: '1 / -1' }}>
-          <label>Map — click to select location</label>
-          <LocationPickerMap
-            value={{
-              latitude: form.location.latitude,
-              longitude: form.location.longitude,
-            }}
-            onChange={handleLocationPick}
-          />
-        </div>
+              <div className={`fee-preview-panel ${feeInfo ? 'fee-preview-panel-ready' : ''}`} style={{ marginTop: '1rem' }}>
+                <div>
+                  <span>Phi uoc tinh</span>
+                  {feeLoading ? (
+                    <strong>Dang tinh...</strong>
+                  ) : feeInfo ? (
+                    <strong>{formatMoney(feeInfo.estimatedFee)}</strong>
+                  ) : (
+                    <strong>Chua tinh duoc</strong>
+                  )}
+                </div>
+                {feeInfo ? (
+                  <p>
+                    He so {feeInfo.coefficient} x (Gia dich vu {formatMoney(feeInfo.basePrice)} + Phi di chuyen tu dong {formatMoney(feeInfo.travelCost)})
+                  </p>
+                ) : (
+                  <p>{feeError || 'Chon dich vu va vi tri tren ban do de xem phi uoc tinh.'}</p>
+                )}
+              </div>
+            </>
+          ) : null}
 
-        <div className="form-grid" style={{ marginTop: '1rem' }}>
-          <div className="field">
-            <label>Country</label>
-            <input
-              name="location.country"
-              value={form.location.country}
-              onChange={handleChange}
-              disabled={geocoding}
-            />
-          </div>
-          <div className="field">
-            <label>Province</label>
-            <input
-              name="location.province"
-              value={form.location.province}
-              onChange={handleChange}
-              required
-              disabled={geocoding}
-            />
-          </div>
-          <div className="field">
-            <label>District</label>
-            <input
-              name="location.district"
-              value={form.location.district}
-              onChange={handleChange}
-              disabled={geocoding}
-            />
-          </div>
-          <div className="field">
-            <label>Ward</label>
-            <input
-              name="location.ward"
-              value={form.location.ward}
-              onChange={handleChange}
-              disabled={geocoding}
-            />
-          </div>
-          <div className="field">
-            <label>Street</label>
-            <input
-              name="location.street"
-              value={form.location.street}
-              onChange={handleChange}
-              disabled={geocoding}
-            />
-          </div>
-          <div className="field">
-            <label>Detail</label>
-            <input
-              name="location.detail"
-              value={form.location.detail}
-              onChange={handleChange}
-              disabled={geocoding}
-            />
-          </div>
-          <div className="field">
-            <label>Latitude</label>
-            <input
-              name="location.latitude"
-              value={form.location.latitude}
-              onChange={handleChange}
-              disabled={geocoding}
-            />
-          </div>
-          <div className="field">
-            <label>Longitude</label>
-            <input
-              name="location.longitude"
-              value={form.location.longitude}
-              onChange={handleChange}
-              disabled={geocoding}
-            />
-          </div>
-        </div>
+          <div className="actions-row" style={{ marginTop: '1.25rem' }}>
+            {currentStep > 1 ? (
+              <button type="button" className="button button-secondary" onClick={goBack}>
+                <ChevronLeft size={18} aria-hidden="true" />
+                Quay lai
+              </button>
+            ) : null}
 
-        <div className={`fee-preview-panel ${feeInfo ? 'fee-preview-panel-ready' : ''}`}>
-          <div>
-            <span>Estimated fee</span>
-            {feeLoading ? (
-              <strong>Calculating...</strong>
-            ) : feeInfo ? (
-              <strong>{formatMoney(feeInfo.estimatedFee)}</strong>
+            {currentStep < WIZARD_STEPS.length ? (
+              <button type="button" className="button button-primary" onClick={goNext}>
+                Tiep tuc
+                <ChevronRight size={18} aria-hidden="true" />
+              </button>
             ) : (
-              <strong>Not calculated yet</strong>
+              <button
+                className={`button button-sos ${submitting ? 'button-loading' : ''}`}
+                type="submit"
+                disabled={submitting || geocoding}
+              >
+                <Send size={18} aria-hidden="true" />
+                {submitting ? 'Dang gui...' : 'Gui yeu cau cuu ho'}
+              </button>
             )}
           </div>
-          {feeInfo ? (
-            <p>
-              Coefficient {feeInfo.coefficient} x (Service price {formatMoney(feeInfo.basePrice)} + Auto travel cost {formatMoney(feeInfo.travelCost)})
-            </p>
-          ) : (
-            <p>{feeError || 'Select a service type and location on the map, then the fee will appear here before you create the request.'}</p>
-          )}
-        </div>
+        </form>
 
-        <div className="actions-row">
-          <button
-            className="button button-primary"
-            type="submit"
-            disabled={submitting || geocoding}
-          >
-            {submitting ? 'Submitting...' : 'Create request'}
-          </button>
+        <div className="card card-muted" style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
+          <CheckCircle2 size={20} color="var(--success)" aria-hidden="true" />
+          <p className="muted-line" style={{ margin: 0 }}>
+            <strong>Buoc 5 - Theo doi:</strong> Sau khi gui, he thong chuyen ban den trang chi tiet voi timeline tien trinh xu ly.
+          </p>
         </div>
-      </form>
+      </div>
     </>
   );
 }

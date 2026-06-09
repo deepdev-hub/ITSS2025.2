@@ -1,5 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import {
+  Building2,
+  CheckCircle2,
+  ClipboardList,
+  DollarSign,
+  LayoutDashboard,
+  Star,
+  Users,
+  XCircle,
+} from 'lucide-react';
 import { adminApi } from '../../api/adminApi';
 import { getApiError } from '../../api/client';
 import Loader from '../../components/common/Loader';
@@ -156,6 +166,8 @@ export default function AdminDashboardPage() {
   return (
     <>
       <PageHeader
+        icon={<LayoutDashboard size={22} />}
+        eyebrow="Quản trị"
         title="Admin Dashboard"
         subtitle="Monitor saved daily statistics, refresh the snapshot on demand, and dispatch staff without leaving the dashboard."
         actions={(
@@ -209,18 +221,18 @@ export default function AdminDashboardPage() {
           </div>
 
           <div className="stats-grid">
-            <StatCard label="Requests" value={dashboard?.requestCount ?? 0} />
-            <StatCard label="Completed Requests" value={dashboard?.completedRequestCount ?? 0} />
-            <StatCard label="Canceled Requests" value={dashboard?.canceledRequestCount ?? 0} />
-            <StatCard label="In Progress Requests" value={dashboard?.inProgressRequestCount ?? 0} />
-            <StatCard label="Paid Payments" value={dashboard?.paidPaymentCount ?? 0} />
-            <StatCard label="Revenue" value={formatCurrency(dashboard?.revenue ?? 0)} />
-            <StatCard label="Reviews" value={dashboard?.reviewCount ?? 0} />
-            <StatCard label="Average Rating" value={averageRatingLabel} />
-            <StatCard label="Customers" value={dashboard?.customerCount ?? 0} />
-            <StatCard label="Staff" value={dashboard?.staffCount ?? 0} />
-            <StatCard label="Companies" value={dashboard?.companyCount ?? 0} />
-            <StatCard label="Approved Companies" value={dashboard?.approvedCompanyCount ?? 0} />
+            <StatCard label="Requests" value={dashboard?.requestCount ?? 0} icon={<ClipboardList size={20} />} variant="info" />
+            <StatCard label="Completed" value={dashboard?.completedRequestCount ?? 0} icon={<CheckCircle2 size={20} />} variant="success" />
+            <StatCard label="Canceled" value={dashboard?.canceledRequestCount ?? 0} icon={<XCircle size={20} />} variant="danger" />
+            <StatCard label="In Progress" value={dashboard?.inProgressRequestCount ?? 0} icon={<ClipboardList size={20} />} variant="warning" />
+            <StatCard label="Paid Payments" value={dashboard?.paidPaymentCount ?? 0} icon={<DollarSign size={20} />} variant="success" />
+            <StatCard label="Revenue" value={formatCurrency(dashboard?.revenue ?? 0)} icon={<DollarSign size={20} />} variant="info" />
+            <StatCard label="Reviews" value={dashboard?.reviewCount ?? 0} icon={<Star size={20} />} />
+            <StatCard label="Avg Rating" value={averageRatingLabel} icon={<Star size={20} />} variant="warning" />
+            <StatCard label="Customers" value={dashboard?.customerCount ?? 0} icon={<Users size={20} />} />
+            <StatCard label="Staff" value={dashboard?.staffCount ?? 0} icon={<Users size={20} />} variant="info" />
+            <StatCard label="Companies" value={dashboard?.companyCount ?? 0} icon={<Building2 size={20} />} />
+            <StatCard label="Approved" value={dashboard?.approvedCompanyCount ?? 0} icon={<Building2 size={20} />} variant="success" />
           </div>
 
           <div className="card">

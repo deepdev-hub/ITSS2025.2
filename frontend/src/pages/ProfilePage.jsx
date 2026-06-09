@@ -1,13 +1,24 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import {
+  Calendar,
+  Lock,
+  Mail,
+  MapPin,
+  MessageCircle,
+  Phone,
+  Shield,
+  Sparkles,
+  User,
+} from 'lucide-react';
 import { authApi } from '../api/authApi';
 import { getApiError } from '../api/client';
+import Alert from '../components/common/Alert';
+import ChatModal from '../components/common/ChatModal';
+import ImageUploadZone from '../components/common/ImageUploadZone';
 import Loader from '../components/common/Loader';
 import PageHeader from '../components/common/PageHeader';
 import { useAuth } from '../context/AuthContext';
 import { addAvatarCacheKey, getAvatarUrl, resolveAvatarUrl } from '../utils/avatar';
-
-const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-const MAX_FILE_SIZE_MB = 5;
 
 const initialProfileForm = {
   fullName: '',
@@ -34,17 +45,14 @@ const initialPasswordForm = {
 
 function getInitials(fullName) {
   if (typeof fullName !== 'string') return '?';
-
-  const initials = fullName
+  return fullName
     .trim()
     .split(/\s+/)
     .filter(Boolean)
     .slice(0, 2)
     .map((word) => word?.charAt(0)?.toUpperCase())
     .filter(Boolean)
-    .join('');
-
-  return initials || '?';
+    .join('') || '?';
 }
 
 function mapUserToForm(user) {
@@ -66,132 +74,24 @@ function mapUserToForm(user) {
   };
 }
 
-function AvatarUpload({ user, onUploadSuccess, onError }) {
-  const { uploadAvatar } = useAuth();
-  const fileInputRef = useRef(null);
-  const [uploading, setUploading] = useState(false);
-  const [previewUrl, setPreviewUrl] = useState(null);
-  const [imageError, setImageError] = useState(false);
-
-  const rawAvatar = previewUrl || getAvatarUrl(user);
-  const initials = getInitials(user?.fullName);
-  const resolvedDisplayUrl = resolveAvatarUrl(rawAvatar);
-  const displayUrl = imageError ? null : addAvatarCacheKey(resolvedDisplayUrl, user?.avatarUpdatedAt);
-
-  useEffect(() => {
-    setImageError(false);
-  }, [rawAvatar]);
-
-  useEffect(() => {
-    return () => {
-      if (previewUrl?.startsWith('blob:')) {
-        URL.revokeObjectURL(previewUrl);
-      }
-    };
-  }, [previewUrl]);
-
-  const handleFileChange = async (event) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
-      onError('Please select a valid image file (JPEG, PNG, WebP, or GIF).');
-      event.target.value = '';
-      return;
-    }
-
-    if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
-      onError(`Image must be smaller than ${MAX_FILE_SIZE_MB}MB.`);
-      event.target.value = '';
-      return;
-    }
-
-    const objectUrl = URL.createObjectURL(file);
-    setPreviewUrl((previous) => {
-      if (previous?.startsWith('blob:')) {
-        URL.revokeObjectURL(previous);
-      }
-      return objectUrl;
-    });
-    setImageError(false);
-
-    setUploading(true);
-    onError('');
-    try {
-      const updatedUser = await uploadAvatar(file);
-      setPreviewUrl((previous) => {
-        if (previous?.startsWith('blob:')) {
-          URL.revokeObjectURL(previous);
-        }
-        return null;
-      });
-      onUploadSuccess('Avatar updated successfully.', updatedUser);
-    } catch (err) {
-      setPreviewUrl((previous) => {
-        if (previous?.startsWith('blob:')) {
-          URL.revokeObjectURL(previous);
-        }
-        return null;
-      });
-      onError(getApiError(err));
-    } finally {
-      setUploading(false);
-      event.target.value = '';
-    }
-  };
-
-  return (
-    <div className="avatar-upload-block">
-      <div className="avatar-preview-wrap">
-        {displayUrl ? (
-          <img
-            src={displayUrl}
-            alt="Avatar"
-            className="avatar-preview"
-            onError={() => setImageError(true)}
-          />
-        ) : (
-          <span className="avatar-preview avatar-initials-lg">{initials}</span>
-        )}
-        {uploading && (
-          <div className="avatar-overlay">
-            <div className="avatar-spinner" />
-          </div>
-        )}
-      </div>
-      <div className="avatar-upload-info">
-        <p className="avatar-upload-hint">
-          JPEG, PNG, WebP or GIF - Max {MAX_FILE_SIZE_MB}MB
-        </p>
-        <button
-          type="button"
-          className="button button-secondary"
-          disabled={uploading}
-          onClick={() => fileInputRef.current?.click()}
-        >
-          {uploading ? 'Uploading...' : 'Change avatar'}
-        </button>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept={ACCEPTED_IMAGE_TYPES.join(',')}
-          style={{ display: 'none' }}
-          onChange={handleFileChange}
-        />
-      </div>
-    </div>
-  );
-}
-
 export default function ProfilePage() {
-  const { user, refreshProfile, updateProfile } = useAuth();
+  const { user, refreshProfile, updateProfile, uploadAvatar } = useAuth();
   const [profileForm, setProfileForm] = useState(initialProfileForm);
   const [passwordForm, setPasswordForm] = useState(initialPasswordForm);
   const [loading, setLoading] = useState(true);
   const [savingProfile, setSavingProfile] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [changingPassword, setChangingPassword] = useState(false);
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState('profile');
+
+  const initials = useMemo(() => getInitials(user?.fullName), [user?.fullName]);
+  const avatarPreview = useMemo(() => {
+    const resolved = resolveAvatarUrl(getAvatarUrl(user));
+    return resolved ? addAvatarCacheKey(resolved, user?.avatarUpdatedAt) : null;
+  }, [user?.avatarUrl, user?.avatarUpdatedAt]);
 
   useEffect(() => {
     async function bootstrap() {
@@ -223,10 +123,7 @@ export default function ProfilePage() {
       const key = name.replace('defaultAddress.', '');
       setProfileForm((previous) => ({
         ...previous,
-        defaultAddress: {
-          ...previous.defaultAddress,
-          [key]: value,
-        },
+        defaultAddress: { ...previous.defaultAddress, [key]: value },
       }));
       return;
     }
@@ -238,6 +135,21 @@ export default function ProfilePage() {
     setPasswordForm((previous) => ({ ...previous, [name]: value }));
   };
 
+  const handleAvatarUpload = async (file) => {
+    setUploadingAvatar(true);
+    setError('');
+    setNotice('');
+    try {
+      await uploadAvatar(file);
+      setNotice('Cập nhật ảnh đại diện thành công.');
+    } catch (err) {
+      setError(getApiError(err));
+      throw err;
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
+
   const submitProfile = async (event) => {
     event.preventDefault();
     setSavingProfile(true);
@@ -245,7 +157,7 @@ export default function ProfilePage() {
     setNotice('');
     try {
       await updateProfile(profileForm);
-      setNotice('Profile updated successfully.');
+      setNotice('Cập nhật hồ sơ thành công.');
     } catch (err) {
       setError(getApiError(err));
     } finally {
@@ -256,7 +168,7 @@ export default function ProfilePage() {
   const submitPassword = async (event) => {
     event.preventDefault();
     if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      setError('New password and confirmation do not match.');
+      setError('Mật khẩu mới và xác nhận không khớp.');
       return;
     }
     setChangingPassword(true);
@@ -268,7 +180,7 @@ export default function ProfilePage() {
         newPassword: passwordForm.newPassword,
       });
       setPasswordForm(initialPasswordForm);
-      setNotice('Password changed successfully.');
+      setNotice('Đổi mật khẩu thành công.');
     } catch (err) {
       setError(getApiError(err));
     } finally {
@@ -277,129 +189,182 @@ export default function ProfilePage() {
   };
 
   if (loading) {
-    return <Loader label="Loading your profile..." />;
+    return <Loader label="Đang tải hồ sơ..." />;
   }
 
   return (
     <>
       <PageHeader
-        title="My Profile"
-        subtitle="Update your personal information and change your password without leaving the app."
+        icon={<User size={22} />}
+        eyebrow="Tài khoản"
+        title="Hồ sơ cá nhân"
+        subtitle="Quản lý thông tin, ảnh đại diện và bảo mật tài khoản của bạn."
+        actions={(
+          <button type="button" className="button button-secondary" onClick={() => setIsChatOpen(true)}>
+            <MessageCircle size={18} aria-hidden="true" />
+            Hỗ trợ
+          </button>
+        )}
       />
 
-      {notice ? <div className="notice">{notice}</div> : null}
-      {error ? <div className="notice error">{error}</div> : null}
+      {notice ? <Alert variant="success">{notice}</Alert> : null}
+      {error ? <Alert variant="error" title="Có lỗi">{error}</Alert> : null}
 
-      <div className="grid-two">
-        <form className="card" onSubmit={submitProfile}>
-          <h2>Profile Information</h2>
-
-          <AvatarUpload
-            user={user}
-            onUploadSuccess={(msg, updatedUser) => {
-              setProfileForm((previous) => ({
-                ...previous,
-                avatarUrl: getAvatarUrl(updatedUser) || previous.avatarUrl,
-              }));
-              setNotice(msg);
-              setError('');
-            }}
-            onError={(msg) => { setError(msg); setNotice(''); }}
-          />
-
-          <div className="form-grid" style={{ marginTop: '1.25rem' }}>
-            <div className="field">
-              <label>Email</label>
-              <input value={user?.email || ''} disabled />
+      <div className="profile-page">
+        <section className="profile-hero card">
+          <div className="profile-hero-cover" />
+          <div className="profile-hero-body">
+            <div className="profile-hero-avatar-wrap">
+              <ImageUploadZone
+                variant="avatar"
+                previewSrc={avatarPreview}
+                fallbackLabel={initials}
+                label="Đổi ảnh đại diện"
+                uploading={uploadingAvatar}
+                onUpload={handleAvatarUpload}
+                onError={setError}
+              />
             </div>
-            <div className="field">
-              <label>Role</label>
-              <input value={user?.roleName || ''} disabled />
-            </div>
-            <div className="field">
-              <label>Full Name</label>
-              <input name="fullName" value={profileForm.fullName} onChange={handleProfileChange} required />
-            </div>
-            <div className="field">
-              <label>Phone</label>
-              <input name="phone" value={profileForm.phone} onChange={handleProfileChange} />
-            </div>
-            <div className="field">
-              <label>Date of Birth</label>
-              <input name="dateOfBirth" type="date" value={profileForm.dateOfBirth} onChange={handleProfileChange} />
-            </div>
-            <div className="field">
-              <label>Gender</label>
-              <input name="gender" value={profileForm.gender} onChange={handleProfileChange} />
-            </div>
-            <div className="field">
-              <label>CCCD</label>
-              <input name="cccd" value={profileForm.cccd} onChange={handleProfileChange} />
+            <div className="profile-hero-info">
+              <span className="profile-hero-badge">
+                <Sparkles size={14} aria-hidden="true" />
+                VBAS Rescue Member
+              </span>
+              <h2>{user?.fullName || 'Người dùng'}</h2>
+              <p>{user?.roleName || 'CUSTOMER'}</p>
+              <div className="profile-hero-meta">
+                <span><Mail size={14} /> {user?.email || 'N/A'}</span>
+                <span><MapPin size={14} /> {profileForm.defaultAddress.province || 'Việt Nam'}</span>
+                <span><Calendar size={14} /> Tham gia {user?.createdAt ? new Date(user.createdAt).getFullYear() : '2024'}</span>
+              </div>
             </div>
           </div>
+        </section>
 
-          <h3>Default Address</h3>
-          <div className="form-grid">
-            <div className="field">
-              <label>Country</label>
-              <input name="defaultAddress.country" value={profileForm.defaultAddress.country} onChange={handleProfileChange} />
-            </div>
-            <div className="field">
-              <label>Province</label>
-              <input name="defaultAddress.province" value={profileForm.defaultAddress.province} onChange={handleProfileChange} />
-            </div>
-            <div className="field">
-              <label>District</label>
-              <input name="defaultAddress.district" value={profileForm.defaultAddress.district} onChange={handleProfileChange} />
-            </div>
-            <div className="field">
-              <label>Ward</label>
-              <input name="defaultAddress.ward" value={profileForm.defaultAddress.ward} onChange={handleProfileChange} />
-            </div>
-            <div className="field">
-              <label>Street</label>
-              <input name="defaultAddress.street" value={profileForm.defaultAddress.street} onChange={handleProfileChange} />
-            </div>
-          </div>
-
-          <div className="field">
-            <label>Address Detail</label>
-            <textarea name="defaultAddress.detail" value={profileForm.defaultAddress.detail} onChange={handleProfileChange} />
-          </div>
-
-          <button className="button button-primary" type="submit" disabled={savingProfile}>
-            {savingProfile ? 'Saving...' : 'Save profile'}
+        <div className="profile-tabs">
+          <button type="button" className={`profile-tab ${activeTab === 'profile' ? 'active' : ''}`} onClick={() => setActiveTab('profile')}>
+            <User size={16} /> Thông tin
           </button>
-        </form>
-
-        <form className="card" onSubmit={submitPassword}>
-          <h2>Change Password</h2>
-          <div className="field">
-            <label>Current Password</label>
-            <input name="currentPassword" type="password" value={passwordForm.currentPassword} onChange={handlePasswordChange} required />
-          </div>
-          <div className="field">
-            <label>New Password</label>
-            <input name="newPassword" type="password" value={passwordForm.newPassword} onChange={handlePasswordChange} minLength="6" required />
-          </div>
-          <div className="field">
-            <label>Confirm New Password</label>
-            <input name="confirmPassword" type="password" value={passwordForm.confirmPassword} onChange={handlePasswordChange} minLength="6" required />
-          </div>
-
-          <div className="card card-muted">
-            <h3>Current Session</h3>
-            <p><strong>Status:</strong> {user?.status}</p>
-            <p><strong>Member Since:</strong> {user?.createdAt ? new Date(user.createdAt).toLocaleString() : 'N/A'}</p>
-            <p><strong>Linked Company:</strong> {user?.companyId || 'N/A'}</p>
-            <p><strong>Linked Staff Profile:</strong> {user?.staffId || 'N/A'}</p>
-          </div>
-
-          <button className="button button-secondary" type="submit" disabled={changingPassword}>
-            {changingPassword ? 'Updating...' : 'Change password'}
+          <button type="button" className={`profile-tab ${activeTab === 'photos' ? 'active' : ''}`} onClick={() => setActiveTab('photos')}>
+            <Sparkles size={16} /> Ảnh đại diện
           </button>
-        </form>
+          <button type="button" className={`profile-tab ${activeTab === 'security' ? 'active' : ''}`} onClick={() => setActiveTab('security')}>
+            <Lock size={16} /> Bảo mật
+          </button>
+        </div>
+
+        <div className="profile-content-grid">
+          <aside className="profile-sidebar card">
+            <h3>Giới thiệu</h3>
+            <ul className="profile-facts">
+              <li><Shield size={16} /> {user?.roleName}</li>
+              <li><Phone size={16} /> {profileForm.phone || 'Chưa cập nhật'}</li>
+              <li><Mail size={16} /> {user?.email}</li>
+              <li><MapPin size={16} /> {profileForm.defaultAddress.province || 'Việt Nam'}</li>
+            </ul>
+          </aside>
+
+          <div className="profile-main">
+            {activeTab === 'profile' ? (
+              <form className="card" onSubmit={submitProfile}>
+                <h3>Chỉnh sửa thông tin</h3>
+                <div className="form-grid">
+                  <div className="field">
+                    <label>Họ và tên</label>
+                    <input name="fullName" value={profileForm.fullName} onChange={handleProfileChange} required />
+                  </div>
+                  <div className="field">
+                    <label>Số điện thoại</label>
+                    <input name="phone" value={profileForm.phone} onChange={handleProfileChange} />
+                  </div>
+                  <div className="field">
+                    <label>Ngày sinh</label>
+                    <input name="dateOfBirth" type="date" value={profileForm.dateOfBirth} onChange={handleProfileChange} />
+                  </div>
+                  <div className="field">
+                    <label>Giới tính</label>
+                    <input name="gender" value={profileForm.gender} onChange={handleProfileChange} />
+                  </div>
+                  <div className="field">
+                    <label>CCCD</label>
+                    <input name="cccd" value={profileForm.cccd} onChange={handleProfileChange} />
+                  </div>
+                </div>
+                <h4 className="profile-section-title">Địa chỉ</h4>
+                <div className="form-grid">
+                  <div className="field">
+                    <label>Tỉnh/Thành</label>
+                    <input name="defaultAddress.province" value={profileForm.defaultAddress.province} onChange={handleProfileChange} />
+                  </div>
+                  <div className="field">
+                    <label>Quận/Huyện</label>
+                    <input name="defaultAddress.district" value={profileForm.defaultAddress.district} onChange={handleProfileChange} />
+                  </div>
+                  <div className="field" style={{ gridColumn: '1 / -1' }}>
+                    <label>Chi tiết</label>
+                    <textarea name="defaultAddress.detail" value={profileForm.defaultAddress.detail} onChange={handleProfileChange} />
+                  </div>
+                </div>
+                <div className="actions-row" style={{ marginTop: '1rem' }}>
+                  <button className={`button button-primary ${savingProfile ? 'button-loading' : ''}`} type="submit" disabled={savingProfile}>
+                    {savingProfile ? 'Đang lưu...' : 'Lưu thay đổi'}
+                  </button>
+                </div>
+              </form>
+            ) : null}
+
+            {activeTab === 'photos' ? (
+              <div className="card profile-photos-card">
+                <h3>Ảnh đại diện</h3>
+                <p className="muted-line">Nhấn vào vùng bên dưới hoặc kéo thả ảnh để tải lên. Ảnh sẽ hiển thị ngay sau khi upload thành công.</p>
+                <ImageUploadZone
+                  previewSrc={avatarPreview}
+                  fallbackLabel={initials}
+                  label="Tải ảnh đại diện"
+                  hint="JPEG, PNG, WebP, GIF — tối đa 5MB"
+                  uploading={uploadingAvatar}
+                  onUpload={handleAvatarUpload}
+                  onError={setError}
+                />
+              </div>
+            ) : null}
+
+            {activeTab === 'security' ? (
+              <form className="card" onSubmit={submitPassword}>
+                <h3>Đổi mật khẩu</h3>
+                <div className="form-grid">
+                  <div className="field">
+                    <label>Mật khẩu hiện tại</label>
+                    <input name="currentPassword" type="password" value={passwordForm.currentPassword} onChange={handlePasswordChange} required />
+                  </div>
+                  <div className="field">
+                    <label>Mật khẩu mới</label>
+                    <input name="newPassword" type="password" value={passwordForm.newPassword} onChange={handlePasswordChange} minLength="6" required />
+                  </div>
+                  <div className="field">
+                    <label>Xác nhận mật khẩu</label>
+                    <input name="confirmPassword" type="password" value={passwordForm.confirmPassword} onChange={handlePasswordChange} minLength="6" required />
+                  </div>
+                </div>
+                <div className="actions-row" style={{ marginTop: '1rem' }}>
+                  <button className={`button button-primary ${changingPassword ? 'button-loading' : ''}`} type="submit" disabled={changingPassword}>
+                    <Lock size={16} aria-hidden="true" />
+                    {changingPassword ? 'Đang cập nhật...' : 'Đổi mật khẩu'}
+                  </button>
+                </div>
+              </form>
+            ) : null}
+          </div>
+        </div>
       </div>
+
+      <ChatModal
+        isOpen={isChatOpen}
+        onClose={() => setIsChatOpen(false)}
+        requestId={null}
+        companyName="Support Team"
+        staffName="Support Agent"
+      />
     </>
   );
 }

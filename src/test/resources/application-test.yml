@@ -1,0 +1,37 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:vbas_test;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1;NON_KEYWORDS=ACCOUNT,USER
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+  mail:
+    host: localhost
+    port: 2525
+    username: test
+    password: test
+    protocol: smtp
+    properties:
+      mail:
+        smtp:
+          auth: false
+          starttls:
+            enable: false
+  task:
+    scheduling:
+      enabled: false
+
+app:
+  cors:
+    allowed-origins: http://localhost:5173
+  jwt:
+    secret: dGVzdC1zZWNyZXQta2V5LWZvci12YmFzLWludGVncmF0aW9uLXRlc3Rz
+    expiration-hours: 2
+  fee:
+    coefficient: 1.2

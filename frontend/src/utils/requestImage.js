@@ -1,4 +1,14 @@
-import { API_ORIGIN } from '../api/client';
+import { API_BASE_URL, API_ORIGIN } from '../api/client';
+
+function getAssetBaseUrl() {
+  if (API_BASE_URL) {
+    return API_BASE_URL;
+  }
+  if (import.meta.env.DEV) {
+    return window.location.origin;
+  }
+  return API_ORIGIN || window.location.origin;
+}
 
 export function getRequestImageUrl(request) {
   if (!request || typeof request !== 'object') return '';
@@ -19,7 +29,7 @@ export function resolveRequestImageUrl(value) {
   }
 
   try {
-    return new URL(raw, API_ORIGIN || window.location.origin).toString();
+    return new URL(raw, getAssetBaseUrl()).toString();
   } catch {
     return null;
   }
