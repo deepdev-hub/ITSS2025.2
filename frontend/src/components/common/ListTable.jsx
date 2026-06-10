@@ -1,11 +1,11 @@
 import { Trash2, Edit2, Eye } from 'lucide-react';
 import './ListTable.css';
 
-export default function ListTable({ 
-  columns, 
-  data, 
-  onEdit, 
-  onDelete, 
+export default function ListTable({
+  columns,
+  data,
+  onEdit,
+  onDelete,
   onView,
   loading = false,
   emptyMessage = 'No data found'

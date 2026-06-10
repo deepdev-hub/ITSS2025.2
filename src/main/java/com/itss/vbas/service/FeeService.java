@@ -6,11 +6,12 @@ import com.itss.vbas.dto.request.FeeDto;
 
 public interface FeeService {
     /**
-     * Predict fee using formula: fee = coefficient * (serviceBasePrice + transportCost)
+     * Predict fee using formula: fee = coefficient * (serviceBasePrice + automaticTravelCost)
      *
      * @param serviceTypeId ID of the service type
-     * @param transportCost transport/travel cost in VND
+     * @param latitude request latitude
+     * @param longitude request longitude
      * @return PredictFeeResponse containing breakdown and estimated fee
      */
-    FeeDto.PredictFeeResponse predictFee(Long serviceTypeId, BigDecimal transportCost);
+    FeeDto.PredictFeeResponse predictFee(Long serviceTypeId, BigDecimal latitude, BigDecimal longitude);
 }

@@ -123,10 +123,11 @@ public class RescueRequestServiceImpl implements RescueRequestService {
                 .orElseThrow(() -> new ResourceNotFoundException("Service type not found with id: " + request.serviceTypeId()));
         CustomerVehicle vehicle = request.vehicleId() == null ? null : customerVehicleRepository.findByIdAndCustomerId(request.vehicleId(), customer.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Vehicle not found with id: " + request.vehicleId()));
-        BigDecimal travelCost = resolveTravelCost(request.transportCost());
+        Address requestLocation = addressService.createAddress(request.location());
         FeeDto.PredictFeeResponse estimatedQuotation = serviceType == null
                 ? null
-                : feeService.predictFee(serviceType.getId(), travelCost);
+                : feeService.predictFee(serviceType.getId(), requestLocation.getLatitude(), requestLocation.getLongitude());
+        BigDecimal travelCost = estimatedQuotation == null ? null : estimatedQuotation.travelCost();
 
         RescueRequest rescueRequest = RescueRequest.builder()
                 .requestCode(CodeGenerator.requestCode())
@@ -138,7 +139,7 @@ public class RescueRequestServiceImpl implements RescueRequestService {
                 .travelCost(travelCost)
                 .feeCoefficient(estimatedQuotation == null ? null : estimatedQuotation.coefficient())
                 .estimatedQuotationAmount(estimatedQuotation == null ? null : estimatedQuotation.estimatedFee())
-                .location(addressService.createAddress(request.location()))
+                .location(requestLocation)
                 .description(request.description())
                 .priorityLevel(parsePriority(request.priorityLevel()))
                 .status(RescueRequestStatus.CREATED)
@@ -440,14 +441,6 @@ public class RescueRequestServiceImpl implements RescueRequestService {
         } catch (Exception ex) {
             throw new BadRequestException("Invalid request status: " + value);
         }
-    }
-
-    private BigDecimal resolveTravelCost(BigDecimal travelCost) {
-        BigDecimal resolved = travelCost == null ? BigDecimal.ZERO : travelCost;
-        if (resolved.compareTo(BigDecimal.ZERO) < 0) {
-            throw new BadRequestException("Travel cost cannot be negative");
-        }
-        return resolved;
     }
 
     @Override

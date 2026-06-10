@@ -9,8 +9,8 @@ import {
   Send,
   AlertTriangle,
   Wrench,
-  Navigation,
   FileCheck,
+  Calculator,
 } from 'lucide-react';
 import { authApi } from '../../api/authApi';
 import { customerApi } from '../../api/customerApi';
@@ -33,31 +33,37 @@ const SUGGESTED_SERVICES_MAP = {
 };
 
 const WIZARD_STEPS = [
-  { id: 'situation', label: 'Tình trạng', hint: 'Xác nhận sự cố & mức ưu tiên' },
-  { id: 'details', label: 'Thông tin', hint: 'Xe, dịch vụ & mô tả' },
-  { id: 'location', label: 'Vị trí', hint: 'Chọn điểm cứu hộ' },
-  { id: 'confirm', label: 'Xác nhận', hint: 'Kiểm tra & gửi yêu cầu' },
+  { id: 'situation', label: 'Tinh trang', hint: 'Xac nhan su co & muc uu tien' },
+  { id: 'details', label: 'Thong tin', hint: 'Xe, dich vu & mo ta' },
+  { id: 'location', label: 'Vi tri', hint: 'Chon diem cuu ho' },
+  { id: 'quotation', label: 'Tinh phi', hint: 'Phi tu dong' },
+  { id: 'confirm', label: 'Xac nhan', hint: 'Kiem tra & gui yeu cau' },
 ];
 
 const STEP_GUIDES = {
   1: {
-    title: 'Bước 1 — Xác nhận tình trạng',
-    text: 'Chọn loại sự cố và mức độ ưu tiên. Chọn EMERGENCY nếu bạn đang gặp nguy hiểm.',
+    title: 'Buoc 1 - Xac nhan tinh trang',
+    text: 'Chon loai su co va muc do uu tien. Chon EMERGENCY neu ban dang gap nguy hiem.',
     icon: AlertTriangle,
   },
   2: {
-    title: 'Bước 2 — Nhập thông tin cần thiết',
-    text: 'Chọn xe, dịch vụ cứu hộ, chi phí di chuyển và mô tả tình huống để đội hỗ trợ chuẩn bị tốt hơn.',
+    title: 'Buoc 2 - Nhap thong tin can thiet',
+    text: 'Chon xe, dich vu cuu ho va mo ta tinh huong de doi ho tro chuan bi tot hon.',
     icon: Wrench,
   },
   3: {
-    title: 'Bước 3 — Xác nhận vị trí',
-    text: 'Nhấn trên bản đồ để chọn vị trí chính xác. Hệ thống sẽ tự điền địa chỉ nếu có thể.',
+    title: 'Buoc 3 - Xac nhan vi tri',
+    text: 'Nhan tren ban do de chon vi tri chinh xac. He thong se tu dien dia chi neu co the.',
     icon: MapPin,
   },
   4: {
-    title: 'Bước 4 — Gửi yêu cầu cứu hộ',
-    text: 'Kiểm tra lại toàn bộ thông tin và phí ước tính trước khi gửi. Sau khi gửi, bạn sẽ theo dõi tiến trình ở bước 5.',
+    title: 'Buoc 4 - Tinh phi tu dong',
+    text: 'He thong tinh phi tu dong tu gia dich vu va chi phi di chuyen gan nhat theo vi tri ban da chon.',
+    icon: Calculator,
+  },
+  5: {
+    title: 'Buoc 5 - Xac nhan va gui yeu cau',
+    text: 'Kiem tra lai toan bo thong tin va phi uoc tinh truoc khi gui. Sau khi gui, ban se theo doi tien trinh o trang chi tiet.',
     icon: FileCheck,
   },
 };
@@ -82,6 +88,11 @@ const initialForm = {
 
 function formatMoney(value) {
   return `${Number(value || 0).toLocaleString('vi-VN')} VND`;
+}
+
+function isValidCoordinate(value, min, max) {
+  const numericValue = Number(value);
+  return Number.isFinite(numericValue) && numericValue >= min && numericValue <= max;
 }
 
 function StepGuide({ step }) {
@@ -113,7 +124,6 @@ export default function CreateRequestPage() {
   const [error, setError] = useState('');
   const [imageError, setImageError] = useState('');
   const [selectedImageFile, setSelectedImageFile] = useState(null);
-  const [transportCost, setTransportCost] = useState('');
   const [feeInfo, setFeeInfo] = useState(null);
   const [feeLoading, setFeeLoading] = useState(false);
   const [feeError, setFeeError] = useState('');
@@ -149,10 +159,10 @@ export default function CreateRequestPage() {
       return;
     }
 
-    const cost = Number(transportCost || 0);
-    if (Number.isNaN(cost) || cost < 0) {
+    if (!isValidCoordinate(form.location.latitude, -90, 90)
+        || !isValidCoordinate(form.location.longitude, -180, 180)) {
       setFeeInfo(null);
-      setFeeError('Travel cost must be a valid non-negative number.');
+      setFeeError('Chon vi tri tren ban do de tinh phi di chuyen tu dong.');
       setFeeLoading(false);
       return;
     }
@@ -162,7 +172,11 @@ export default function CreateRequestPage() {
     setFeeError('');
 
     requestApi
-      .predictFee(Number(form.serviceTypeId), cost)
+      .predictFee(
+        Number(form.serviceTypeId),
+        Number(form.location.latitude),
+        Number(form.location.longitude),
+      )
       .then((data) => {
         if (!cancelled) setFeeInfo(data);
       })
@@ -179,7 +193,7 @@ export default function CreateRequestPage() {
     return () => {
       cancelled = true;
     };
-  }, [form.serviceTypeId, transportCost]);
+  }, [form.serviceTypeId, form.location.latitude, form.location.longitude]);
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -252,26 +266,34 @@ export default function CreateRequestPage() {
   const validateStep = (step) => {
     if (step === 1) {
       if (!form.incidentTypeId) {
-        setError('Vui lòng chọn loại sự cố.');
+        setError('Vui long chon loai su co.');
         return false;
       }
       return true;
     }
     if (step === 2) {
       if (!form.serviceTypeId) {
-        setError('Vui lòng chọn loại dịch vụ.');
-        return false;
-      }
-      const cost = Number(transportCost || 0);
-      if (Number.isNaN(cost) || cost < 0) {
-        setError('Chi phí di chuyển phải là số hợp lệ.');
+        setError('Vui long chon loai dich vu.');
         return false;
       }
       return true;
     }
     if (step === 3) {
-      if (!form.location.province || !form.location.latitude || !form.location.longitude) {
-        setError('Vui lòng chọn vị trí trên bản đồ và điền tỉnh/thành.');
+      if (!form.location.province
+          || !isValidCoordinate(form.location.latitude, -90, 90)
+          || !isValidCoordinate(form.location.longitude, -180, 180)) {
+        setError('Vui long chon vi tri tren ban do va dien tinh/thanh.');
+        return false;
+      }
+      return true;
+    }
+    if (step === 4) {
+      if (feeLoading) {
+        setError('Vui long doi he thong tinh phi tu dong.');
+        return false;
+      }
+      if (!feeInfo) {
+        setError(feeError || 'Chua tinh duoc phi tu dong. Vui long kiem tra dich vu va vi tri.');
         return false;
       }
       return true;
@@ -291,24 +313,35 @@ export default function CreateRequestPage() {
   };
 
   const handleSubmit = async (event) => {
-    event.preventDefault();
-    if (!validateStep(4)) return;
+    event?.preventDefault?.();
+    if (currentStep < WIZARD_STEPS.length) {
+      goNext();
+      return;
+    }
+
+    if (!validateStep(1) || !validateStep(2) || !validateStep(3) || !validateStep(4)) return;
 
     setSubmitting(true);
     setError('');
     setImageError('');
     try {
-      const resolvedTransportCost = Number(transportCost || 0);
+      if (!isValidCoordinate(form.location.latitude, -90, 90)
+          || !isValidCoordinate(form.location.longitude, -180, 180)) {
+        setError('Vui long chon vi tri hop le tren ban do truoc khi tao request.');
+        return;
+      }
+
+      const latitude = Number(form.location.latitude);
+      const longitude = Number(form.location.longitude);
       const payload = {
         ...form,
         vehicleId: form.vehicleId ? Number(form.vehicleId) : null,
         incidentTypeId: Number(form.incidentTypeId),
         serviceTypeId: Number(form.serviceTypeId),
-        transportCost: resolvedTransportCost,
         location: {
           ...form.location,
-          latitude: form.location.latitude ? Number(form.location.latitude) : null,
-          longitude: form.location.longitude ? Number(form.location.longitude) : null,
+          latitude,
+          longitude,
         },
       };
       const created = await requestApi.createRequest(payload);
@@ -343,39 +376,39 @@ export default function CreateRequestPage() {
   return (
     <>
       <PageHeader
-        title="Tạo yêu cầu cứu hộ"
-        subtitle="Hoàn thành từng bước để gửi yêu cầu nhanh và chính xác. Sau khi gửi, bạn sẽ theo dõi tiến trình ở trang chi tiết."
+        title="Tao yeu cau cuu ho"
+        subtitle="Hoan thanh tung buoc de gui yeu cau nhanh va chinh xac. Phi uoc tinh duoc tinh tu dong theo vi tri."
       />
 
-      {error ? <Alert variant="error" title="Không thể tiếp tục">{error}</Alert> : null}
-      {imageError ? <Alert variant="warning" title="Lưu ý">{imageError}</Alert> : null}
+      {error ? <Alert variant="error" title="Khong the tiep tuc">{error}</Alert> : null}
+      {imageError ? <Alert variant="warning" title="Luu y">{imageError}</Alert> : null}
       {form.priorityLevel === 'EMERGENCY' ? (
-        <Alert variant="warning" title="Tình huống khẩn cấp">
-          Bạn đã chọn mức ưu tiên EMERGENCY. Hãy đảm bảo vị trí chính xác và mô tả rõ tình trạng.
+        <Alert variant="warning" title="Tinh huong khan cap">
+          Ban da chon muc uu tien EMERGENCY. Hay dam bao vi tri chinh xac va mo ta ro tinh trang.
         </Alert>
       ) : null}
 
       <div className="wizard-shell">
         <Stepper steps={WIZARD_STEPS} currentStep={currentStep} />
 
-        <form className="card wizard-step-panel" onSubmit={handleSubmit}>
-          {loading ? <p>Đang tải dữ liệu...</p> : null}
+        <div className="card wizard-step-panel">
+          {loading ? <p>Dang tai du lieu...</p> : null}
 
           {!loading && currentStep === 1 ? (
             <>
               <StepGuide step={1} />
               <div className="form-grid">
                 <div className="field">
-                  <label>Loại sự cố</label>
+                  <label>Loai su co</label>
                   <select name="incidentTypeId" value={form.incidentTypeId} onChange={handleChange} required>
-                    <option value="">Chọn sự cố</option>
+                    <option value="">Chon su co</option>
                     {incidentTypes.map((item) => (
                       <option key={item.id} value={item.id}>{item.name}</option>
                     ))}
                   </select>
                 </div>
                 <div className="field">
-                  <label>Mức ưu tiên</label>
+                  <label>Muc uu tien</label>
                   <select name="priorityLevel" value={form.priorityLevel} onChange={handleChange}>
                     <option value="LOW">LOW</option>
                     <option value="NORMAL">NORMAL</option>
@@ -394,7 +427,7 @@ export default function CreateRequestPage() {
                 <div className="field">
                   <label>Xe</label>
                   <select name="vehicleId" value={form.vehicleId} onChange={handleChange}>
-                    <option value="">Không liên kết xe</option>
+                    <option value="">Khong lien ket xe</option>
                     {vehicles.map((vehicle) => (
                       <option key={vehicle.id} value={vehicle.id}>
                         {vehicle.brand} {vehicle.model} - {vehicle.plateNumber}
@@ -403,17 +436,17 @@ export default function CreateRequestPage() {
                   </select>
                 </div>
                 <div className="field">
-                  <label>Dịch vụ</label>
+                  <label>Dich vu</label>
                   <select name="serviceTypeId" value={form.serviceTypeId} onChange={handleChange} required>
-                    <option value="">Chọn dịch vụ</option>
+                    <option value="">Chon dich vu</option>
                     {suggestedServices.length > 0 ? (
                       <>
-                        <optgroup label="Gợi ý">
+                        <optgroup label="Goi y">
                           {suggestedServices.map((item) => (
-                            <option key={item.id} value={item.id}>{item.name} (Đề xuất)</option>
+                            <option key={item.id} value={item.id}>{item.name} (De xuat)</option>
                           ))}
                         </optgroup>
-                        <optgroup label="Dịch vụ khác">
+                        <optgroup label="Dich vu khac">
                           {otherServices.map((item) => (
                             <option key={item.id} value={item.id}>{item.name}</option>
                           ))}
@@ -426,32 +459,21 @@ export default function CreateRequestPage() {
                     )}
                   </select>
                 </div>
-                <div className="field">
-                  <label>Chi phí di chuyển (VND)</label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="1000"
-                    placeholder="Ví dụ: 50000"
-                    value={transportCost}
-                    onChange={(event) => setTransportCost(event.target.value)}
-                  />
-                </div>
               </div>
               <div className="field">
-                <label>Mô tả tình huống</label>
+                <label>Mo ta tinh huong</label>
                 <textarea
                   name="description"
                   value={form.description}
                   onChange={handleChange}
-                  placeholder="Mô tả sự cố, tình trạng xe, yêu cầu hỗ trợ..."
+                  placeholder="Mo ta su co, tinh trang xe, yeu cau ho tro..."
                 />
               </div>
               <div className="field">
-                <label>Ảnh minh họa <span className="muted-line">(tùy chọn)</span></label>
+                <label>Anh minh hoa <span className="muted-line">(tuy chon)</span></label>
                 <ImageUploadZone
-                  label="Thêm ảnh minh họa"
-                  hint={`JPEG, PNG, WebP, GIF — tối đa ${MAX_FILE_SIZE_MB}MB`}
+                  label="Them anh minh hoa"
+                  hint={`JPEG, PNG, WebP, GIF - toi da ${MAX_FILE_SIZE_MB}MB`}
                   accept={ACCEPTED_IMAGE_TYPES}
                   maxSizeMb={MAX_FILE_SIZE_MB}
                   showRemove
@@ -467,7 +489,7 @@ export default function CreateRequestPage() {
             <>
               <StepGuide step={3} />
               <div className="field">
-                <label><MapPin size={16} style={{ verticalAlign: 'middle' }} /> Bản đồ — nhấn để chọn vị trí</label>
+                <label><MapPin size={16} style={{ verticalAlign: 'middle' }} /> Ban do - nhan de chon vi tri</label>
                 <LocationPickerMap
                   value={{
                     latitude: form.location.latitude,
@@ -478,23 +500,23 @@ export default function CreateRequestPage() {
               </div>
               <div className="form-grid" style={{ marginTop: '1rem' }}>
                 <div className="field">
-                  <label>Tỉnh/Thành</label>
+                  <label>Tinh/Thanh</label>
                   <input name="location.province" value={form.location.province} onChange={handleChange} required disabled={geocoding} />
                 </div>
                 <div className="field">
-                  <label>Quận/Huyện</label>
+                  <label>Quan/Huyen</label>
                   <input name="location.district" value={form.location.district} onChange={handleChange} disabled={geocoding} />
                 </div>
                 <div className="field">
-                  <label>Phường/Xã</label>
+                  <label>Phuong/Xa</label>
                   <input name="location.ward" value={form.location.ward} onChange={handleChange} disabled={geocoding} />
                 </div>
                 <div className="field">
-                  <label>Đường</label>
+                  <label>Duong</label>
                   <input name="location.street" value={form.location.street} onChange={handleChange} disabled={geocoding} />
                 </div>
                 <div className="field">
-                  <label>Chi tiết</label>
+                  <label>Chi tiet</label>
                   <input name="location.detail" value={form.location.detail} onChange={handleChange} disabled={geocoding} />
                 </div>
                 <div className="field">
@@ -514,11 +536,46 @@ export default function CreateRequestPage() {
               <StepGuide step={4} />
               <div className="wizard-review-grid">
                 <div className="wizard-review-item">
-                  <span>Sự cố</span>
-                  <strong>{selectedIncident?.name || '—'}</strong>
+                  <span>Dich vu</span>
+                  <strong>{selectedService?.name || '-'}</strong>
                 </div>
                 <div className="wizard-review-item">
-                  <span>Ưu tiên</span>
+                  <span>Vi tri</span>
+                  <strong>{form.location.province || '-'}</strong>
+                </div>
+              </div>
+              <div className={`fee-preview-panel ${feeInfo ? 'fee-preview-panel-ready' : ''}`}>
+                <div>
+                  <span>Phi uoc tinh</span>
+                  {feeLoading ? (
+                    <strong>Dang tinh...</strong>
+                  ) : feeInfo ? (
+                    <strong>{formatMoney(feeInfo.estimatedFee)}</strong>
+                  ) : (
+                    <strong>Chua tinh duoc</strong>
+                  )}
+                </div>
+                {feeInfo ? (
+                  <p>
+                    He so {feeInfo.coefficient} x (Gia dich vu {formatMoney(feeInfo.basePrice)} + Phi di chuyen tu dong {formatMoney(feeInfo.travelCost)})
+                  </p>
+                ) : (
+                  <p>{feeError || 'Chon dich vu va vi tri tren ban do de xem phi uoc tinh.'}</p>
+                )}
+              </div>
+            </>
+          ) : null}
+
+          {!loading && currentStep === 5 ? (
+            <>
+              <StepGuide step={5} />
+              <div className="wizard-review-grid">
+                <div className="wizard-review-item">
+                  <span>Su co</span>
+                  <strong>{selectedIncident?.name || '-'}</strong>
+                </div>
+                <div className="wizard-review-item">
+                  <span>Uu tien</span>
                   <strong>{form.priorityLevel}</strong>
                 </div>
                 <div className="wizard-review-item">
@@ -526,37 +583,21 @@ export default function CreateRequestPage() {
                   <strong>
                     {selectedVehicle
                       ? `${selectedVehicle.brand} ${selectedVehicle.model}`
-                      : 'Không liên kết'}
+                      : 'Khong lien ket'}
                   </strong>
                 </div>
                 <div className="wizard-review-item">
-                  <span>Dịch vụ</span>
-                  <strong>{selectedService?.name || '—'}</strong>
+                  <span>Dich vu</span>
+                  <strong>{selectedService?.name || '-'}</strong>
                 </div>
                 <div className="wizard-review-item">
-                  <span>Vị trí</span>
-                  <strong>{form.location.province || '—'}</strong>
+                  <span>Vi tri</span>
+                  <strong>{form.location.province || '-'}</strong>
                 </div>
-              </div>
-
-              <div className={`fee-preview-panel ${feeInfo ? 'fee-preview-panel-ready' : ''}`} style={{ marginTop: '1rem' }}>
-                <div>
-                  <span>Phí ước tính</span>
-                  {feeLoading ? (
-                    <strong>Đang tính...</strong>
-                  ) : feeInfo ? (
-                    <strong>{formatMoney(feeInfo.estimatedFee)}</strong>
-                  ) : (
-                    <strong>Chưa tính được</strong>
-                  )}
+                <div className="wizard-review-item">
+                  <span>Phi uoc tinh</span>
+                  <strong>{feeInfo ? formatMoney(feeInfo.estimatedFee) : 'Chua tinh duoc'}</strong>
                 </div>
-                {feeInfo ? (
-                  <p>
-                    Hệ số {feeInfo.coefficient} x (Giá dịch vụ {formatMoney(feeInfo.basePrice)} + Di chuyển {formatMoney(feeInfo.transportCost)})
-                  </p>
-                ) : (
-                  <p>{feeError || 'Chọn dịch vụ và nhập chi phí di chuyển để xem phí ước tính.'}</p>
-                )}
               </div>
             </>
           ) : null}
@@ -565,32 +606,33 @@ export default function CreateRequestPage() {
             {currentStep > 1 ? (
               <button type="button" className="button button-secondary" onClick={goBack}>
                 <ChevronLeft size={18} aria-hidden="true" />
-                Quay lại
+                Quay lai
               </button>
             ) : null}
 
             {currentStep < WIZARD_STEPS.length ? (
               <button type="button" className="button button-primary" onClick={goNext}>
-                Tiếp tục
+                Tiep tuc
                 <ChevronRight size={18} aria-hidden="true" />
               </button>
             ) : (
               <button
                 className={`button button-sos ${submitting ? 'button-loading' : ''}`}
-                type="submit"
+                type="button"
                 disabled={submitting || geocoding}
+                onClick={handleSubmit}
               >
                 <Send size={18} aria-hidden="true" />
-                {submitting ? 'Đang gửi...' : 'Gửi yêu cầu cứu hộ'}
+                {submitting ? 'Dang gui...' : 'Gui yeu cau cuu ho'}
               </button>
             )}
           </div>
-        </form>
+        </div>
 
         <div className="card card-muted" style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
           <CheckCircle2 size={20} color="var(--success)" aria-hidden="true" />
           <p className="muted-line" style={{ margin: 0 }}>
-            <strong>Bước 5 — Theo dõi:</strong> Sau khi gửi, hệ thống chuyển bạn đến trang chi tiết với timeline tiến trình xử lý.
+            <strong>Sau khi gui:</strong> He thong chuyen ban den trang chi tiet voi timeline tien trinh xu ly.
           </p>
         </div>
       </div>
