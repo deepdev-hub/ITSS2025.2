@@ -63,22 +63,29 @@ function toForm(account, fallbackRole = 'CUSTOMER') {
 }
 
 function normalizeAddress(address) {
+  if (!address) return null;
   const trimmed = {
-    country: address.country?.trim() || '',
+    country: address.country?.trim() || 'Vietnam',
     province: address.province?.trim() || '',
     district: address.district?.trim() || '',
     ward: address.ward?.trim() || '',
     street: address.street?.trim() || '',
     detail: address.detail?.trim() || '',
   };
-  const hasValue = Object.values(trimmed).some((value) => value !== '');
-  return hasValue ? trimmed : null;
+  const hasDetails = [
+    trimmed.province,
+    trimmed.district,
+    trimmed.ward,
+    trimmed.street,
+    trimmed.detail
+  ].some((value) => value !== '');
+  return hasDetails ? trimmed : null;
 }
 
 function buildPayload(form) {
   return {
     email: form.email.trim(),
-    password: form.password || '',
+    password: form.password || null,
     fullName: form.fullName.trim(),
     phone: form.phone.trim(),
     avatarUrl: form.avatarUrl.trim(),
