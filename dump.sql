@@ -1053,7 +1053,7 @@ COPY public.account (id, email, password_hash, full_name, phone, avatar_url, sta
 93	thien113205@gmail.com	$2a$10$VetlWCsrNI0poUxQHXVgLOI/c0Barx6ytJA1kl39nIpzhZz0CV9UC	Nguyễn Quang Thiện	0329584430		BANNED	2026-04-15 20:44:06.563483	1	\N		96	12345678999
 91	nguyenquangthien1132005@gmail.com	$2a$10$GfuQJOqohdPxyWure1VLHOay01pO4u2AaKqv1UqexHfw.qLAbable	Nguyễn Quang Thiện	0329584430	\N	BANNED	2026-04-15 20:39:59.124745	4	\N	\N	\N	\N
 92	huyen29112002@gmail.com	$2a$10$IOjgmWg0qB/SCUbDS2meDu/LH8xSoPPGZtbpPD7WfJVzs6LEHGnL.	Nguyễn Quang Thiện	0329584430	\N	ACTIVE	2026-04-15 20:40:17.361165	4	\N	\N	110	\N
-75	company@vbas.local	$2a$10$rjHPQwx0fREqDoBTeNTStuK54bl.jGhfHO8QV/fotDrMlK5utkLOm	RapidTow Owner	0900000003	D:\\program\\itss\\ITSS2025.2\\uploads\\avatars\\95799a1d-68d0-42c6-a65a-95d61b9a5607.png	ACTIVE	2026-04-09 14:25:29.43875	3	\N	MALE	143	
+75	company@vbas.local	$2a$10$rjHPQwx0fREqDoBTeNTStuK54bl.jGhfHO8QV/fotDrMlK5utkLOm	RapidTow Owner	0900000003	D:\\program\\itss\\ITSS2025.2\\uploads\\avatars\\95799a1d-68d0-42c6-a65a-95d61b9a5607.png	ACTIVE	2026-04-09 14:25:29.43875	3	\N	MALE	143
 76	staff@vbas.local	$2a$10$7Q2uIg4PZN4te9memDTjD.x3egu0ZpuTBPX0zyYnNQrp71Rnj6Lmi	RapidTow Staff	0900000004	\N	ACTIVE	2026-04-09 14:25:29.43875	4	\N	MALE	145	\N
 \.
 
@@ -1144,11 +1144,11 @@ COPY public.daily_statistics (id, stat_date, request_count, completed_request_co
 --
 
 COPY public.incident_types (id, incident_code, incident_name, description) FROM stdin;
-1	001	Het Xang	Het xang 
+1	001	Het Xang	Het xang
 34	FLAT_TIRE	Flat Tire	Vehicle has a punctured or damaged tire
 35	ENGINE_FAIL	Engine Failure	Vehicle cannot continue due to engine issue
 36	BATTERY	Battery Problem	Battery drained or electrical startup problem
-2	002	Thủng xăm 	Thủng xăm 
+2	002	Thủng xăm 	Thủng xăm
 \.
 
 
@@ -1233,7 +1233,7 @@ COPY public.quotes (id, request_id, company_id, staff_id, quote_code, estimated_
 35	71	34	34	QTE-20260414203120-B9F305	500000.00	500000.00	SENT	2026-04-14 20:31:20.617753	2026-04-14 20:31:00	Towing	1	\N	\N	\N	\N
 36	72	34	\N	QTE-20260414221200-D0A1E2	10000.00	10000.00	SENT	2026-04-14 22:12:00.054445	2026-04-14 22:11:00	Do day binh	1	\N	\N	\N	\N
 37	78	35	36	QTE-20260415210536-22A8E5	1000000.00	800000.00	SENT	2026-04-15 21:05:36.093127	\N	Va xam	1	\N	0.00	\N	\N
-43	125	34	34	QTE-20260520211124-EB86E4	100000.00	100000.00	ACCEPTED	2026-05-20 21:11:24.242528	\N	Battery Support	1	100000.00	100000.00	\N	
+43	125	34	34	QTE-20260520211124-EB86E4	100000.00	100000.00	ACCEPTED	2026-05-20 21:11:24.242528	\N	Battery Support	1	100000.00	100000.00	\N
 44	126	34	34	QTE-20260520213512-CD97F8	1000000.00	1000000.00	ACCEPTED	2026-05-20 21:35:12.023926	\N	Battery Support	1	1000000.00	1000000.00	\N	gggg
 38	124	34	34	QTE-20260519223432-A3F602	300000.00	300000.00	ACCEPTED	2026-05-19 22:34:32.76018	\N	Battery Support	1	300000.00	300000.00	\N	Smoke test deal price update
 45	127	34	34	QTE-20260520221908-AE9E1B	1000000.00	1000000.00	ACCEPTED	2026-05-20 22:19:08.617378	\N	Battery Support	1	1000000.00	1000000.00	\N	alidsfdsklf
@@ -2242,4 +2242,3 @@ GRANT ALL ON SCHEMA public TO PUBLIC;
 --
 -- PostgreSQL database dump complete
 --
-

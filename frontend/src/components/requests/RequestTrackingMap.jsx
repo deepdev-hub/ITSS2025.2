@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { MapContainer, Marker, Polyline, Popup, TileLayer, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { getApiError } from '../../api/client';
@@ -128,7 +129,7 @@ function FitTrackingBounds({ points, boundsKey }) {
   return null;
 }
 
-export default function RequestTrackingMap({ requestId, requestStatus }) {
+export default function RequestTrackingMap({ requestId, requestStatus, staffProfilePath }) {
   const [tracking, setTracking] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -229,11 +230,18 @@ export default function RequestTrackingMap({ requestId, requestStatus }) {
     ? `${Number(tracking.staff.rating).toFixed(1)}/5`
     : 'Chưa có đánh giá';
 
+  const resolvedStaffProfilePath = staffProfilePath || (tracking?.staff?.id ? `/staff/${tracking.staff.id}/profile` : null);
+
   if (technicianStartedTask) {
     return (
       <div className="card tracking-state-card tracking-task-card">
         <div className="tracking-search-icon">OK</div>
         <div>
+          {resolvedStaffProfilePath ? (
+            <Link className="button button-secondary tracking-profile-action" to={resolvedStaffProfilePath}>
+              View profile
+            </Link>
+          ) : null}
           <h2>Technician đang thực hiện nhiệm vụ</h2>
           <p>Staff đã check-in tại điểm cứu hộ. Hệ thống đã dừng cập nhật trạng thái đang tới.</p>
         </div>
@@ -376,6 +384,11 @@ export default function RequestTrackingMap({ requestId, requestStatus }) {
           </div>
         </div>
         <div className="tracking-actions">
+          {resolvedStaffProfilePath ? (
+            <Link className="button button-secondary" to={resolvedStaffProfilePath}>
+              View profile
+            </Link>
+          ) : null}
           <button className="button button-secondary" type="button" disabled>
             Gọi
           </button>

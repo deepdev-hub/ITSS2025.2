@@ -10,7 +10,7 @@ public final class FeeDto {
             Long serviceTypeId,
             String serviceName,
             BigDecimal basePrice,
-            BigDecimal transportCost,
+            BigDecimal travelCost,
             BigDecimal coefficient,
             BigDecimal estimatedFee
     ) {}
