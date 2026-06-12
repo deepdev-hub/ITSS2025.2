@@ -72,4 +72,10 @@ public final class AuthDto {
             ProfileResponse user
     ) {
     }
+
+    public record PasswordResetResponse(
+            String resetLink,
+            boolean emailSent
+    ) {
+    }
 }

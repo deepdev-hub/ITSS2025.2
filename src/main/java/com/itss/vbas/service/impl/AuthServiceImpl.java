@@ -29,6 +29,7 @@ import com.itss.vbas.service.AuthService;
 import com.itss.vbas.service.EmailService;
 import com.itss.vbas.service.FileStorageService;
 import com.itss.vbas.util.PasswordUtil;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -50,6 +51,8 @@ public class AuthServiceImpl implements AuthService {
     private final JwtUtil jwtUtil;
     private final AuthContext authContext;
     private final FileStorageService fileStorageService;
+    private final String frontendBaseUrl;
+    private final long passwordResetExpirationMinutes;
 
     public AuthServiceImpl(
             EmailService emailService,
@@ -64,7 +67,9 @@ public class AuthServiceImpl implements AuthService {
             AppMapper appMapper,
             JwtUtil jwtUtil,
             AuthContext authContext,
-            FileStorageService fileStorageService
+            FileStorageService fileStorageService,
+            @Value("${app.frontend.base-url:http://localhost:5173}") String frontendBaseUrl,
+            @Value("${app.password-reset.expiration-minutes:15}") long passwordResetExpirationMinutes
     ) {
         this.emailService = emailService;
         this.passwordResetTokenRepository = passwordResetTokenRepository;
@@ -79,6 +84,8 @@ public class AuthServiceImpl implements AuthService {
         this.jwtUtil = jwtUtil;
         this.authContext = authContext;
         this.fileStorageService = fileStorageService;
+        this.frontendBaseUrl = frontendBaseUrl;
+        this.passwordResetExpirationMinutes = passwordResetExpirationMinutes;
     }
 
     @Override
@@ -178,24 +185,37 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    public void forgotPassword(String email) {
-        Account account = accountRepository.findByEmailIgnoreCase(email)
+    public AuthDto.PasswordResetResponse forgotPassword(String email) {
+        if (email == null || email.isBlank()) {
+            throw new BadRequestException("Email is required");
+        }
+
+        Account account = accountRepository.findByEmailIgnoreCase(email.trim().toLowerCase())
                 .orElseThrow(() -> new BadRequestException("Email does not exist"));
 
         PasswordResetToken resetToken = PasswordResetToken.builder()
                 .user(account)
                 .token(UUID.randomUUID().toString())
-                .expiresAt(LocalDateTime.now().plusMinutes(15))
+                .expiresAt(LocalDateTime.now().plusMinutes(passwordResetExpirationMinutes))
                 .build();
 
         passwordResetTokenRepository.save(resetToken);
-        String link = "http://localhost:5173/reset-password?token=" + resetToken.getToken();
-        emailService.sendResetPasswordEmail(account.getEmail(), link);
+        String link = buildResetPasswordLink(resetToken.getToken());
+        boolean emailSent = emailService.sendResetPasswordEmail(account.getEmail(), link);
+        return new AuthDto.PasswordResetResponse(emailSent ? null : link, emailSent);
     }
 
     @Override
     public void resetPassword(String token, String newPassword) {
-        PasswordResetToken resetToken = passwordResetTokenRepository.findByToken(token)
+        if (token == null || token.isBlank()) {
+            throw new BadRequestException("Invalid token");
+        }
+
+        if (newPassword == null || newPassword.length() < 6 || newPassword.length() > 100) {
+            throw new BadRequestException("New password must be between 6 and 100 characters");
+        }
+
+        PasswordResetToken resetToken = passwordResetTokenRepository.findByToken(token.trim())
                 .orElseThrow(() -> new BadRequestException("Invalid token"));
 
         if (resetToken.getUsedAt() != null) {
@@ -245,5 +265,15 @@ public class AuthServiceImpl implements AuthService {
     private Role getOrCreateRole(RoleName roleName) {
         return roleRepository.findByRoleName(roleName)
                 .orElseGet(() -> roleRepository.save(Role.builder().roleName(roleName).build()));
+    }
+
+    private String buildResetPasswordLink(String token) {
+        String baseUrl = frontendBaseUrl == null || frontendBaseUrl.isBlank()
+                ? "http://localhost:5173"
+                : frontendBaseUrl.trim();
+        if (baseUrl.endsWith("/")) {
+            baseUrl = baseUrl.substring(0, baseUrl.length() - 1);
+        }
+        return baseUrl + "/reset-password?token=" + token;
     }
 }

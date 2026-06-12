@@ -45,7 +45,7 @@ export default function ResetPasswordPage() {
         token,
         newPassword: password,
       });
-      setMessage(response || 'Doi mat khau thanh cong.');
+      setMessage(response?.message || 'Doi mat khau thanh cong.');
       setPassword('');
       setConfirmPassword('');
     } catch (err) {

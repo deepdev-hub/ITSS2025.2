@@ -21,7 +21,7 @@ public interface AuthService {
 
     List<CommonDto.LookupResponse> getServiceLookups();
 
-    void forgotPassword(String email);
+    AuthDto.PasswordResetResponse forgotPassword(String email);
 
     void resetPassword(String token, String newPassword);
 

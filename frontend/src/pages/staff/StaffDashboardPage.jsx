@@ -83,7 +83,7 @@ export default function StaffDashboardPage() {
               <ArrowRight className="action-card-arrow" size={20} />
             </Link>
 
-            <Link className="action-card" to="/staff/profile">
+            <Link className="action-card" to="/profile">
               <div className="action-card-icon">
                 <User size={32} />
               </div>
@@ -94,7 +94,7 @@ export default function StaffDashboardPage() {
               <ArrowRight className="action-card-arrow" size={20} />
             </Link>
 
-            <Link className="action-card" to="/settings">
+            <Link className="action-card" to="/profile?tab=security">
               <div className="action-card-icon">
                 <Settings size={32} />
               </div>

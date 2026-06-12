@@ -46,6 +46,7 @@ export default function AppRouter() {
         <Route element={<AppShell />}>
           <Route path="/app" element={<Navigate to="/" replace />} />
           <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/settings" element={<Navigate to="/profile?tab=security" replace />} />
           <Route path="/requests/:id" element={<RequestDetailPage />} />
           <Route path="/staff/:id/profile" element={<StaffProfilePage />} />
 
@@ -79,6 +80,7 @@ export default function AppRouter() {
             <Route path="/staff/dashboard" element={<StaffDashboardPage />} />
             <Route path="/staff/assignments" element={<StaffAssignmentsPage />} />
             <Route path="/staff/location" element={<StaffLocationPage />} />
+            <Route path="/staff/profile" element={<Navigate to="/profile" replace />} />
           </Route>
         </Route>
       </Route>

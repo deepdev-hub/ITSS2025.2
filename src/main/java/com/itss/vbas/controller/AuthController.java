@@ -69,9 +69,12 @@ public class AuthController {
     }
 
     @PostMapping("/forgot-password")
-    public ResponseEntity<CommonDto.ApiResponse<Void>> forgotPassword(@RequestParam String email) {
-        authService.forgotPassword(email);
-        return ResponseEntity.ok(CommonDto.ApiResponse.success("Reset password link sent successfully"));
+    public ResponseEntity<CommonDto.ApiResponse<AuthDto.PasswordResetResponse>> forgotPassword(@RequestParam String email) {
+        AuthDto.PasswordResetResponse response = authService.forgotPassword(email);
+        String message = response.emailSent()
+                ? "Reset password link sent successfully"
+                : "Reset password link generated. Email is not configured, use the returned link.";
+        return ResponseEntity.ok(CommonDto.ApiResponse.success(message, response));
     }
 
     @PostMapping("/reset-password")

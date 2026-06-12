@@ -4,15 +4,28 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.when;
 
 import java.util.Map;
 
 import com.itss.vbas.entity.Account;
+import com.itss.vbas.entity.PasswordResetToken;
 import com.itss.vbas.enums.AccountStatus;
 import com.itss.vbas.enums.RoleName;
+import com.itss.vbas.repository.PasswordResetTokenRepository;
+import com.itss.vbas.service.EmailService;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.mock.mockito.MockBean;
 
 class AuthControllerIntegrationTest extends IntegrationTestSupport {
+
+    @Autowired
+    private PasswordResetTokenRepository passwordResetTokenRepository;
+
+    @MockBean
+    private EmailService emailService;
 
     @Test
     void registerCustomerReturnsCreatedTokenAndProfile() throws Exception {
@@ -104,5 +117,70 @@ class AuthControllerIntegrationTest extends IntegrationTestSupport {
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.id").value(customer.getId()))
                 .andExpect(jsonPath("$.data.email").value(customer.getEmail()));
+    }
+
+    @Test
+    void forgotPasswordCreatesTokenAndReportsEmailSent() throws Exception {
+        Account customer = createCustomer("forgot@test.local");
+        when(emailService.sendResetPasswordEmail(anyString(), anyString())).thenReturn(true);
+
+        mockMvc.perform(post("/api/auth/forgot-password")
+                        .param("email", customer.getEmail()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("Reset password link sent successfully"))
+                .andExpect(jsonPath("$.data.emailSent").value(true));
+
+        PasswordResetToken token = passwordResetTokenRepository.findAll().get(0);
+        org.assertj.core.api.Assertions.assertThat(token.getUser().getId()).isEqualTo(customer.getId());
+        org.assertj.core.api.Assertions.assertThat(token.getUsedAt()).isNull();
+    }
+
+    @Test
+    void forgotPasswordReturnsResetLinkWhenEmailIsNotConfigured() throws Exception {
+        Account customer = createCustomer("forgot-local@test.local");
+        when(emailService.sendResetPasswordEmail(anyString(), anyString())).thenReturn(false);
+
+        mockMvc.perform(post("/api/auth/forgot-password")
+                        .param("email", customer.getEmail()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.emailSent").value(false))
+                .andExpect(jsonPath("$.data.resetLink").value(org.hamcrest.Matchers.containsString("/reset-password?token=")));
+    }
+
+    @Test
+    void resetPasswordWithValidTokenUpdatesPasswordAndRejectsReuse() throws Exception {
+        Account customer = createCustomer("reset@test.local");
+        when(emailService.sendResetPasswordEmail(anyString(), anyString())).thenReturn(false);
+
+        mockMvc.perform(post("/api/auth/forgot-password")
+                        .param("email", customer.getEmail()))
+                .andExpect(status().isOk());
+
+        String token = passwordResetTokenRepository.findAll().get(0).getToken();
+
+        mockMvc.perform(post("/api/auth/reset-password")
+                        .param("token", token)
+                        .param("newPassword", "NewPassword123"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("Password reset successfully"));
+
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(jsonContentType())
+                        .content(json(Map.of(
+                                "email", customer.getEmail(),
+                                "password", "NewPassword123"
+                        ))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.token").exists());
+
+        mockMvc.perform(post("/api/auth/reset-password")
+                        .param("token", token)
+                        .param("newPassword", "AnotherPassword123"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false));
     }
 }
