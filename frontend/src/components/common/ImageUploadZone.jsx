@@ -8,8 +8,8 @@ export default function ImageUploadZone({
   onFileSelected,
   onUpload,
   uploading = false,
-  label = 'Thêm ảnh',
-  hint = 'JPEG, PNG, WebP, GIF — tối đa 5MB',
+  label = 'Add image',
+  hint = 'JPEG, PNG, WebP, GIF - up to 5MB',
   accept = DEFAULT_ACCEPT,
   maxSizeMb = 5,
   variant = 'default',
@@ -37,12 +37,12 @@ export default function ImageUploadZone({
     if (!file) return;
 
     if (!accept.includes(file.type)) {
-      onError?.('Vui lòng chọn file ảnh hợp lệ (JPEG, PNG, WebP hoặc GIF).');
+      onError?.('Please choose a valid image file (JPEG, PNG, WebP, or GIF).');
       return;
     }
 
     if (file.size > maxSizeMb * 1024 * 1024) {
-      onError?.(`Ảnh phải nhỏ hơn ${maxSizeMb}MB.`);
+      onError?.(`Image must be smaller than ${maxSizeMb}MB.`);
       return;
     }
 
@@ -167,7 +167,7 @@ export default function ImageUploadZone({
             {uploading ? (
               <div className="image-upload-overlay">
                 <Loader2 size={28} className="spin-icon" />
-                <span>Đang tải lên...</span>
+                <span>Uploading...</span>
               </div>
             ) : null}
           </div>
@@ -180,7 +180,7 @@ export default function ImageUploadZone({
             <p>{hint}</p>
             <span className="image-upload-cta">
               <Upload size={16} aria-hidden="true" />
-              Nhấn hoặc kéo thả ảnh vào đây
+              Click or drag an image here
             </span>
           </div>
         )}
@@ -199,12 +199,12 @@ export default function ImageUploadZone({
         <div className="image-upload-actions">
           <button type="button" className="button button-secondary" disabled={uploading} onClick={openPicker}>
             <Camera size={16} aria-hidden="true" />
-            Đổi ảnh
+            Change image
           </button>
           {showRemove ? (
             <button type="button" className="button button-danger" disabled={uploading} onClick={handleRemove}>
               <Trash2 size={16} aria-hidden="true" />
-              Xóa
+              Remove
             </button>
           ) : null}
         </div>

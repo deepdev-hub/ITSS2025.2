@@ -1,120 +1,181 @@
-import { useState, useEffect, useRef } from 'react';
-import { Send, X } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Send } from 'lucide-react';
+import { requestApi } from '../../api/requestApi';
+import { getApiError } from '../../api/client';
+import { useAuth } from '../../context/AuthContext';
 import Modal from './Modal';
 import './ChatModal.css';
 
+const CHAT_POLL_INTERVAL_MS = 2500;
+
+function normalizeMessages(items = []) {
+  const byId = new Map();
+  [...items]
+    .sort((left, right) => new Date(left.sentAt).getTime() - new Date(right.sentAt).getTime())
+    .forEach((item) => {
+      byId.set(item.id, item);
+    });
+  return Array.from(byId.values());
+}
+
+function formatMessageTime(value) {
+  if (!value) return '';
+  return new Date(value).toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function getPeerName(staffName, companyName) {
+  return staffName || companyName || 'Rescue Team';
+}
+
 export default function ChatModal({ isOpen, onClose, requestId, companyName, staffName }) {
+  const { user } = useAuth();
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
+  const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
+  const [error, setError] = useState('');
+  const [lastSyncedAt, setLastSyncedAt] = useState(null);
   const messagesEndRef = useRef(null);
+  const refreshInFlightRef = useRef(false);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  const loadMessages = useCallback(async ({ silent = false } = {}) => {
+    if (!isOpen || !requestId || refreshInFlightRef.current) {
+      return;
+    }
+
+    refreshInFlightRef.current = true;
+    if (!silent) {
+      setLoading(true);
+    }
+    setError('');
+
+    try {
+      const requestMessages = await requestApi.getMessages(requestId);
+      setMessages(normalizeMessages(requestMessages));
+      setLastSyncedAt(new Date().toISOString());
+    } catch (err) {
+      setError(getApiError(err));
+    } finally {
+      refreshInFlightRef.current = false;
+      if (!silent) {
+        setLoading(false);
+      }
+    }
+  }, [isOpen, requestId]);
+
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
 
-  // Simulate loading messages for the request
   useEffect(() => {
-    if (isOpen && requestId) {
-      // In a real app, you would load messages from the API
-      setMessages([
-        {
-          id: 1,
-          sender: 'You',
-          text: 'Xin chào, tôi cần hỗ trợ cứu hộ khẩn cấp',
-          timestamp: new Date(Date.now() - 5 * 60000),
-          isCustomer: true,
-        },
-        {
-          id: 2,
-          sender: staffName || 'Đội cứu hộ',
-          text: 'Chúng tôi đã nhận được yêu cầu của bạn. Chúng tôi sẽ có mặt trong 15 phút.',
-          timestamp: new Date(Date.now() - 4 * 60000),
-          isCustomer: false,
-        },
-        {
-          id: 3,
-          sender: staffName || 'Đội cứu hộ',
-          text: 'Hiện tại chúng tôi đang trên đường. Vui lòng đứng yên chờ đợi.',
-          timestamp: new Date(Date.now() - 2 * 60000),
-          isCustomer: false,
-        },
-      ]);
+    if (!isOpen) {
+      return undefined;
     }
-  }, [isOpen, requestId, staffName]);
+
+    setNewMessage('');
+    setError('');
+
+    if (!requestId) {
+      setMessages([]);
+      setLoading(false);
+      setLastSyncedAt(null);
+      return undefined;
+    }
+
+    loadMessages();
+    const intervalId = window.setInterval(() => {
+      loadMessages({ silent: true });
+    }, CHAT_POLL_INTERVAL_MS);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [isOpen, loadMessages, requestId]);
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
-    if (!newMessage.trim()) return;
+    const content = newMessage.trim();
+    if (!requestId || !content) return;
 
     setSending(true);
-    // Add message to local state
-    const userMessage = {
-      id: messages.length + 1,
-      sender: 'You',
-      text: newMessage.trim(),
-      timestamp: new Date(),
-      isCustomer: true,
-    };
+    setError('');
 
-    setMessages((prev) => [...prev, userMessage]);
-    setNewMessage('');
-
-    // Simulate API call
-    setTimeout(() => {
-      const replyMessages = [
-        'Cảm ơn bạn đã thông báo. Chúng tôi sẽ xử lý ngay.',
-        'Chúng tôi đang kiểm tra thông tin của bạn.',
-        'Có gì tôi có thể giúp thêm không?',
-        'Chúng tôi sẽ liên lạc với bạn ngay.',
-      ];
-      const randomReply =
-        replyMessages[Math.floor(Math.random() * replyMessages.length)];
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: prev.length + 1,
-          sender: staffName || 'Đội cứu hộ',
-          text: randomReply,
-          timestamp: new Date(),
-          isCustomer: false,
-        },
-      ]);
+    try {
+      const sentMessage = await requestApi.sendMessage(requestId, { content });
+      setMessages((previous) => normalizeMessages([...previous, sentMessage]));
+      setNewMessage('');
+      setLastSyncedAt(new Date().toISOString());
+      loadMessages({ silent: true });
+    } catch (err) {
+      setError(getApiError(err));
+    } finally {
       setSending(false);
-    }, 800);
+    }
   };
+
+  const peerName = getPeerName(staffName, companyName);
+  const canSend = Boolean(requestId);
 
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={`Chat với ${companyName || 'Đội cứu hộ'}`}
+      title={`Chat with ${peerName}`}
       size="medium"
       footer={null}
     >
       <div className="chat-modal-container">
+        <div className="chat-status">
+          {requestId ? (
+            <span>
+              {loading ? 'Loading messages...' : `Live refresh every ${CHAT_POLL_INTERVAL_MS / 1000}s`}
+              {lastSyncedAt ? ` - Last sync ${formatMessageTime(lastSyncedAt)}` : ''}
+            </span>
+          ) : (
+            <span>Open an assigned rescue request to chat directly with the rescue staff.</span>
+          )}
+        </div>
+
+        {error ? <div className="chat-error">{error}</div> : null}
+
         <div className="chat-messages">
-          {messages.map((msg) => (
-            <div
-              key={msg.id}
-              className={`chat-message-row ${msg.isCustomer ? 'own' : ''}`}
-            >
-              <div className={`chat-bubble ${msg.isCustomer ? 'own' : ''}`}>
-                <div className="chat-sender">{msg.sender}</div>
-                <div className="chat-text">{msg.text}</div>
-                <div className="chat-time">
-                  {msg.timestamp.toLocaleTimeString('vi-VN', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
+          {!requestId ? (
+            <div className="chat-empty">No active request selected.</div>
+          ) : null}
+
+          {requestId && !loading && messages.length === 0 ? (
+            <div className="chat-empty">No messages yet. Start the conversation with the assigned rescue staff.</div>
+          ) : null}
+
+          {messages.map((msg) => {
+            const isOwnMessage = msg.senderId === user?.id;
+            const senderName = isOwnMessage ? 'You' : (msg.senderName || peerName);
+
+            return (
+              <div
+                key={msg.id}
+                className={`chat-message-row ${isOwnMessage ? 'own' : ''}`}
+              >
+                <div className={`chat-bubble ${isOwnMessage ? 'own' : ''}`}>
+                  <div className="chat-sender">
+                    <span>{senderName}</span>
+                    {msg.senderRole ? <span className="chat-role-pill">{msg.senderRole}</span> : null}
+                  </div>
+                  <div className="chat-text">{msg.content}</div>
+                  <div className="chat-time">
+                    {formatMessageTime(msg.sentAt)}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
           <div ref={messagesEndRef} />
         </div>
 
@@ -123,15 +184,16 @@ export default function ChatModal({ isOpen, onClose, requestId, companyName, sta
             type="text"
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
-            placeholder="Nhập tin nhắn..."
+            placeholder="Type a message..."
             className="chat-input"
-            disabled={sending}
+            disabled={sending || !canSend}
           />
           <button
             type="submit"
             className="button button-primary"
-            disabled={sending || !newMessage.trim()}
+            disabled={sending || !canSend || !newMessage.trim()}
             style={{ borderRadius: '12px', padding: '0.6rem 1rem' }}
+            aria-label="Send message"
           >
             <Send size={16} />
           </button>

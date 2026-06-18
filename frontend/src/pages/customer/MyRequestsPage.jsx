@@ -51,7 +51,7 @@ export default function MyRequestsPage() {
     setNotice('');
     try {
       await requestApi.cancelRequest(requestId, { note: 'Canceled by customer from My Requests page' });
-      setNotice('Đã hủy yêu cầu thành công.');
+      setNotice('Request canceled successfully.');
       await loadRequests();
     } catch (err) {
       setError(getApiError(err));
@@ -71,13 +71,13 @@ export default function MyRequestsPage() {
     <>
       <PageHeader
         icon={<History size={22} />}
-        eyebrow="Khách hàng"
-        title="Lịch sử yêu cầu cứu hộ"
-        subtitle="Theo dõi các yêu cầu đang xử lý và xem lại lịch sử cứu hộ trước đây."
+        eyebrow="Customer"
+        title="Rescue Request History"
+        subtitle="Track active requests and review your previous rescue history."
         actions={
           <Link className="button button-sos" to="/customer/requests/new">
             <PhoneCall size={18} aria-hidden="true" />
-            SOS — Tạo yêu cầu
+            SOS - Create Request
           </Link>
         }
       />
@@ -86,34 +86,34 @@ export default function MyRequestsPage() {
         <div className="stat-card stat-card-info">
           <Clock size={18} style={{ marginRight: '8px' }} />
           <div>
-            <span className="stat-card-label">Đang xử lý</span>
+            <span className="stat-card-label">Active</span>
             <strong className="stat-card-value">{activeCount}</strong>
           </div>
         </div>
         <div className="stat-card">
           <AlertCircle size={18} style={{ marginRight: '8px' }} />
           <div>
-            <span className="stat-card-label">Tổng yêu cầu</span>
+            <span className="stat-card-label">Total Requests</span>
             <strong className="stat-card-value">{requests.length}</strong>
           </div>
         </div>
       </div>
 
       {notice ? <Alert variant="success">{notice}</Alert> : null}
-      {error ? <Alert variant="error" title="Có lỗi xảy ra">{error}</Alert> : null}
+      {error ? <Alert variant="error" title="Something went wrong">{error}</Alert> : null}
 
-      {loading ? <Loader label="Đang tải lịch sử yêu cầu..." /> : null}
+      {loading ? <Loader label="Loading request history..." /> : null}
 
       {!loading ? (
         <div className="history-list">
           {requests.length === 0 ? (
             <div className="card empty-state">
               <History size={32} color="var(--primary)" aria-hidden="true" />
-              <h2>Chưa có yêu cầu cứu hộ</h2>
-              <p className="muted-line">Khi gặp sự cố, nhấn SOS để gửi yêu cầu hỗ trợ ngay.</p>
+              <h2>No rescue requests yet</h2>
+              <p className="muted-line">When you have a vehicle issue, press SOS to request support right away.</p>
               <Link className="button button-sos" to="/customer/requests/new">
                 <FilePlus2 size={18} aria-hidden="true" />
-                Tạo yêu cầu đầu tiên
+                Create first request
               </Link>
             </div>
           ) : (
@@ -123,7 +123,7 @@ export default function MyRequestsPage() {
                   <div>
                     <strong>{request.requestCode}</strong>
                     <div className="muted-line">
-                      ID #{request.id} · {formatDateTime(request.createdAt)}
+                      ID #{request.id} - {formatDateTime(request.createdAt)}
                     </div>
                   </div>
                   <div className="history-card-meta">
@@ -136,35 +136,35 @@ export default function MyRequestsPage() {
                   <div className="wizard-review-item">
                     <span>
                       <AlertCircle size={14} style={{ marginRight: '4px', verticalAlign: 'middle' }} />
-                      Sự cố / Dịch vụ
+                      Incident / Service
                     </span>
                     <strong>{request.incidentTypeName}</strong>
-                    <div className="muted-line">{request.serviceTypeName || 'Chưa chọn dịch vụ'}</div>
+                    <div className="muted-line">{request.serviceTypeName || 'No service selected'}</div>
                   </div>
                   <div className="wizard-review-item">
                     <span>
                       <MapPin size={14} style={{ marginRight: '4px', verticalAlign: 'middle' }} />
-                      Vị trí
+                      Location
                     </span>
                     <strong>{getRequestLocationLabel(request)}</strong>
                   </div>
                   <div className="wizard-review-item">
                     <span>
                       <Truck size={14} style={{ marginRight: '4px', verticalAlign: 'middle' }} />
-                      Đội cứu hộ
+                      Rescue Team
                     </span>
-                    <strong>{request.assignedCompany?.companyName || 'Đang chờ phân công'}</strong>
+                    <strong>{request.assignedCompany?.companyName || 'Waiting for assignment'}</strong>
                     <Countdown
                       expiresAt={request.expiresAt}
                       status={request.assignmentStatus}
-                      label="Còn lại"
+                      label="Remaining"
                     />
                   </div>
                 </div>
 
                 <div className="history-card-actions">
                   <Link className="button button-primary" to={`/requests/${request.id}`}>
-                    Theo dõi tiến trình
+                    Track progress
                   </Link>
 
                   {request.assignedCompany && (
@@ -172,7 +172,7 @@ export default function MyRequestsPage() {
                       className="button button-secondary"
                       type="button"
                       onClick={() => handleOpenChat(request)}
-                      title="Chat với đội cứu hộ"
+                      title="Chat with rescue team"
                     >
                       <MessageCircle size={16} />
                       Chat
@@ -186,7 +186,7 @@ export default function MyRequestsPage() {
                       disabled={actionId === request.id}
                       onClick={() => handleCancel(request.id)}
                     >
-                      {actionId === request.id ? 'Đang hủy...' : 'Hủy yêu cầu'}
+                      {actionId === request.id ? 'Canceling...' : 'Cancel request'}
                     </button>
                   ) : null}
                 </div>
@@ -208,46 +208,6 @@ export default function MyRequestsPage() {
           staffName={chatRequest.assignedStaff?.fullName}
         />
       )}
-
-      {/* Floating Chat Button for General Support */}
-      <button
-        className="floating-chat-button"
-        onClick={() => {
-          setChatRequest({ id: null, assignedCompany: { companyName: 'Support Team' }, assignedStaff: { fullName: 'Support Agent' } });
-          setIsChatOpen(true);
-        }}
-        title="Chat with support"
-      >
-        <MessageCircle size={24} />
-      </button>
-
-      <style>{`
-        .floating-chat-button {
-          position: fixed;
-          bottom: 30px;
-          right: 30px;
-          width: 60px;
-          height: 60px;
-          border-radius: 50%;
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-          color: white;
-          border: none;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
-          transition: all 0.3s ease;
-          z-index: 1000;
-        }
-        .floating-chat-button:hover {
-          transform: translateY(-3px);
-          box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
-        }
-        .floating-chat-button:active {
-          transform: translateY(-1px);
-        }
-      `}</style>
     </>
   );
 }

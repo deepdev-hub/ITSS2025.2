@@ -9,12 +9,13 @@ export const authApi = {
   updateProfile: (payload) => unwrap(apiClient.put('/api/auth/profile', payload)),
   changePassword: (payload) => unwrap(apiClient.put('/api/auth/change-password', payload)),
   forgotPassword: (email) => apiClient
-    .post('/api/auth/forgot-password', null, { params: { email: email.trim() } })
+    .post('/api/auth/forgot-password', { email: email.trim() })
     .then((response) => response.data),
-  resetPassword: ({ token, newPassword }) => apiClient
-    .post('/api/auth/reset-password', null, {
-      params: { token: token.trim(), newPassword },
-    })
+  verifyResetOtp: ({ email, otp }) => apiClient
+    .post('/api/auth/verify-reset-otp', { email: email.trim(), otp: otp.trim() })
+    .then((response) => response.data),
+  resetPassword: ({ resetToken, newPassword }) => apiClient
+    .post('/api/auth/reset-password', { resetToken: resetToken.trim(), newPassword })
     .then((response) => response.data),
   getIncidentTypes: () => unwrap(apiClient.get('/api/auth/lookups/incident-types')),
   getServiceTypes: () => unwrap(apiClient.get('/api/auth/lookups/service-types')),

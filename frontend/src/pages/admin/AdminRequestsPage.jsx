@@ -23,14 +23,14 @@ const icons = {
     iconUrl: 'https://cdn-icons-png.flaticon.com/512/1995/1995562.png',
     iconSize: [32, 32], iconAnchor: [16, 32], popupAnchor: [0, -32],
   }),
-  // ⚠️ Mới tạo/Đang tìm thợ (Hazard Warning)
+  // Newly created or searching (hazard warning)
   CREATED: createIcon('https://cdn-icons-png.flaticon.com/512/179/179386.png'),
   SEARCHING: createIcon('https://cdn-icons-png.flaticon.com/512/179/179386.png'),
-  // ⏳ Đã gán, chờ thợ bấm nút (Clock/Pending)
+  // Matched and waiting for staff response (clock/pending)
   MATCHED: createIcon('https://cdn-icons-png.flaticon.com/512/3582/3582012.png'),
-  // ✅ Thợ đã nhận (Handshake/Accepted)
+  // Staff accepted (handshake/accepted)
   ACCEPTED: createIcon('https://cdn-icons-png.flaticon.com/512/11529/11529555.png'),
-  // 🛠️ Đang sửa chữa (Tools/In Progress)
+  // Repair in progress (tools/in progress)
   IN_PROGRESS: createIcon('https://cdn-icons-png.flaticon.com/512/1013/1013374.png'),
 };
 
@@ -79,7 +79,7 @@ export default function AdminRequestsPage() {
     setAssigningId(requestId);
     try {
       await adminApi.autoAssign(requestId);
-      setNotice(`Chế độ điều phối chuỗi đã kích hoạt cho: ${requestId}`);
+      setNotice(`Chained dispatch mode activated for: ${requestId}`);
       await loadData();
     } catch (err) {
       setError(getApiError(err));
@@ -137,7 +137,7 @@ export default function AdminRequestsPage() {
             <h4>{hoveredStaff.fullName}</h4>
             <p className="staff-id">Staff ID: {hoveredStaff.id}</p>
             <p><strong>JobTitle:</strong> {hoveredStaff.jobTitle}</p>
-            <p className="status">● ACTIVE</p>
+            <p className="status">ACTIVE</p>
           </div>
         )}
 
@@ -147,7 +147,7 @@ export default function AdminRequestsPage() {
             <p><StatusBadge value={hoveredRequest.status} /></p>
             <p><strong>Customer:</strong> {hoveredRequest.customerName}</p>
             <p className="note-text"><strong>Note:</strong> {hoveredRequest.description || 'N/A'}</p>
-            {hoveredRequest.status === 'MATCHED' && <p className="timer">⏳ Timeout: {hoveredRequest.timeoutSeconds}s</p>}
+            {hoveredRequest.status === 'MATCHED' && <p className="timer">Timeout: {hoveredRequest.timeoutSeconds}s</p>}
           </div>
         )}
       </section>

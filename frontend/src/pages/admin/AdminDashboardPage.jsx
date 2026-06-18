@@ -167,7 +167,7 @@ export default function AdminDashboardPage() {
     <>
       <PageHeader
         icon={<LayoutDashboard size={22} />}
-        eyebrow="Quản trị"
+        eyebrow="Admin"
         title="Admin Dashboard"
         subtitle="Monitor saved daily statistics, refresh the snapshot on demand, and dispatch staff without leaving the dashboard."
         actions={(

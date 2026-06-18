@@ -7,6 +7,7 @@ import com.itss.vbas.dto.common.CommonDto;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 public final class AuthDto {
@@ -73,9 +74,31 @@ public final class AuthDto {
     ) {
     }
 
+    public record PasswordResetRequest(
+            @NotBlank @Email String email
+    ) {
+    }
+
     public record PasswordResetResponse(
-            String resetLink,
-            boolean emailSent
+            boolean emailSent,
+            long expiresInMinutes
+    ) {
+    }
+
+    public record VerifyPasswordResetOtpRequest(
+            @NotBlank @Email String email,
+            @NotBlank @Pattern(regexp = "^\\d{6}$", message = "OTP must contain 6 digits") String otp
+    ) {
+    }
+
+    public record PasswordResetVerificationResponse(
+            String resetToken
+    ) {
+    }
+
+    public record ResetPasswordRequest(
+            @NotBlank String resetToken,
+            @NotBlank @Size(min = 6, max = 100) String newPassword
     ) {
     }
 }

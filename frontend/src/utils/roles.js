@@ -19,6 +19,13 @@ export function getDefaultRoute(roleName) {
   }
 }
 
+export function getPostLoginRoute(roleName, fromPath) {
+  if (roleName === ROLES.ADMIN) {
+    return getDefaultRoute(roleName);
+  }
+  return fromPath || getDefaultRoute(roleName);
+}
+
 export function getMenuItems(roleName) {
   switch (roleName) {
     case ROLES.ADMIN:

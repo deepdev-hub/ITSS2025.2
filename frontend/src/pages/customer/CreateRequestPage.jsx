@@ -33,37 +33,37 @@ const SUGGESTED_SERVICES_MAP = {
 };
 
 const WIZARD_STEPS = [
-  { id: 'situation', label: 'Tinh trang', hint: 'Xac nhan su co & muc uu tien' },
-  { id: 'details', label: 'Thong tin', hint: 'Xe, dich vu & mo ta' },
-  { id: 'location', label: 'Vi tri', hint: 'Chon diem cuu ho' },
-  { id: 'quotation', label: 'Tinh phi', hint: 'Phi tu dong' },
-  { id: 'confirm', label: 'Xac nhan', hint: 'Kiem tra & gui yeu cau' },
+  { id: 'situation', label: 'Situation', hint: 'Confirm issue and priority' },
+  { id: 'details', label: 'Details', hint: 'Vehicle, service, and notes' },
+  { id: 'location', label: 'Location', hint: 'Choose rescue point' },
+  { id: 'quotation', label: 'Estimate', hint: 'Automatic fee' },
+  { id: 'confirm', label: 'Confirm', hint: 'Review and submit' },
 ];
 
 const STEP_GUIDES = {
   1: {
-    title: 'Buoc 1 - Xac nhan tinh trang',
-    text: 'Chon loai su co va muc do uu tien. Chon EMERGENCY neu ban dang gap nguy hiem.',
+    title: 'Step 1 - Confirm the situation',
+    text: 'Choose the incident type and priority. Select EMERGENCY if you are in danger.',
     icon: AlertTriangle,
   },
   2: {
-    title: 'Buoc 2 - Nhap thong tin can thiet',
-    text: 'Chon xe, dich vu cuu ho va mo ta tinh huong de doi ho tro chuan bi tot hon.',
+    title: 'Step 2 - Enter the required details',
+    text: 'Choose a vehicle, rescue service, and description so the support team can prepare.',
     icon: Wrench,
   },
   3: {
-    title: 'Buoc 3 - Xac nhan vi tri',
-    text: 'Nhan tren ban do de chon vi tri chinh xac. He thong se tu dien dia chi neu co the.',
+    title: 'Step 3 - Confirm the location',
+    text: 'Click the map to choose an exact location. The system will fill the address when possible.',
     icon: MapPin,
   },
   4: {
-    title: 'Buoc 4 - Tinh phi tu dong',
-    text: 'He thong tinh phi tu dong tu gia dich vu va chi phi di chuyen gan nhat theo vi tri ban da chon.',
+    title: 'Step 4 - Calculate the automatic fee',
+    text: 'The system estimates the fee from the service price and nearest travel cost.',
     icon: Calculator,
   },
   5: {
-    title: 'Buoc 5 - Xac nhan va gui yeu cau',
-    text: 'Kiem tra lai toan bo thong tin va phi uoc tinh truoc khi gui. Sau khi gui, ban se theo doi tien trinh o trang chi tiet.',
+    title: 'Step 5 - Confirm and submit',
+    text: 'Review all details and the estimated fee before submitting. You can track progress on the detail page.',
     icon: FileCheck,
   },
 };
@@ -87,7 +87,7 @@ const initialForm = {
 };
 
 function formatMoney(value) {
-  return `${Number(value || 0).toLocaleString('vi-VN')} VND`;
+  return `${Number(value || 0).toLocaleString('en-US')} VND`;
 }
 
 function isValidCoordinate(value, min, max) {
@@ -162,7 +162,7 @@ export default function CreateRequestPage() {
     if (!isValidCoordinate(form.location.latitude, -90, 90)
         || !isValidCoordinate(form.location.longitude, -180, 180)) {
       setFeeInfo(null);
-      setFeeError('Chon vi tri tren ban do de tinh phi di chuyen tu dong.');
+      setFeeError('Choose a location on the map to calculate automatic travel cost.');
       setFeeLoading(false);
       return;
     }
@@ -266,14 +266,14 @@ export default function CreateRequestPage() {
   const validateStep = (step) => {
     if (step === 1) {
       if (!form.incidentTypeId) {
-        setError('Vui long chon loai su co.');
+        setError('Please choose an incident type.');
         return false;
       }
       return true;
     }
     if (step === 2) {
       if (!form.serviceTypeId) {
-        setError('Vui long chon loai dich vu.');
+        setError('Please choose a service type.');
         return false;
       }
       return true;
@@ -282,18 +282,18 @@ export default function CreateRequestPage() {
       if (!form.location.province
           || !isValidCoordinate(form.location.latitude, -90, 90)
           || !isValidCoordinate(form.location.longitude, -180, 180)) {
-        setError('Vui long chon vi tri tren ban do va dien tinh/thanh.');
+        setError('Please choose a map location and enter the province/city.');
         return false;
       }
       return true;
     }
     if (step === 4) {
       if (feeLoading) {
-        setError('Vui long doi he thong tinh phi tu dong.');
+        setError('Please wait for the automatic fee calculation.');
         return false;
       }
       if (!feeInfo) {
-        setError(feeError || 'Chua tinh duoc phi tu dong. Vui long kiem tra dich vu va vi tri.');
+        setError(feeError || 'The automatic fee could not be calculated. Please check the service and location.');
         return false;
       }
       return true;
@@ -327,7 +327,7 @@ export default function CreateRequestPage() {
     try {
       if (!isValidCoordinate(form.location.latitude, -90, 90)
           || !isValidCoordinate(form.location.longitude, -180, 180)) {
-        setError('Vui long chon vi tri hop le tren ban do truoc khi tao request.');
+        setError('Please choose a valid map location before creating the request.');
         return;
       }
 
@@ -376,15 +376,15 @@ export default function CreateRequestPage() {
   return (
     <>
       <PageHeader
-        title="Tao yeu cau cuu ho"
-        subtitle="Hoan thanh tung buoc de gui yeu cau nhanh va chinh xac. Phi uoc tinh duoc tinh tu dong theo vi tri."
+        title="Create Rescue Request"
+        subtitle="Complete each step to submit a fast and accurate request. The estimated fee is calculated automatically from the location."
       />
 
-      {error ? <Alert variant="error" title="Khong the tiep tuc">{error}</Alert> : null}
-      {imageError ? <Alert variant="warning" title="Luu y">{imageError}</Alert> : null}
+      {error ? <Alert variant="error" title="Cannot continue">{error}</Alert> : null}
+      {imageError ? <Alert variant="warning" title="Note">{imageError}</Alert> : null}
       {form.priorityLevel === 'EMERGENCY' ? (
-        <Alert variant="warning" title="Tinh huong khan cap">
-          Ban da chon muc uu tien EMERGENCY. Hay dam bao vi tri chinh xac va mo ta ro tinh trang.
+        <Alert variant="warning" title="Emergency situation">
+          You selected EMERGENCY priority. Make sure the location is accurate and the description is clear.
         </Alert>
       ) : null}
 
@@ -392,23 +392,23 @@ export default function CreateRequestPage() {
         <Stepper steps={WIZARD_STEPS} currentStep={currentStep} />
 
         <div className="card wizard-step-panel">
-          {loading ? <p>Dang tai du lieu...</p> : null}
+          {loading ? <p>Loading data...</p> : null}
 
           {!loading && currentStep === 1 ? (
             <>
               <StepGuide step={1} />
               <div className="form-grid">
                 <div className="field">
-                  <label>Loai su co</label>
+                  <label>Incident Type</label>
                   <select name="incidentTypeId" value={form.incidentTypeId} onChange={handleChange} required>
-                    <option value="">Chon su co</option>
+                    <option value="">Choose incident</option>
                     {incidentTypes.map((item) => (
                       <option key={item.id} value={item.id}>{item.name}</option>
                     ))}
                   </select>
                 </div>
                 <div className="field">
-                  <label>Muc uu tien</label>
+                  <label>Priority</label>
                   <select name="priorityLevel" value={form.priorityLevel} onChange={handleChange}>
                     <option value="LOW">LOW</option>
                     <option value="NORMAL">NORMAL</option>
@@ -425,9 +425,9 @@ export default function CreateRequestPage() {
               <StepGuide step={2} />
               <div className="form-grid">
                 <div className="field">
-                  <label>Xe</label>
+                  <label>Vehicle</label>
                   <select name="vehicleId" value={form.vehicleId} onChange={handleChange}>
-                    <option value="">Khong lien ket xe</option>
+                    <option value="">No linked vehicle</option>
                     {vehicles.map((vehicle) => (
                       <option key={vehicle.id} value={vehicle.id}>
                         {vehicle.brand} {vehicle.model} - {vehicle.plateNumber}
@@ -436,17 +436,17 @@ export default function CreateRequestPage() {
                   </select>
                 </div>
                 <div className="field">
-                  <label>Dich vu</label>
+                  <label>Service</label>
                   <select name="serviceTypeId" value={form.serviceTypeId} onChange={handleChange} required>
-                    <option value="">Chon dich vu</option>
+                    <option value="">Choose service</option>
                     {suggestedServices.length > 0 ? (
                       <>
-                        <optgroup label="Goi y">
+                        <optgroup label="Suggested">
                           {suggestedServices.map((item) => (
-                            <option key={item.id} value={item.id}>{item.name} (De xuat)</option>
+                            <option key={item.id} value={item.id}>{item.name} (Recommended)</option>
                           ))}
                         </optgroup>
-                        <optgroup label="Dich vu khac">
+                        <optgroup label="Other services">
                           {otherServices.map((item) => (
                             <option key={item.id} value={item.id}>{item.name}</option>
                           ))}
@@ -461,19 +461,19 @@ export default function CreateRequestPage() {
                 </div>
               </div>
               <div className="field">
-                <label>Mo ta tinh huong</label>
+                <label>Situation Description</label>
                 <textarea
                   name="description"
                   value={form.description}
                   onChange={handleChange}
-                  placeholder="Mo ta su co, tinh trang xe, yeu cau ho tro..."
+                  placeholder="Describe the issue, vehicle condition, and support request..."
                 />
               </div>
               <div className="field">
-                <label>Anh minh hoa <span className="muted-line">(tuy chon)</span></label>
+                <label>Reference Image <span className="muted-line">(optional)</span></label>
                 <ImageUploadZone
-                  label="Them anh minh hoa"
-                  hint={`JPEG, PNG, WebP, GIF - toi da ${MAX_FILE_SIZE_MB}MB`}
+                  label="Add reference image"
+                  hint={`JPEG, PNG, WebP, GIF - up to ${MAX_FILE_SIZE_MB}MB`}
                   accept={ACCEPTED_IMAGE_TYPES}
                   maxSizeMb={MAX_FILE_SIZE_MB}
                   showRemove
@@ -489,7 +489,7 @@ export default function CreateRequestPage() {
             <>
               <StepGuide step={3} />
               <div className="field">
-                <label><MapPin size={16} style={{ verticalAlign: 'middle' }} /> Ban do - nhan de chon vi tri</label>
+                <label><MapPin size={16} style={{ verticalAlign: 'middle' }} /> Map - click to choose a location</label>
                 <LocationPickerMap
                   value={{
                     latitude: form.location.latitude,
@@ -500,23 +500,23 @@ export default function CreateRequestPage() {
               </div>
               <div className="form-grid" style={{ marginTop: '1rem' }}>
                 <div className="field">
-                  <label>Tinh/Thanh</label>
+                  <label>Province/City</label>
                   <input name="location.province" value={form.location.province} onChange={handleChange} required disabled={geocoding} />
                 </div>
                 <div className="field">
-                  <label>Quan/Huyen</label>
+                  <label>District</label>
                   <input name="location.district" value={form.location.district} onChange={handleChange} disabled={geocoding} />
                 </div>
                 <div className="field">
-                  <label>Phuong/Xa</label>
+                  <label>Ward</label>
                   <input name="location.ward" value={form.location.ward} onChange={handleChange} disabled={geocoding} />
                 </div>
                 <div className="field">
-                  <label>Duong</label>
+                  <label>Street</label>
                   <input name="location.street" value={form.location.street} onChange={handleChange} disabled={geocoding} />
                 </div>
                 <div className="field">
-                  <label>Chi tiet</label>
+                  <label>Detail</label>
                   <input name="location.detail" value={form.location.detail} onChange={handleChange} disabled={geocoding} />
                 </div>
                 <div className="field">
@@ -536,31 +536,31 @@ export default function CreateRequestPage() {
               <StepGuide step={4} />
               <div className="wizard-review-grid">
                 <div className="wizard-review-item">
-                  <span>Dich vu</span>
+                  <span>Service</span>
                   <strong>{selectedService?.name || '-'}</strong>
                 </div>
                 <div className="wizard-review-item">
-                  <span>Vi tri</span>
+                  <span>Location</span>
                   <strong>{form.location.province || '-'}</strong>
                 </div>
               </div>
               <div className={`fee-preview-panel ${feeInfo ? 'fee-preview-panel-ready' : ''}`}>
                 <div>
-                  <span>Phi uoc tinh</span>
+                  <span>Estimated Fee</span>
                   {feeLoading ? (
-                    <strong>Dang tinh...</strong>
+                    <strong>Calculating...</strong>
                   ) : feeInfo ? (
                     <strong>{formatMoney(feeInfo.estimatedFee)}</strong>
                   ) : (
-                    <strong>Chua tinh duoc</strong>
+                    <strong>Not available</strong>
                   )}
                 </div>
                 {feeInfo ? (
                   <p>
-                    He so {feeInfo.coefficient} x (Gia dich vu {formatMoney(feeInfo.basePrice)} + Phi di chuyen tu dong {formatMoney(feeInfo.travelCost)})
+                    Coefficient {feeInfo.coefficient} x (Service price {formatMoney(feeInfo.basePrice)} + Automatic travel cost {formatMoney(feeInfo.travelCost)})
                   </p>
                 ) : (
-                  <p>{feeError || 'Chon dich vu va vi tri tren ban do de xem phi uoc tinh.'}</p>
+                  <p>{feeError || 'Choose a service and map location to see the estimated fee.'}</p>
                 )}
               </div>
             </>
@@ -571,32 +571,32 @@ export default function CreateRequestPage() {
               <StepGuide step={5} />
               <div className="wizard-review-grid">
                 <div className="wizard-review-item">
-                  <span>Su co</span>
+                  <span>Incident</span>
                   <strong>{selectedIncident?.name || '-'}</strong>
                 </div>
                 <div className="wizard-review-item">
-                  <span>Uu tien</span>
+                  <span>Priority</span>
                   <strong>{form.priorityLevel}</strong>
                 </div>
                 <div className="wizard-review-item">
-                  <span>Xe</span>
+                  <span>Vehicle</span>
                   <strong>
                     {selectedVehicle
                       ? `${selectedVehicle.brand} ${selectedVehicle.model}`
-                      : 'Khong lien ket'}
+                      : 'No linked vehicle'}
                   </strong>
                 </div>
                 <div className="wizard-review-item">
-                  <span>Dich vu</span>
+                  <span>Service</span>
                   <strong>{selectedService?.name || '-'}</strong>
                 </div>
                 <div className="wizard-review-item">
-                  <span>Vi tri</span>
+                  <span>Location</span>
                   <strong>{form.location.province || '-'}</strong>
                 </div>
                 <div className="wizard-review-item">
-                  <span>Phi uoc tinh</span>
-                  <strong>{feeInfo ? formatMoney(feeInfo.estimatedFee) : 'Chua tinh duoc'}</strong>
+                  <span>Estimated Fee</span>
+                  <strong>{feeInfo ? formatMoney(feeInfo.estimatedFee) : 'Not available'}</strong>
                 </div>
               </div>
             </>
@@ -606,13 +606,13 @@ export default function CreateRequestPage() {
             {currentStep > 1 ? (
               <button type="button" className="button button-secondary" onClick={goBack}>
                 <ChevronLeft size={18} aria-hidden="true" />
-                Quay lai
+                Back
               </button>
             ) : null}
 
             {currentStep < WIZARD_STEPS.length ? (
               <button type="button" className="button button-primary" onClick={goNext}>
-                Tiep tuc
+                Continue
                 <ChevronRight size={18} aria-hidden="true" />
               </button>
             ) : (
@@ -623,7 +623,7 @@ export default function CreateRequestPage() {
                 onClick={handleSubmit}
               >
                 <Send size={18} aria-hidden="true" />
-                {submitting ? 'Dang gui...' : 'Gui yeu cau cuu ho'}
+                {submitting ? 'Submitting...' : 'Submit rescue request'}
               </button>
             )}
           </div>
@@ -632,7 +632,7 @@ export default function CreateRequestPage() {
         <div className="card card-muted" style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
           <CheckCircle2 size={20} color="var(--success)" aria-hidden="true" />
           <p className="muted-line" style={{ margin: 0 }}>
-            <strong>Sau khi gui:</strong> He thong chuyen ban den trang chi tiet voi timeline tien trinh xu ly.
+            <strong>After submitting:</strong> The system will open the detail page with the service timeline.
           </p>
         </div>
       </div>

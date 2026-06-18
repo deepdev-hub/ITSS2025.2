@@ -76,24 +76,24 @@ function getGoogleMapsDirectionsUrl(location) {
 
 function getPriceStatusLabel(quote, hasPaidPayment, requestStatus) {
   if (requestStatus === 'CANCELED') {
-    return 'Đã hủy';
+    return 'Canceled';
   }
   if (hasPaidPayment) {
-    return 'Đã thanh toán';
+    return 'Paid';
   }
   switch (quote?.status) {
     case 'SENT':
-      return 'Chờ khách hàng xác nhận giá';
+      return 'Waiting for customer price confirmation';
     case 'ACCEPTED':
-      return 'Khách hàng đã chấp nhận giá';
+      return 'Customer accepted the price';
     case 'REJECTED':
-      return 'Khách hàng yêu cầu deal lại';
+      return 'Customer requested a new deal';
     case 'DRAFT':
-      return 'Đang chuẩn bị giá';
+      return 'Preparing price';
     case 'EXPIRED':
-      return 'Báo giá đã hết hạn';
+      return 'Quote expired';
     default:
-      return 'Chưa có giá deal';
+      return 'No deal price yet';
   }
 }
 
@@ -206,7 +206,7 @@ function RequestImageUpload({ requestId, currentImageUrl, imageUpdatedAt, onUplo
       formData.append('file', file);
       const result = await requestApi.uploadRequestImage(requestId, formData);
       const newUrl = getRequestImageUrlFromUploadResponse(result);
-      onUploadSuccess('Cập nhật ảnh yêu cầu thành công.', newUrl);
+      onUploadSuccess('Request image updated successfully.', newUrl);
     } catch (err) {
       onError(getApiError(err));
       throw err;
@@ -218,8 +218,8 @@ function RequestImageUpload({ requestId, currentImageUrl, imageUpdatedAt, onUplo
   return (
     <ImageUploadZone
       previewSrc={previewSrc}
-      label={currentImageUrl ? 'Đổi ảnh yêu cầu' : 'Tải ảnh lên'}
-      hint={`JPEG, PNG, WebP, GIF — tối đa ${MAX_FILE_SIZE_MB}MB`}
+      label={currentImageUrl ? 'Change request image' : 'Upload image'}
+      hint={`JPEG, PNG, WebP, GIF - up to ${MAX_FILE_SIZE_MB}MB`}
       accept={ACCEPTED_IMAGE_TYPES}
       maxSizeMb={MAX_FILE_SIZE_MB}
       uploading={uploading}
@@ -520,7 +520,7 @@ export default function RequestDetailPage() {
       status: 'IN_PROGRESS',
       note: 'Staff checked in at customer location',
     }),
-    'Check-in confirmed. Technician đang thực hiện nhiệm vụ.',
+    'Check-in confirmed. Technician is working on the task.',
   );
 
   const updateDealPrice = async (event) => {
@@ -604,7 +604,7 @@ export default function RequestDetailPage() {
         actions={(
           <div className="actions-row">
             <div className="sync-pill">
-              <strong>{refreshing ? 'Refreshing…' : pollLabel}</strong>
+              <strong>{refreshing ? 'Refreshing...' : pollLabel}</strong>
               <span>{lastSyncedAt ? `Last sync ${formatDateTime(lastSyncedAt)}` : 'Waiting for first sync'}</span>
             </div>
             {detail.assignedCompany && isCustomer && (
@@ -612,7 +612,7 @@ export default function RequestDetailPage() {
                 className="button button-secondary"
                 type="button"
                 onClick={() => setIsChatOpen(true)}
-                title="Chat với đội cứu hộ"
+                title="Chat with rescue team"
               >
                 <MessageCircle size={16} />
                 Chat
@@ -636,7 +636,7 @@ export default function RequestDetailPage() {
       ) : null}
 
       {notice ? <Alert variant="success">{notice}</Alert> : null}
-      {error ? <Alert variant="error" title="Có lỗi xảy ra">{error}</Alert> : null}
+      {error ? <Alert variant="error" title="Something went wrong">{error}</Alert> : null}
 
       <div className="grid-two">
         <div className="card">
@@ -693,7 +693,7 @@ export default function RequestDetailPage() {
                 target="_blank"
                 rel="noreferrer"
               >
-                Dẫn đường tới khách hàng
+                Navigate to customer
               </a>
             </div>
           ) : null}
@@ -701,8 +701,8 @@ export default function RequestDetailPage() {
           {staffCheckedIn ? (
             <div className="section-banner section-banner-success staff-checkin-panel">
               <div>
-                <strong>Technician đang thực hiện nhiệm vụ</strong>
-                <span>Staff đã check-in tại điểm cứu hộ, luồng theo dõi đang tới đã được dừng.</span>
+                <strong>Technician is working on the task</strong>
+                <span>Staff has checked in at the rescue point. The arrival tracking flow has stopped.</span>
               </div>
             </div>
           ) : null}
@@ -710,8 +710,8 @@ export default function RequestDetailPage() {
           {canStaffCheckIn ? (
             <div className="section-banner section-banner-info staff-checkin-panel">
               <div>
-                <strong>Check-in khi đã đến nơi</strong>
-                <span>Xác nhận để chuyển request sang trạng thái thực hiện nhiệm vụ.</span>
+                <strong>Check in after arrival</strong>
+                <span>Confirm to move the request to in-progress task status.</span>
               </div>
               <button
                 className="button button-primary"
@@ -719,7 +719,7 @@ export default function RequestDetailPage() {
                 disabled={busyAction === 'check-in'}
                 onClick={confirmStaffCheckIn}
               >
-                {busyAction === 'check-in' ? 'Đang check-in...' : 'Xác nhận check-in'}
+                {busyAction === 'check-in' ? 'Checking in...' : 'Confirm check-in'}
               </button>
             </div>
           ) : null}
@@ -736,7 +736,7 @@ export default function RequestDetailPage() {
             />
           </div>
 
-          {/* ── Request Image ─────────────────────────────── */}
+          {/* Request Image */}
           <div className="card card-muted" style={{ marginTop: '1rem' }}>
             <h3>Incident Image</h3>
             <RequestImage imageUrl={detail.imageUrl} updatedAt={detail.updatedAt} />
@@ -771,13 +771,13 @@ export default function RequestDetailPage() {
           {isCustomer && canCustomerCancel(detail.status) ? (
             <div className="card card-muted" style={{ marginTop: '1rem' }}>
               <h3>Customer Actions</h3>
-              <p className="muted-line">Bạn có thể hủy đơn nếu quá trình deal giá không thành công.</p>
+              <p className="muted-line">You can cancel the request if price negotiation fails.</p>
               <div className="field">
-                <label>Lý do hủy</label>
+                <label>Cancellation Reason</label>
                 <input
                   value={cancelForm.reason}
                   onChange={(event) => setCancelForm({ reason: event.target.value })}
-                  placeholder="Ví dụ: Không thỏa thuận được giá"
+                  placeholder="Example: Could not agree on the price"
                 />
               </div>
               <div className="actions-row">
@@ -835,36 +835,36 @@ export default function RequestDetailPage() {
             <h3>Deal Price</h3>
             <div className="info-grid">
               <div className="info-item">
-                <span>Giá dự kiến ban đầu</span>
+                <span>Initial Estimated Price</span>
                 <strong>{formatCurrency(latestQuote?.estimatedAmount)}</strong>
               </div>
               <div className="info-item">
-                <span>Giá đã deal</span>
+                <span>Deal Price</span>
                 <strong>{formatCurrency(getQuoteAmount(latestQuote))}</strong>
               </div>
               <div className="info-item">
-                <span>Trạng thái deal giá</span>
+                <span>Deal Price Status</span>
                 <strong>{latestPriceStatus}</strong>
               </div>
             </div>
             <div className="field">
-              <label>Ghi chú từ staff</label>
-              <textarea value={latestQuote?.note || 'Chưa có ghi chú deal giá.'} disabled />
+              <label>Staff Note</label>
+              <textarea value={latestQuote?.note || 'No deal price note yet.'} disabled />
             </div>
             {latestQuote?.customerNote ? (
               <div className="field">
-                <label>Lý do khách hàng từ chối</label>
+                <label>Customer Rejection Reason</label>
                 <textarea value={latestQuote.customerNote} disabled />
               </div>
             ) : null}
             {canCustomerActOnPrice ? (
               <div style={{ marginTop: '1rem' }}>
                 <div className="field">
-                  <label>Lý do nếu không chấp nhận</label>
+                  <label>Reason if not accepted</label>
                   <input
                     value={rejectForm.reason}
                     onChange={(event) => setRejectForm({ reason: event.target.value })}
-                    placeholder="Ví dụ: Giá quá cao, muốn thương lượng lại"
+                    placeholder="Example: Price is too high, want to negotiate again"
                   />
                 </div>
                 <div className="actions-row" style={{ marginTop: '0.75rem' }}>
@@ -874,7 +874,7 @@ export default function RequestDetailPage() {
                     disabled={busyAction === 'price-accept'}
                     onClick={acceptPrice}
                   >
-                    {busyAction === 'price-accept' ? 'Accepting...' : 'Chấp nhận giá'}
+                    {busyAction === 'price-accept' ? 'Accepting...' : 'Accept price'}
                   </button>
                   <button
                     className="button button-secondary"
@@ -882,7 +882,7 @@ export default function RequestDetailPage() {
                     disabled={busyAction === 'price-reject'}
                     onClick={rejectPrice}
                   >
-                    {busyAction === 'price-reject' ? 'Rejecting...' : 'Không chấp nhận / Yêu cầu deal lại'}
+                    {busyAction === 'price-reject' ? 'Rejecting...' : 'Reject / Request new deal'}
                   </button>
                 </div>
               </div>
@@ -909,7 +909,7 @@ export default function RequestDetailPage() {
                   <input
                     value={dealPriceForm.note}
                     onChange={(event) => setDealPriceForm((previous) => ({ ...previous, note: event.target.value }))}
-                    placeholder="Giá đã bao gồm phí kéo xe và phụ phí ban đêm"
+                    placeholder="Price includes towing fee and night surcharge"
                   />
                 </div>
               </div>
@@ -925,7 +925,7 @@ export default function RequestDetailPage() {
 
           {isCustomer && waitingDealQuote ? (
             <div className="section-banner section-banner-warning">
-              Giá deal mới đang chờ bạn xác nhận. Hãy chấp nhận để chuyển sang thanh toán hoặc yêu cầu deal lại.
+              A new deal price is waiting for your confirmation. Accept it to move to payment or request a new deal.
             </div>
           ) : null}
 
@@ -993,7 +993,7 @@ export default function RequestDetailPage() {
                               disabled={busyAction === 'price-accept'}
                               onClick={acceptPrice}
                             >
-                              Chấp nhận
+                              Accept
                             </button>
                             <button
                               className="button button-secondary"
@@ -1001,7 +1001,7 @@ export default function RequestDetailPage() {
                               disabled={busyAction === 'price-reject'}
                               onClick={rejectPrice}
                             >
-                              Deal lại
+                              Request new deal
                             </button>
                           </div>
                         ) : null}
@@ -1049,7 +1049,7 @@ export default function RequestDetailPage() {
             <div className="card card-muted" style={{ marginTop: '1rem' }}>
               <h3>Payment Actions</h3>
               <p className="muted-line">
-                Thanh toán chỉ mở sau khi staff cập nhật giá deal và bạn chấp nhận giá. Đơn đã hủy hoặc đã thanh toán sẽ không thể tạo payment mới.
+                Payment is available only after staff updates the deal price and you accept it. Canceled or paid requests cannot create a new payment.
               </p>
             </div>
           ) : null}
@@ -1231,8 +1231,8 @@ export default function RequestDetailPage() {
 
         <div className="card">
           <SectionHeader
-            title="Timeline xử lý"
-            subtitle="Mỗi thay đổi trạng thái được ghi lại theo thứ tự và tự động cập nhật."
+            title="Processing Timeline"
+            subtitle="Each status change is recorded in order and updated automatically."
           />
 
           {(detail.history || []).length === 0 ? (
@@ -1266,7 +1266,7 @@ export default function RequestDetailPage() {
           onClose={() => setIsChatOpen(false)}
           requestId={detail.id}
           companyName={detail.assignedCompany?.companyName}
-          staffName={detail.assignedStaff?.fullName}
+          staffName={detail.currentAssignment?.staffName}
         />
       )}
     </>

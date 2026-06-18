@@ -129,7 +129,7 @@ export default function StaffDashboardPage() {
                     <div className="assignment-item-content">
                       <strong>{assignment.vehicleCode || 'Rescue Vehicle'}</strong>
                       <div className="muted-line">
-                        {assignment.companyName} · {formatDateTime(assignment.assignedAt)}
+                        {assignment.companyName} - {formatDateTime(assignment.assignedAt)}
                       </div>
                       <StatusBadge value={assignment.status} />
                     </div>

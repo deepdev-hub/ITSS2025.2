@@ -99,7 +99,7 @@ export default function CompanyRequestsPage() {
     [detail?.currentAssignment, now],
   );
 
-  // ── Data loading ────────────────────────────────────────────────────────────
+  // Data loading
 
   const loadWorkspace = async (preferredRequestId = activeRequestId) => {
     setLoading(true);
@@ -196,7 +196,7 @@ export default function CompanyRequestsPage() {
     }));
   }, [detail, staff, vehicles]);
 
-  // ── Actions ────────────────────────────────────────────────────────────────
+  // Actions
 
   const reloadActiveData = async () => {
     const nextRequestId = await loadWorkspace(activeRequestId);
@@ -222,7 +222,7 @@ export default function CompanyRequestsPage() {
     event.preventDefault();
     if (!activeRequestId) return;
 
-    // Client-side expiry check — backend will validate again server-side
+    // Client-side expiry check; backend validates again server-side.
     if (assignmentExpired) {
       setError('This assignment has expired. The acceptance window is closed. Please wait for the admin to reassign the request.');
       return;
@@ -286,7 +286,7 @@ export default function CompanyRequestsPage() {
     );
   };
 
-  // ── Render ─────────────────────────────────────────────────────────────────
+  // Render
 
   if (loading) return <Loader label="Loading dispatch workspace..." />;
 
@@ -301,7 +301,7 @@ export default function CompanyRequestsPage() {
 
       <div className="grid-two">
 
-        {/* ── Request Queue ──────────────────────────────────────────────── */}
+        {/* Request Queue */}
         <div className="card">
           <h2>Request Queue</h2>
           {requests.length === 0 ? (
@@ -340,7 +340,7 @@ export default function CompanyRequestsPage() {
                         {request.expiresAt && request.assignmentStatus === 'PENDING' ? (
                           <Countdown expiresAt={request.expiresAt} status={request.assignmentStatus} />
                         ) : (
-                          <span className="muted-line">—</span>
+                          <span className="muted-line">-</span>
                         )}
                       </td>
                       <td>
@@ -367,7 +367,7 @@ export default function CompanyRequestsPage() {
           )}
         </div>
 
-        {/* ── Dispatch Workspace ─────────────────────────────────────────── */}
+        {/* Dispatch Workspace */}
         <div className="card">
           <h2>Dispatch Workspace</h2>
           {detailLoading ? <Loader label="Loading selected request..." /> : null}
@@ -406,7 +406,7 @@ export default function CompanyRequestsPage() {
               {/*
                 Acceptance window countdown.
                 Only shown while the current assignment is PENDING (not yet confirmed).
-                Once accepted (status → ACCEPTED) this banner disappears because
+                Once accepted (status changes to ACCEPTED) this banner disappears because
                 isAssignmentExpired() returns false for non-PENDING assignments.
               */}
               {detail.currentAssignment?.expiresAt &&
@@ -536,7 +536,7 @@ export default function CompanyRequestsPage() {
                 <p><strong>Assignment Status:</strong> {detail.currentAssignment?.status || 'Pending'}</p>
               </div>
 
-              {/* ── Assign Staff & Vehicle ──────────────────────────────── */}
+              {/* Assign Staff & Vehicle */}
               <form className="card card-muted secondary-assignment-panel" style={{ marginTop: '1rem' }} onSubmit={handleAssignment}>
                 <h3>Confirm Staff & Vehicle</h3>
 
@@ -599,14 +599,14 @@ export default function CompanyRequestsPage() {
                   title={assignmentExpired ? 'Acceptance window has expired' : undefined}
                 >
                   {assignmentExpired
-                    ? 'Expired — cannot confirm'
+                    ? 'Expired - cannot confirm'
                     : busyAction === 'assignment'
                       ? 'Saving...'
                       : 'Confirm assignment (accept)'}
                 </button>
               </form>
 
-              {/* ── Status Update ───────────────────────────────────────── */}
+              {/* Status Update */}
               {statusOptions.length > 0 ? (
                 <form className="card card-muted" style={{ marginTop: '1rem' }} onSubmit={handleStatusUpdate}>
                   <h3>Update Request Progress</h3>
@@ -642,7 +642,7 @@ export default function CompanyRequestsPage() {
                 </div>
               )}
 
-              {/* ── Quote ───────────────────────────────────────────────── */}
+              {/* Quote */}
               <div className="card card-muted" style={{ marginTop: '1rem' }}>
                 <h3>Create or Update Quote</h3>
                 <div className="form-grid">
@@ -739,7 +739,7 @@ export default function CompanyRequestsPage() {
                 </div>
               </div>
 
-              {/* ── Quote History ────────────────────────────────────────── */}
+              {/* Quote History */}
               <div className="card card-muted" style={{ marginTop: '1rem' }}>
                 <h3>Quote History</h3>
                 <div className="table-wrapper">

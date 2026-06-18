@@ -53,7 +53,7 @@ export default function CompanyDashboardPage() {
     <>
       <PageHeader
         icon={<LayoutDashboard size={22} />}
-        eyebrow="Công ty cứu hộ"
+        eyebrow="Rescue Company"
         title="Company Dashboard"
         subtitle="Track assigned rescue work, dispatch resources quickly, and review customer feedback from one place."
         actions={<Link className="button button-secondary" to="/company/requests">Open dispatch workspace</Link>}

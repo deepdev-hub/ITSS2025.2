@@ -9,7 +9,7 @@ function formatNotificationTime(value) {
   if (!value) return '';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '';
-  return date.toLocaleString('vi-VN', {
+  return date.toLocaleString('en-US', {
     hour: '2-digit',
     minute: '2-digit',
     day: '2-digit',
@@ -146,16 +146,16 @@ export default function NotificationBell({ enabled }) {
       {open ? (
         <div className="notification-panel">
           <div className="notification-panel-header">
-            <strong>Thông báo</strong>
+            <strong>Notifications</strong>
             <button type="button" onClick={handleMarkAllRead} disabled={unreadCount === 0}>
-              Đánh dấu đã đọc
+              Mark all as read
             </button>
           </div>
 
-          {loading ? <p className="notification-state">Đang tải...</p> : null}
+          {loading ? <p className="notification-state">Loading...</p> : null}
           {error ? <p className="notification-state notification-error">{error}</p> : null}
           {!loading && !error && notifications.length === 0 ? (
-            <p className="notification-state">Chưa có thông báo.</p>
+            <p className="notification-state">No notifications yet.</p>
           ) : null}
 
           {!loading && !error && notifications.length > 0 ? (

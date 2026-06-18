@@ -109,3 +109,13 @@ ALTER TABLE public.account
 
 ALTER TABLE public.rescue_requests
     ADD COLUMN IF NOT EXISTS image_url text;
+
+-- Forgot password OTP support
+ALTER TABLE public.password_reset_tokens
+    ADD COLUMN IF NOT EXISTS otp_hash character varying(255),
+    ADD COLUMN IF NOT EXISTS verified_at timestamp without time zone,
+    ADD COLUMN IF NOT EXISTS attempt_count integer DEFAULT 0;
+
+UPDATE public.password_reset_tokens
+SET attempt_count = 0
+WHERE attempt_count IS NULL;

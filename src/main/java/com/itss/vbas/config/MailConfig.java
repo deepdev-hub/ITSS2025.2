@@ -24,27 +24,44 @@ public class MailConfig {
     public JavaMailSender javaMailSender(Environment env) {
         JavaMailSenderImpl mailSender = new JavaMailSenderImpl();
 
-        String host = mailProperties != null ? mailProperties.getHost() : env.getProperty("spring.mail.host", "smtp.gmail.com");
-        Integer port = mailProperties != null && mailProperties.getPort() != null ? mailProperties.getPort() : Integer.parseInt(env.getProperty("spring.mail.port", "587"));
-        String username = mailProperties != null ? mailProperties.getUsername() : env.getProperty("spring.mail.username");
-        String password = mailProperties != null ? mailProperties.getPassword() : env.getProperty("spring.mail.password");
-        String protocol = mailProperties != null ? mailProperties.getProtocol() : env.getProperty("spring.mail.protocol", "smtp");
+        String host = firstText(mailProperties == null ? null : mailProperties.getHost(), env.getProperty("spring.mail.host"), env.getProperty("MAIL_HOST"), "smtp.gmail.com");
+        Integer port = mailProperties != null && mailProperties.getPort() != null
+                ? mailProperties.getPort()
+                : Integer.parseInt(firstText(env.getProperty("spring.mail.port"), env.getProperty("MAIL_PORT"), "587"));
+        String username = firstText(mailProperties == null ? null : mailProperties.getUsername(), env.getProperty("spring.mail.username"), env.getProperty("MAIL_USERNAME"));
+        String password = firstText(mailProperties == null ? null : mailProperties.getPassword(), env.getProperty("spring.mail.password"), env.getProperty("MAIL_PASSWORD"));
+        String protocol = firstText(mailProperties == null ? null : mailProperties.getProtocol(), env.getProperty("spring.mail.protocol"), env.getProperty("MAIL_PROTOCOL"), "smtp");
 
         mailSender.setHost(host);
         mailSender.setPort(port);
-        if (username != null) mailSender.setUsername(username);
-        if (password != null) mailSender.setPassword(password);
+        if (hasText(username)) mailSender.setUsername(username);
+        if (hasText(password)) mailSender.setPassword(password);
         mailSender.setProtocol(protocol);
 
         Properties props = mailSender.getJavaMailProperties();
+        props.put("mail.smtp.auth", firstText(env.getProperty("spring.mail.properties.mail.smtp.auth"), env.getProperty("MAIL_SMTP_AUTH"), "true"));
+        props.put("mail.smtp.starttls.enable", firstText(env.getProperty("spring.mail.properties.mail.smtp.starttls.enable"), env.getProperty("MAIL_SMTP_STARTTLS"), "true"));
+        props.put("mail.smtp.ssl.trust", firstText(env.getProperty("spring.mail.properties.mail.smtp.ssl.trust"), env.getProperty("MAIL_SMTP_SSL_TRUST"), host));
+        props.put("mail.smtp.connectiontimeout", firstText(env.getProperty("spring.mail.properties.mail.smtp.connectiontimeout"), env.getProperty("MAIL_SMTP_CONNECTION_TIMEOUT"), "10000"));
+        props.put("mail.smtp.timeout", firstText(env.getProperty("spring.mail.properties.mail.smtp.timeout"), env.getProperty("MAIL_SMTP_TIMEOUT"), "10000"));
+        props.put("mail.smtp.writetimeout", firstText(env.getProperty("spring.mail.properties.mail.smtp.writetimeout"), env.getProperty("MAIL_SMTP_WRITE_TIMEOUT"), "10000"));
         if (mailProperties != null && mailProperties.getProperties() != null) {
             props.putAll(mailProperties.getProperties());
-        } else {
-            props.put("mail.smtp.auth", env.getProperty("spring.mail.properties.mail.smtp.auth", "true"));
-            props.put("mail.smtp.starttls.enable", env.getProperty("spring.mail.properties.mail.smtp.starttls.enable", "true"));
-            props.put("mail.smtp.ssl.trust", env.getProperty("spring.mail.properties.mail.smtp.ssl.trust", "*"));
         }
 
         return mailSender;
+    }
+
+    private String firstText(String... values) {
+        for (String value : values) {
+            if (hasText(value)) {
+                return value.trim();
+            }
+        }
+        return null;
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.isBlank();
     }
 }

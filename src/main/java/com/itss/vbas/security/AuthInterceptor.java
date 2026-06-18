@@ -34,6 +34,7 @@ public class AuthInterceptor implements HandlerInterceptor {
         if (path.startsWith("/api/auth/login") ||
                 path.startsWith("/api/auth/register") ||
                 path.startsWith("/api/auth/forgot-password") ||
+                path.startsWith("/api/auth/verify-reset-otp") ||
                 path.startsWith("/api/auth/reset-password")) {
             return true;
         }

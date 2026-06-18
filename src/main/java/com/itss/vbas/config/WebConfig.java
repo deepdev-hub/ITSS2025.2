@@ -40,6 +40,7 @@ public class WebConfig implements WebMvcConfigurer {
                         "/api/auth/login",
                         "/api/auth/register",
                         "/api/auth/forgot-password",
+                        "/api/auth/verify-reset-otp",
                         "/api/auth/reset-password"
                 );
     }

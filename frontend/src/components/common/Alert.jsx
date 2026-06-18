@@ -20,7 +20,7 @@ export default function Alert({ variant = 'info', title, children, onDismiss }) 
       </div>
       {onDismiss ? (
         <button type="button" className="alert-dismiss" onClick={onDismiss} aria-label="Dismiss">
-          ×
+          x
         </button>
       ) : null}
     </div>

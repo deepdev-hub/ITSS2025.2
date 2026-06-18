@@ -278,7 +278,7 @@ export default function AdminLookupCatalogPage({
                         </td>
                         <td data-label={descriptionLabel}>
                           <span className="lookup-description">
-                            {item.description?.trim() || '—'}
+                            {item.description?.trim() || '-'}
                           </span>
                         </td>
                         <td>

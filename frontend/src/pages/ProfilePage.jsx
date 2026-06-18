@@ -5,7 +5,6 @@ import {
   Lock,
   Mail,
   MapPin,
-  MessageCircle,
   Phone,
   Shield,
   Sparkles,
@@ -14,7 +13,6 @@ import {
 import { authApi } from '../api/authApi';
 import { getApiError } from '../api/client';
 import Alert from '../components/common/Alert';
-import ChatModal from '../components/common/ChatModal';
 import ImageUploadZone from '../components/common/ImageUploadZone';
 import Loader from '../components/common/Loader';
 import PageHeader from '../components/common/PageHeader';
@@ -86,7 +84,6 @@ export default function ProfilePage() {
   const [changingPassword, setChangingPassword] = useState(false);
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
-  const [isChatOpen, setIsChatOpen] = useState(false);
   const requestedTab = searchParams.get('tab') === 'security' ? 'security' : 'profile';
   const [activeTab, setActiveTab] = useState(requestedTab);
 
@@ -217,12 +214,6 @@ export default function ProfilePage() {
         eyebrow="Account"
         title="My Profile"
         subtitle="Manage your account information, avatar, and security."
-        actions={(
-          <button type="button" className="button button-secondary" onClick={() => setIsChatOpen(true)}>
-            <MessageCircle size={18} aria-hidden="true" />
-            Support
-          </button>
-        )}
       />
 
       {notice ? <Alert variant="success">{notice}</Alert> : null}
@@ -371,13 +362,6 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      <ChatModal
-        isOpen={isChatOpen}
-        onClose={() => setIsChatOpen(false)}
-        requestId={null}
-        companyName="Support Team"
-        staffName="Support Agent"
-      />
     </>
   );
 }
