@@ -64,6 +64,12 @@ public class EmailServiceImpl implements EmailService {
     }
 
     private String resolveFromAddress() {
+        if (mailSender instanceof JavaMailSenderImpl sender) {
+            String configuredFrom = sender.getJavaMailProperties().getProperty("vbas.mail.from");
+            if (hasText(configuredFrom)) {
+                return configuredFrom.trim();
+            }
+        }
         if (hasText(fromAddress)) {
             return fromAddress.trim();
         }
