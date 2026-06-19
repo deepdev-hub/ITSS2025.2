@@ -134,17 +134,16 @@ export default function AppShell() {
             >
               {sidebarOpen ? <X size={18} /> : <Menu size={18} />}
             </button>
-            <UserAvatar user={user} size={46} />
-            <div className="topbar-user-info">
-              <strong>{user?.fullName}</strong>
-              <p>{user?.roleName}</p>
-            </div>
+            <Link to="/profile" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', textDecoration: 'none', color: 'inherit' }}>
+              <UserAvatar user={user} size={46} />
+              <div className="topbar-user-info">
+                <strong>{user?.fullName}</strong>
+                <p>{user?.roleName}</p>
+              </div>
+            </Link>
           </div>
           <div className="topbar-actions">
             <NotificationBell enabled={notificationsEnabled} />
-            <NavLink className="button button-secondary" to="/profile">
-              Profile
-            </NavLink>
             <button className="button button-secondary" type="button" onClick={logout}>
               Logout
             </button>

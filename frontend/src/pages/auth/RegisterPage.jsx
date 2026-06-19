@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { LifeBuoy, UserPlus, Mail, Lock, Eye, EyeOff, Moon, Sun, User, Phone, MapPin, Calendar, CreditCard } from 'lucide-react';
+import { LifeBuoy, UserPlus, Mail, Lock, Eye, EyeOff, User, Phone, MapPin, Calendar, CreditCard } from 'lucide-react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { getDefaultRoute } from '../../utils/roles';
@@ -32,26 +32,10 @@ export default function RegisterPage() {
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [darkMode, setDarkMode] = useState(false);
-
   useEffect(() => {
-    const savedDarkMode = localStorage.getItem('darkMode') === 'true';
-    setDarkMode(savedDarkMode);
-    if (savedDarkMode) {
-      document.documentElement.classList.add('dark-mode');
-    }
+    // Remove dark mode class if it was previously set
+    document.documentElement.classList.remove('dark-mode');
   }, []);
-
-  const toggleDarkMode = () => {
-    const newDarkMode = !darkMode;
-    setDarkMode(newDarkMode);
-    localStorage.setItem('darkMode', newDarkMode);
-    if (newDarkMode) {
-      document.documentElement.classList.add('dark-mode');
-    } else {
-      document.documentElement.classList.remove('dark-mode');
-    }
-  };
 
   if (isAuthenticated && user) {
     return <Navigate to={getDefaultRoute(user.roleName)} replace />;
@@ -103,16 +87,7 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="hero">
-      <button
-        className="dark-mode-toggle"
-        onClick={toggleDarkMode}
-        title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
-      >
-        {darkMode ? <Sun size={20} /> : <Moon size={20} />}
-      </button>
-
-      <form className="auth-card card modern-auth-card" style={{ maxWidth: '800px', width: '100%' }} onSubmit={handleSubmit}>
+    <div className="hero">      <form className="auth-card card modern-auth-card" style={{ maxWidth: '800px', width: '100%' }} onSubmit={handleSubmit}>
         <div className="auth-card-header">
           <div className="auth-card-icon">
             <LifeBuoy size={40} />
@@ -281,28 +256,6 @@ export default function RegisterPage() {
       </form>
 
       <style>{`
-        .dark-mode-toggle {
-          position: fixed;
-          top: 20px;
-          right: 20px;
-          width: 44px;
-          height: 44px;
-          border-radius: 50%;
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-          color: white;
-          border: none;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
-          transition: all 0.3s ease;
-          z-index: 1000;
-        }
-        .dark-mode-toggle:hover {
-          transform: scale(1.1);
-          box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
-        }
         .modern-auth-card {
           padding: 2.5rem;
           border-radius: 16px;
@@ -405,47 +358,6 @@ export default function RegisterPage() {
         .auth-link:hover {
           color: #764ba2;
           text-decoration: underline;
-        }
-        .dark-mode {
-          --bg-primary: #1a1a2e;
-          --bg-secondary: #16213e;
-          --bg-card: #0f3460;
-          --text-primary: #eaeaea;
-          --text-secondary: #a0a0a0;
-          --border-color: #2a2a4a;
-        }
-        .dark-mode .modern-auth-card {
-          background: var(--bg-card);
-          color: var(--text-primary);
-          border-color: var(--border-color);
-        }
-        .dark-mode .auth-card-header h1 {
-          color: var(--text-primary);
-        }
-        .dark-mode .auth-card-subtitle {
-          color: var(--text-secondary);
-        }
-        .dark-mode .section-title {
-          color: var(--text-primary);
-          border-color: var(--border-color);
-        }
-        .dark-mode .modern-field label {
-          color: var(--text-primary);
-        }
-        .dark-mode .modern-field input,
-        .dark-mode .modern-field textarea {
-          background: var(--bg-secondary);
-          color: var(--text-primary);
-          border-color: var(--border-color);
-        }
-        .dark-mode .password-toggle {
-          color: var(--text-secondary);
-        }
-        .dark-mode .password-toggle:hover {
-          color: #667eea;
-        }
-        .dark-mode .auth-card-footer {
-          border-color: var(--border-color);
         }
       `}</style>
     </div>

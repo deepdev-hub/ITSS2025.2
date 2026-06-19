@@ -26,11 +26,14 @@ function formatMessageTime(value) {
   });
 }
 
-function getPeerName(staffName, companyName) {
-  return staffName || companyName || 'Rescue Team';
+function getPeerName(userRole, customerName, staffName, companyName) {
+  if (userRole === 'RESCUE_STAFF' || userRole === 'RESCUE_COMPANY') {
+    return `Customer: ${customerName || 'Customer'}`;
+  }
+  return staffName ? `Staff: ${staffName}` : (companyName ? `Company: ${companyName}` : 'Rescue Team');
 }
 
-export default function ChatModal({ isOpen, onClose, requestId, companyName, staffName }) {
+export default function ChatModal({ isOpen, onClose, requestId, companyName, staffName, customerName, userRole }) {
   const { user } = useAuth();
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
@@ -120,16 +123,17 @@ export default function ChatModal({ isOpen, onClose, requestId, companyName, sta
     }
   };
 
-  const peerName = getPeerName(staffName, companyName);
+  const peerName = getPeerName(userRole, customerName, staffName, companyName);
   const canSend = Boolean(requestId);
 
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={`Chat with ${peerName}`}
-      size="medium"
+      title={peerName}
+      size="large"
       footer={null}
+      bodyStyle={{ padding: 0 }}
     >
       <div className="chat-modal-container">
         <div className="chat-status">
@@ -190,12 +194,11 @@ export default function ChatModal({ isOpen, onClose, requestId, companyName, sta
           />
           <button
             type="submit"
-            className="button button-primary"
+            className="chat-send-btn"
             disabled={sending || !canSend || !newMessage.trim()}
-            style={{ borderRadius: '12px', padding: '0.6rem 1rem' }}
             aria-label="Send message"
           >
-            <Send size={16} />
+            <Send size={20} />
           </button>
         </form>
       </div>

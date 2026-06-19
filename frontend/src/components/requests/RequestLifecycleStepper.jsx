@@ -7,7 +7,10 @@ const TRACKING_STEPS = [
   { id: 'completed', label: 'Completed', hint: 'The request has ended' },
 ];
 
-function getTrackingStep(status) {
+function getTrackingStep(status, hasPaidPayment) {
+  if (hasPaidPayment) {
+    return 5;
+  }
   switch (status) {
     case 'CREATED':
     case 'SEARCHING':
@@ -18,7 +21,7 @@ function getTrackingStep(status) {
     case 'IN_PROGRESS':
       return 3;
     case 'COMPLETED':
-      return 4;
+      return 5;
     case 'CANCELED':
       return 1;
     default:
@@ -26,8 +29,8 @@ function getTrackingStep(status) {
   }
 }
 
-export default function RequestLifecycleStepper({ status }) {
-  const currentStep = getTrackingStep(status);
+export default function RequestLifecycleStepper({ status, hasPaidPayment }) {
+  const currentStep = getTrackingStep(status, hasPaidPayment);
   const isCanceled = status === 'CANCELED';
 
   return (

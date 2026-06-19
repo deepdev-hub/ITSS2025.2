@@ -1,7 +1,7 @@
 import { X } from 'lucide-react';
 import './Modal.css';
 
-export default function Modal({ isOpen, onClose, title, children, size = 'medium', footer }) {
+export default function Modal({ isOpen, onClose, title, children, size = 'medium', footer, bodyClassName = '', bodyStyle = {} }) {
   if (!isOpen) return null;
 
   return (
@@ -13,7 +13,7 @@ export default function Modal({ isOpen, onClose, title, children, size = 'medium
             <X size={20} />
           </button>
         </div>
-        <div className="modal-body">
+        <div className={`modal-body ${bodyClassName}`} style={bodyStyle}>
           {children}
         </div>
         {footer && <div className="modal-footer">{footer}</div>}
