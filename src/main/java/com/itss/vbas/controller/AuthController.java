@@ -69,17 +69,22 @@ public class AuthController {
     }
 
     @PostMapping("/forgot-password")
-    public ResponseEntity<CommonDto.ApiResponse<AuthDto.PasswordResetResponse>> forgotPassword(@RequestParam String email) {
-        AuthDto.PasswordResetResponse response = authService.forgotPassword(email);
-        return ResponseEntity.ok(CommonDto.ApiResponse.success("Reset password link sent successfully", response));
+    public ResponseEntity<CommonDto.ApiResponse<AuthDto.PasswordResetResponse>> forgotPassword(@Valid @RequestBody AuthDto.PasswordResetRequest request) {
+        AuthDto.PasswordResetResponse response = authService.forgotPassword(request);
+        return ResponseEntity.ok(CommonDto.ApiResponse.success("Password reset OTP sent successfully", response));
+    }
+
+    @PostMapping("/verify-reset-otp")
+    public ResponseEntity<CommonDto.ApiResponse<AuthDto.PasswordResetVerificationResponse>> verifyResetOtp(
+            @Valid @RequestBody AuthDto.VerifyPasswordResetOtpRequest request
+    ) {
+        AuthDto.PasswordResetVerificationResponse response = authService.verifyResetOtp(request);
+        return ResponseEntity.ok(CommonDto.ApiResponse.success("OTP verified successfully", response));
     }
 
     @PostMapping("/reset-password")
-    public ResponseEntity<CommonDto.ApiResponse<Void>> resetPassword(
-            @RequestParam String token,
-            @RequestParam String newPassword
-    ) {
-        authService.resetPassword(token, newPassword);
+    public ResponseEntity<CommonDto.ApiResponse<Void>> resetPassword(@Valid @RequestBody AuthDto.ResetPasswordRequest request) {
+        authService.resetPassword(request);
         return ResponseEntity.ok(CommonDto.ApiResponse.success("Password reset successfully"));
     }
 

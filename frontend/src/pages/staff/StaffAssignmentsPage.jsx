@@ -99,20 +99,20 @@ export default function StaffAssignmentsPage() {
 
   // --- QUICK ACTION LOGIC (ACCEPT / REJECT) ---
   const handleQuickAction = async (statusAction) => {
-    // SỬ DỤNG ID CỦA ASSIGNMENT ĐỂ TRÁNH LỖI PHÂN QUYỀN
+    // Use assignment ID to avoid permission errors.
     if (!activeAssignment?.id) return;
     setBusyAction('quick');
     setNotice('');
     setError('');
     try {
       if (statusAction === 'ACCEPTED') {
-        // Gọi API Accept dành riêng cho Assignment
+        // Call the assignment-specific accept API.
         await companyApi.acceptAssignment(activeAssignment.id);
-        setNotice('✅ Request accepted successfully! Please proceed to the location.');
+        setNotice('Request accepted successfully. Please proceed to the location.');
       } else {
-        // Gọi API Reject dành riêng cho Assignment
+        // Call the assignment-specific reject API.
         await companyApi.rejectAssignment(activeAssignment.id);
-        setNotice('❌ You have rejected the request.');
+        setNotice('You have rejected the request.');
       }
       
       await loadAssignments();

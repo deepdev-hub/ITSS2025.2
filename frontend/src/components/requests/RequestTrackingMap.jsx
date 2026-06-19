@@ -68,32 +68,32 @@ function calculateDistanceKm(from, to) {
 function getMovementLabel(tracking, staffPosition, destinationPosition) {
   const backendStatus = tracking?.movementStatus;
   if (backendStatus === 'ARRIVED' || ['ARRIVED', 'IN_PROGRESS', 'COMPLETED'].includes(tracking?.requestStatus)) {
-    return 'Rescue staff đã đến nơi';
+    return 'Rescue staff has arrived';
   }
   if (backendStatus === 'NEARBY') {
-    return 'Sắp đến nơi';
+    return 'Almost there';
   }
   if (backendStatus === 'APPROACHING') {
-    return 'Đang tới điểm cứu hộ';
+    return 'Heading to the rescue point';
   }
 
   const distanceKm = calculateDistanceKm(staffPosition, destinationPosition);
   if (distanceKm !== null && distanceKm < 0.3) {
-    return 'Sắp đến nơi';
+    return 'Almost there';
   }
 
-  return 'Đang tới điểm cứu hộ';
+  return 'Heading to the rescue point';
 }
 
 function getEtaLabel(tracking) {
   if (tracking?.movementStatus === 'ARRIVED' || tracking?.etaMinutes === 0) {
-    return 'Đã đến nơi';
+    return 'Arrived';
   }
   if (Number.isFinite(Number(tracking?.etaMinutes)) && Number(tracking?.etaMinutes) > 0) {
-    return `Khoảng ${tracking.etaMinutes} phút`;
+    return `About ${tracking.etaMinutes} minutes`;
   }
 
-  return 'Đang cập nhật ETA';
+  return 'Updating ETA';
 }
 
 function isTechnicianWorkingStatus(status) {
@@ -157,7 +157,7 @@ export default function RequestTrackingMap({ requestId, requestStatus, staffProf
       setTracking(nextTracking);
       setError('');
     } catch (err) {
-      setError(getApiError(err) || 'Không thể cập nhật vị trí mới nhất. Đang thử lại...');
+      setError(getApiError(err) || 'Unable to update the latest location. Retrying...');
     } finally {
       inFlightRef.current = false;
       setLoading(false);
@@ -218,17 +218,17 @@ export default function RequestTrackingMap({ requestId, requestStatus, staffProf
   const effectiveRequestStatus = tracking?.requestStatus || requestStatus;
   const technicianStartedTask = isTechnicianWorkingStatus(effectiveRequestStatus);
   const isNearbyStaffUpdate = tracking?.movementStatus === 'NEARBY' && !technicianStartedTask;
-  const movementLabel = isNearbyStaffUpdate ? 'Sắp đến nơi' : getMovementLabel(tracking, staffPosition, destinationPosition);
-  const etaLabel = isNearbyStaffUpdate ? 'Khoảng 3 phút' : getEtaLabel(tracking);
+  const movementLabel = isNearbyStaffUpdate ? 'Almost there' : getMovementLabel(tracking, staffPosition, destinationPosition);
+  const etaLabel = isNearbyStaffUpdate ? 'About 3 minutes' : getEtaLabel(tracking);
   const vehicleLabel = isNearbyStaffUpdate
-    ? 'Phương tiện đang cập nhật'
+    ? 'Vehicle information is updating'
     : tracking?.vehicle
     ? [tracking.vehicle.vehicleType, tracking.vehicle.vehicleCode].filter(Boolean).join(' - ')
-    : 'Phương tiện đang cập nhật';
-  const plateLabel = isNearbyStaffUpdate ? 'Chưa có biển số' : (tracking?.vehicle?.plateNumber || 'Chưa có biển số');
+    : 'Vehicle information is updating';
+  const plateLabel = isNearbyStaffUpdate ? 'No plate number yet' : (tracking?.vehicle?.plateNumber || 'No plate number yet');
   const ratingLabel = Number.isFinite(Number(tracking?.staff?.rating))
     ? `${Number(tracking.staff.rating).toFixed(1)}/5`
-    : 'Chưa có đánh giá';
+    : 'No rating yet';
 
   const resolvedStaffProfilePath = staffProfilePath || (tracking?.staff?.id ? `/staff/${tracking.staff.id}/profile` : null);
 
@@ -242,8 +242,8 @@ export default function RequestTrackingMap({ requestId, requestStatus, staffProf
               View profile
             </Link>
           ) : null}
-          <h2>Technician đang thực hiện nhiệm vụ</h2>
-          <p>Staff đã check-in tại điểm cứu hộ. Hệ thống đã dừng cập nhật trạng thái đang tới.</p>
+          <h2>Technician is working on the task</h2>
+          <p>Staff has checked in at the rescue point. The arrival tracking flow has stopped.</p>
         </div>
       </div>
     );
@@ -255,8 +255,8 @@ export default function RequestTrackingMap({ requestId, requestStatus, staffProf
         <div className="tracking-skeleton-map" />
         <div>
           <div className="loader-spinner" />
-          <h2>Đang tải bản đồ tracking...</h2>
-          <p>Hệ thống đang lấy trạng thái điều phối mới nhất.</p>
+          <h2>Loading tracking map...</h2>
+          <p>The system is fetching the latest dispatch status.</p>
         </div>
       </div>
     );
@@ -267,8 +267,8 @@ export default function RequestTrackingMap({ requestId, requestStatus, staffProf
       <div className="card tracking-state-card">
         <div className="tracking-search-icon">MAP</div>
         <div>
-          <h2>Không thể tải bản đồ tracking</h2>
-          <p>Không thể cập nhật vị trí mới nhất. Đang thử lại...</p>
+          <h2>Unable to load tracking map</h2>
+          <p>Unable to update the latest location. Retrying...</p>
           {error ? <p className="tracking-error-detail">{error}</p> : null}
         </div>
       </div>
@@ -280,8 +280,8 @@ export default function RequestTrackingMap({ requestId, requestStatus, staffProf
       <div className="card tracking-state-card">
         <div className="tracking-search-icon">MAP</div>
         <div>
-          <h2>Request này chưa có thông tin vị trí.</h2>
-          <p>Hãy cập nhật tọa độ điểm cứu hộ để hiển thị bản đồ theo dõi.</p>
+          <h2>This request does not have location information yet.</h2>
+          <p>Update the rescue point coordinates to display the tracking map.</p>
         </div>
       </div>
     );
@@ -293,9 +293,9 @@ export default function RequestTrackingMap({ requestId, requestStatus, staffProf
         <div className="tracking-search-icon">RS</div>
         <div>
           <div className="loader-spinner" />
-          <h2>Đang tìm kiếm rescue staff phù hợp...</h2>
-          <p>Hệ thống sẽ tự động cập nhật khi có nhân viên nhận chuyến.</p>
-          {error ? <p className="tracking-inline-warning">Không thể cập nhật vị trí mới nhất. Đang thử lại...</p> : null}
+          <h2>Searching for a suitable rescue staff member...</h2>
+          <p>The system will update automatically when a staff member accepts the job.</p>
+          {error ? <p className="tracking-inline-warning">Unable to update the latest location. Retrying...</p> : null}
         </div>
       </div>
     );
@@ -333,7 +333,7 @@ export default function RequestTrackingMap({ requestId, requestStatus, staffProf
           {destinationPosition ? (
             <Marker position={destinationPosition} icon={destinationMarkerIcon}>
               <Popup>
-                <strong>Điểm cứu hộ</strong>
+                <strong>Rescue point</strong>
                 <br />
                 {tracking.destination?.label || 'Customer destination'}
               </Popup>
@@ -343,12 +343,12 @@ export default function RequestTrackingMap({ requestId, requestStatus, staffProf
 
         <div className="tracking-map-status">
           <span className="tracking-live-dot" />
-          {refreshing ? 'Đang cập nhật...' : movementLabel}
+          {refreshing ? 'Updating...' : movementLabel}
         </div>
 
         {error ? (
           <div className="tracking-map-warning">
-            Không thể cập nhật vị trí mới nhất. Đang thử lại...
+            Unable to update the latest location. Retrying...
           </div>
         ) : null}
       </div>
@@ -358,11 +358,11 @@ export default function RequestTrackingMap({ requestId, requestStatus, staffProf
         <div className="tracking-staff-main">
           <div>
             <h2>{tracking.staff?.name || 'Rescue staff'}</h2>
-            <p>{tracking.staff?.jobTitle || 'Nhân viên cứu hộ'}</p>
+            <p>{tracking.staff?.jobTitle || 'Rescue staff'}</p>
           </div>
           <div className="tracking-meta-grid">
             <div>
-              <span>Trạng thái</span>
+              <span>Status</span>
               <strong>{movementLabel}</strong>
             </div>
             <div>
@@ -370,11 +370,11 @@ export default function RequestTrackingMap({ requestId, requestStatus, staffProf
               <strong>{etaLabel}</strong>
             </div>
             <div>
-              <span>Phương tiện</span>
-              <strong>{vehicleLabel || 'Đang cập nhật'}</strong>
+              <span>Vehicle</span>
+              <strong>{vehicleLabel || 'Updating'}</strong>
             </div>
             <div>
-              <span>Biển số</span>
+              <span>Plate Number</span>
               <strong>{plateLabel}</strong>
             </div>
             <div>
@@ -390,7 +390,7 @@ export default function RequestTrackingMap({ requestId, requestStatus, staffProf
             </Link>
           ) : null}
           <button className="button button-secondary" type="button" disabled>
-            Gọi
+            Call
           </button>
           <button className="button button-secondary" type="button" disabled>
             Chat

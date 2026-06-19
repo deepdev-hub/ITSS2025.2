@@ -62,7 +62,8 @@ class RequestControllerIntegrationTest extends IntegrationTestSupport {
         assertEquals(RescueRequestStatus.SEARCHING, savedRequest.getStatus());
         assertEquals(5, assignments.size());
         org.assertj.core.api.Assertions.assertThat(assignments)
-                .allMatch(assignment -> assignment.getStatus() == AssignmentStatus.PENDING);
+                .allMatch(assignment -> assignment.getStatus() == AssignmentStatus.PENDING)
+                .allMatch(assignment -> assignment.getVehicle() != null);
     }
 
     @Test

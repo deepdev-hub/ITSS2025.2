@@ -15,7 +15,7 @@ import { companyApi } from '../../api/companyApi';
 import { getApiError } from '../../api/client';
 import PageHeader from '../../components/common/PageHeader';
 
-// Khắc phục lỗi không hiển thị Icon mặc định của Leaflet trong React
+// Fix the default Leaflet marker icon in React.
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
@@ -23,7 +23,7 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
 
-// Component phụ giúp bản đồ trượt mượt mà đến tọa độ mới
+// Smoothly move the map to the latest coordinates.
 function MapUpdater({ center }) {
   const map = useMap();
   useEffect(() => {
@@ -35,16 +35,16 @@ function MapUpdater({ center }) {
 }
 
 export default function StaffLocationPage() {
-  // Mặc định ở khu vực Hà Nội
+  // Default to Hanoi area.
   const [location, setLocation] = useState({ lat: 21.0051, lng: 105.8456 }); 
   const [isLocating, setIsLocating] = useState(false);
   const [isSavingLocation, setIsSavingLocation] = useState(false);
   const [locationNotice, setLocationNotice] = useState({ type: '', text: '' });
 
-  // Hàm gọi GPS của thiết bị
+  // Read GPS coordinates from the device.
   const handleGetCurrentLocation = () => {
     if (!navigator.geolocation) {
-      setLocationNotice({ type: 'error', text: 'Thiết bị hoặc trình duyệt không hỗ trợ định vị GPS.' });
+      setLocationNotice({ type: 'error', text: 'This device or browser does not support GPS location.' });
       return;
     }
     
@@ -58,28 +58,28 @@ export default function StaffLocationPage() {
           lng: position.coords.longitude 
         });
         setIsLocating(false);
-        setLocationNotice({ type: 'success', text: 'Đã định vị thành công!' });
+        setLocationNotice({ type: 'success', text: 'Location detected successfully.' });
       },
       () => {
         setIsLocating(false);
-        setLocationNotice({ type: 'error', text: 'Hãy cấp quyền truy cập vị trí cho trang web để tiếp tục.' });
+        setLocationNotice({ type: 'error', text: 'Please allow location access for this website to continue.' });
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
   };
 
-  // Hàm lưu tọa độ xuống Database
+  // Save coordinates to the database.
   const handleSaveLocation = async () => {
     setIsSavingLocation(true);
     setLocationNotice({ type: '', text: '' });
     try {
-      // Chỉ gửi latitude và longitude
+      // Send latitude and longitude only.
       await companyApi.updateMyLocation({ 
         latitude: location.lat, 
         longitude: location.lng 
       });
       
-      setLocationNotice({ type: 'success', text: 'Đã cập nhật vị trí lên hệ thống điều phối thành công!' });
+      setLocationNotice({ type: 'success', text: 'Location updated in the dispatch system successfully.' });
     } catch (err) {
       setLocationNotice({ type: 'error', text: getApiError(err) });
     } finally {
@@ -90,15 +90,15 @@ export default function StaffLocationPage() {
   return (
     <>
       <PageHeader
-        title="Khu vực trực hiện hành"
-        subtitle="Cập nhật tọa độ của bạn để hệ thống ưu tiên phân công các sự cố gần nhất."
+        title="Current Service Area"
+        subtitle="Update your coordinates so the system can prioritize nearby incidents."
       />
 
       <div className="card">
         <h2 style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <MapPin size={24} style={{ marginRight: '8px', verticalAlign: 'middle' }} />
-          Cập nhật vị trí
-          <span className="status-badge status-active">Bán kính hoạt động: 5 km</span>
+          Update Location
+          <span className="status-badge status-active">Service radius: 5 km</span>
         </h2>
 
         {locationNotice.text && (
@@ -109,10 +109,10 @@ export default function StaffLocationPage() {
         )}
 
         <div className="grid-two" style={{ alignItems: 'flex-start' }}>
-          {/* Cột 1: Các nút bấm điều khiển */}
+          {/* Controls */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
             <div className="field">
-              <label><Navigation size={16} style={{ marginRight: '8px', verticalAlign: 'middle' }} />Tọa độ của bạn</label>
+              <label><Navigation size={16} style={{ marginRight: '8px', verticalAlign: 'middle' }} />Your Coordinates</label>
               <div className="muted-line" style={{ marginBottom: '0.5rem', fontSize: '0.95rem' }}>
                 <strong>Lat:</strong> {location.lat.toFixed(5)} | <strong>Lng:</strong> {location.lng.toFixed(5)}
               </div>
@@ -124,7 +124,7 @@ export default function StaffLocationPage() {
                 style={{ width: '100%' }}
               >
                 <RefreshCw size={18} style={{ marginRight: '8px', verticalAlign: 'middle' }} />
-                {isLocating ? 'Đang lấy tọa độ...' : 'Lấy vị trí GPS mới nhất'}
+                {isLocating ? 'Getting coordinates...' : 'Get latest GPS location'}
               </button>
             </div>
 
@@ -136,11 +136,11 @@ export default function StaffLocationPage() {
               style={{ width: '100%', padding: '0.75rem' }}
             >
               <Save size={18} style={{ marginRight: '8px', verticalAlign: 'middle' }} />
-              {isSavingLocation ? 'Đang cập nhật lên máy chủ...' : 'Lưu vị trí hiện hành'}
+              {isSavingLocation ? 'Updating server...' : 'Save current location'}
             </button>
           </div>
 
-          {/* Cột 2: Bản đồ */}
+          {/* Map */}
           <div style={{ borderRadius: '12px', overflow: 'hidden', border: '2px solid #e0e0e0', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
              <MapContainer
                 center={[location.lat, location.lng]}
@@ -153,7 +153,7 @@ export default function StaffLocationPage() {
                 />
                 <MapUpdater center={location} />
                 <Marker position={[location.lat, location.lng]} />
-                {/* 5000 mét = 5km */}
+                {/* 5000 meters = 5km */}
                 <Circle
                   center={[location.lat, location.lng]}
                   radius={5000}

@@ -21,9 +21,11 @@ public interface AuthService {
 
     List<CommonDto.LookupResponse> getServiceLookups();
 
-    AuthDto.PasswordResetResponse forgotPassword(String email);
+    AuthDto.PasswordResetResponse forgotPassword(AuthDto.PasswordResetRequest request);
 
-    void resetPassword(String token, String newPassword);
+    AuthDto.PasswordResetVerificationResponse verifyResetOtp(AuthDto.VerifyPasswordResetOtpRequest request);
+
+    void resetPassword(AuthDto.ResetPasswordRequest request);
 
     CommonDto.FileUploadResponse uploadAvatar(MultipartFile file);
 }

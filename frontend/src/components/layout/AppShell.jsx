@@ -1,9 +1,9 @@
 import { Link, NavLink, Outlet } from 'react-router-dom';
 import { LifeBuoy, Menu, PhoneCall, X } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { getMenuItems } from '../../utils/roles';
 import { getMenuIcon } from '../../utils/menuIcons';
-import { useEffect, useMemo, useState } from 'react';
 import { addAvatarCacheKey, getAvatarUrl, resolveAvatarUrl } from '../../utils/avatar';
 import NotificationBell from './NotificationBell';
 
@@ -92,7 +92,7 @@ export default function AppShell() {
           <span><LifeBuoy size={20} aria-hidden="true" /></span>
           <div className="sidebar-brand-copy">
             <strong>VBAS Rescue</strong>
-            <p>Cứu hộ xe 24/7</p>
+            <p>24/7 vehicle rescue</p>
           </div>
         </div>
 
@@ -117,7 +117,7 @@ export default function AppShell() {
           <div className="sidebar-footer">
             <Link className="sidebar-sos-link" to="/customer/requests/new" onClick={() => setSidebarOpen(false)}>
               <PhoneCall size={18} aria-hidden="true" />
-              SOS — Cứu hộ ngay
+              SOS - Rescue Now
             </Link>
           </div>
         ) : null}

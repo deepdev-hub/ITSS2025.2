@@ -13,9 +13,6 @@ import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
 import markerShadow from 'leaflet/dist/images/marker-shadow.png';
 
-
-
-
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: markerIcon2x,
@@ -56,7 +53,6 @@ export default function LocationPickerMap({
   onChange,
   height = '360px',
 }) {
-  
   const [keyword, setKeyword] = useState('');
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState('');
@@ -74,14 +70,14 @@ export default function LocationPickerMap({
     if (hasValidLocation) {
       return [Number(value.latitude), Number(value.longitude)];
     }
-  
+
     return DEFAULT_CENTER;
   }, [hasValidLocation, value]);
-  
+
   const handleSearchPlace = async () => {
     const q = keyword.trim();
     if (!q) {
-      setError('Vui lòng nhập tên địa điểm hoặc địa chỉ.');
+      setError('Please enter a place name or address.');
       return;
     }
 
@@ -91,16 +87,16 @@ export default function LocationPickerMap({
 
       const response = await fetch(
         `https://nominatim.openstreetmap.org/search?format=json&countrycodes=vn&q=${encodeURIComponent(q)}&limit=1`
-      );  
+      );
 
       if (!response.ok) {
-        throw new Error('Không thể tìm kiếm địa điểm.');
+        throw new Error('Unable to search for that place.');
       }
 
       const data = await response.json();
 
       if (!Array.isArray(data) || data.length === 0) {
-        setError('Không tìm thấy địa điểm phù hợp.');
+        setError('No matching place was found.');
         return;
       }
 
@@ -111,7 +107,7 @@ export default function LocationPickerMap({
         longitude: Number(first.lon),
       });
     } catch (err) {
-      setError(err.message || 'Tìm kiếm địa điểm thất bại.');
+      setError(err.message || 'Place search failed.');
     } finally {
       setSearching(false);
     }
@@ -128,7 +124,7 @@ export default function LocationPickerMap({
     setError('');
 
     if (!navigator.geolocation) {
-      setError('Trình duyệt này không hỗ trợ lấy vị trí hiện tại.');
+      setError('This browser does not support current location detection.');
       return;
     }
 
@@ -142,16 +138,16 @@ export default function LocationPickerMap({
       (geoError) => {
         switch (geoError.code) {
           case 1:
-            setError('Bạn đã từ chối quyền truy cập vị trí.');
+            setError('You denied location access.');
             break;
           case 2:
-            setError('Không thể xác định vị trí hiện tại.');
+            setError('Unable to determine your current location.');
             break;
           case 3:
-            setError('Hết thời gian lấy vị trí. Hãy thử lại.');
+            setError('Location lookup timed out. Please try again.');
             break;
           default:
-            setError('Lấy vị trí thất bại.');
+            setError('Failed to get current location.');
         }
       },
       {
@@ -170,7 +166,7 @@ export default function LocationPickerMap({
           className="button"
           onClick={handleGetCurrentLocation}
         >
-          Lấy vị trí hiện tại
+          Get current location
         </button>
       </div>
 
@@ -196,7 +192,7 @@ export default function LocationPickerMap({
         {hasValidLocation ? (
           <Marker position={selectedPosition}>
             <Popup>
-              Vị trí đã chọn
+              Selected location
               <br />
               Latitude: {Number(value.latitude).toFixed(6)}
               <br />
@@ -207,52 +203,52 @@ export default function LocationPickerMap({
       </MapContainer>
 
       <div style={{ marginTop: 12, fontSize: 14 }}>
-        <strong>Tọa độ đã chọn:</strong>{' '}
+        <strong>Selected coordinates:</strong>{' '}
         {hasValidLocation
           ? `${Number(value.latitude).toFixed(6)}, ${Number(value.longitude).toFixed(6)}`
-          : 'Chưa chọn'}
+          : 'Not selected'}
       </div>
 
       <div style={{ marginTop: 6, fontSize: 13, color: '#666' }}>
-        Bấm nút để lấy vị trí hiện tại hoặc click trực tiếp lên bản đồ để chọn vị trí.
+        Use the button to get your current location or click directly on the map to choose a location.
       </div>
       <div
-      style={{
-        display: 'flex',
-        gap: 8,
-        marginBottom: 12,
-        flexWrap: 'wrap',
-      }}
-    >
-      <input
-        type="text"
-        value={keyword}
-        onChange={(e) => setKeyword(e.target.value)}
-        placeholder="Nhập tên địa điểm hoặc địa chỉ..."
         style={{
-          flex: 1,
-          minWidth: 240,
-          padding: '10px 12px',
-          border: '1px solid #ccc',
-          borderRadius: '8px',
+          display: 'flex',
+          gap: 8,
+          marginBottom: 12,
+          flexWrap: 'wrap',
         }}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') {
-            e.preventDefault();
-            handleSearchPlace();
-          }
-        }}
-      />
-
-      <button
-        type="button"
-        className="button"
-        onClick={handleSearchPlace}
-        disabled={searching}
       >
-        {searching ? 'Đang tìm...' : 'Tìm địa điểm'}
-      </button>
-    </div>
+        <input
+          type="text"
+          value={keyword}
+          onChange={(e) => setKeyword(e.target.value)}
+          placeholder="Enter a place name or address..."
+          style={{
+            flex: 1,
+            minWidth: 240,
+            padding: '10px 12px',
+            border: '1px solid #ccc',
+            borderRadius: '8px',
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              handleSearchPlace();
+            }
+          }}
+        />
+
+        <button
+          type="button"
+          className="button"
+          onClick={handleSearchPlace}
+          disabled={searching}
+        >
+          {searching ? 'Searching...' : 'Search place'}
+        </button>
+      </div>
 
       {error ? (
         <div style={{ marginTop: 8, fontSize: 14, color: 'red' }}>{error}</div>

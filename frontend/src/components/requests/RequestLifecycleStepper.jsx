@@ -1,10 +1,10 @@
 import Stepper from '../common/Stepper';
 
 const TRACKING_STEPS = [
-  { id: 'submitted', label: 'Đã gửi yêu cầu', hint: 'Tiếp nhận & tìm đội cứu hộ' },
-  { id: 'matched', label: 'Ghép đội cứu hộ', hint: 'Công ty nhận nhiệm vụ' },
-  { id: 'progress', label: 'Đang xử lý', hint: 'Nhân viên đang hỗ trợ' },
-  { id: 'completed', label: 'Hoàn tất', hint: 'Yêu cầu kết thúc' },
+  { id: 'submitted', label: 'Request Submitted', hint: 'Received and searching for a rescue team' },
+  { id: 'matched', label: 'Team Matched', hint: 'A rescue company accepted the task' },
+  { id: 'progress', label: 'In Progress', hint: 'Staff is assisting the customer' },
+  { id: 'completed', label: 'Completed', hint: 'The request has ended' },
 ];
 
 function getTrackingStep(status) {
@@ -34,8 +34,8 @@ export default function RequestLifecycleStepper({ status }) {
     <div className={`request-lifecycle ${isCanceled ? 'request-lifecycle-canceled' : ''}`}>
       <div className="request-lifecycle-header">
         <div>
-          <span className="request-lifecycle-eyebrow">Tiến trình cứu hộ</span>
-          <h2>{isCanceled ? 'Yêu cầu đã bị hủy' : 'Theo dõi trạng thái xử lý'}</h2>
+          <span className="request-lifecycle-eyebrow">Rescue Progress</span>
+          <h2>{isCanceled ? 'Request canceled' : 'Track service status'}</h2>
         </div>
         {isCanceled ? <span className="status-badge status-canceled">CANCELED</span> : null}
       </div>

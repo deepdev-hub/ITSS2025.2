@@ -6,7 +6,6 @@ import Loader from '../../components/common/Loader';
 import PageHeader from '../../components/common/PageHeader';
 import Modal from '../../components/common/Modal';
 import ListTable from '../../components/common/ListTable';
-import { formatDateTime } from '../../utils/requestUi';
 
 const initialForm = {
   brand: '',
@@ -99,10 +98,10 @@ export default function CustomerVehiclesPage() {
       };
       if (editingId) {
         await customerApi.updateVehicle(editingId, payload);
-        setNotice('Cập nhật xe thành công.');
+        setNotice('Vehicle updated successfully.');
       } else {
         await customerApi.createVehicle(payload);
-        setNotice('Thêm xe thành công.');
+        setNotice('Vehicle added successfully.');
       }
       await loadVehicles();
       closeModal();
@@ -114,11 +113,11 @@ export default function CustomerVehiclesPage() {
   };
 
   const handleDelete = async (vehicle) => {
-    if (!window.confirm(`Xóa xe ${vehicle.plateNumber}?`)) return;
+    if (!window.confirm(`Delete vehicle ${vehicle.plateNumber}?`)) return;
     setActionId(vehicle.id);
     try {
       await customerApi.deleteVehicle(vehicle.id);
-      setNotice('Xóa xe thành công.');
+      setNotice('Vehicle deleted successfully.');
       await loadVehicles();
     } catch (err) {
       setError(getApiError(err));
@@ -128,22 +127,22 @@ export default function CustomerVehiclesPage() {
   };
 
   const columns = [
-    { key: 'brand', label: 'Hãng xe', width: '18%' },
-    { key: 'model', label: 'Mẫu xe', width: '18%' },
-    { key: 'plateNumber', label: 'Biển số', width: '18%' },
-    { key: 'color', label: 'Màu sắc', width: '15%' },
-    { key: 'fuelType', label: 'Loại xăng', width: '15%' },
-    { key: 'manufactureYear', label: 'Năm sản xuất', width: '16%' },
+    { key: 'brand', label: 'Brand', width: '18%' },
+    { key: 'model', label: 'Model', width: '18%' },
+    { key: 'plateNumber', label: 'Plate Number', width: '18%' },
+    { key: 'color', label: 'Color', width: '15%' },
+    { key: 'fuelType', label: 'Fuel Type', width: '15%' },
+    { key: 'manufactureYear', label: 'Manufacture Year', width: '16%' },
   ];
 
   return (
     <>
       <PageHeader
-        title="Xe của tôi"
-        subtitle="Quản lý danh sách các xe có thể được chọn khi tạo yêu cầu cứu hộ."
+        title="My Vehicles"
+        subtitle="Manage vehicles that can be selected when creating a rescue request."
         actions={
           <button className="button button-primary" onClick={openCreateModal}>
-            <Plus size={18} /> Thêm xe
+            <Plus size={18} /> Add Vehicle
           </button>
         }
       />
@@ -154,7 +153,7 @@ export default function CustomerVehiclesPage() {
       <div className="filters-row">
         <input
           type="text"
-          placeholder="Tìm kiếm theo hãng, mẫu, biển số, hoặc màu sắc..."
+          placeholder="Search by brand, model, plate number, or color..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="input-field"
@@ -163,29 +162,29 @@ export default function CustomerVehiclesPage() {
       </div>
 
       {loading ? (
-        <Loader label="Đang tải danh sách xe..." />
+        <Loader label="Loading vehicle list..." />
       ) : (
         <ListTable
           columns={columns}
           data={filteredVehicles}
           onEdit={openEditModal}
           onDelete={handleDelete}
-          emptyMessage="Bạn chưa thêm xe nào"
+          emptyMessage="You have not added any vehicles yet"
         />
       )}
 
       <Modal
         isOpen={isModalOpen}
         onClose={closeModal}
-        title={editingId ? `Chỉnh sửa xe #${editingId}` : 'Thêm xe mới'}
+        title={editingId ? `Edit Vehicle #${editingId}` : 'Add New Vehicle'}
         size="large"
         footer={
           <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
             <button className="button button-secondary" onClick={closeModal} disabled={saving}>
-              Hủy
+              Cancel
             </button>
             <button className="button button-primary" onClick={handleSubmit} disabled={saving}>
-              {saving ? 'Đang lưu...' : editingId ? 'Cập nhật' : 'Thêm xe'}
+              {saving ? 'Saving...' : editingId ? 'Update' : 'Add Vehicle'}
             </button>
           </div>
         }
@@ -193,7 +192,7 @@ export default function CustomerVehiclesPage() {
         <form onSubmit={handleSubmit}>
           <div className="form-grid">
             <div className="field">
-              <label>Hãng xe <span style={{ color: 'var(--danger)' }}>*</span></label>
+              <label>Brand <span style={{ color: 'var(--danger)' }}>*</span></label>
               <input
                 type="text"
                 name="brand"
@@ -204,7 +203,7 @@ export default function CustomerVehiclesPage() {
               />
             </div>
             <div className="field">
-              <label>Mẫu xe <span style={{ color: 'var(--danger)' }}>*</span></label>
+              <label>Model <span style={{ color: 'var(--danger)' }}>*</span></label>
               <input
                 type="text"
                 name="model"
@@ -215,7 +214,7 @@ export default function CustomerVehiclesPage() {
               />
             </div>
             <div className="field">
-              <label>Biển số xe <span style={{ color: 'var(--danger)' }}>*</span></label>
+              <label>Plate Number <span style={{ color: 'var(--danger)' }}>*</span></label>
               <input
                 type="text"
                 name="plateNumber"
@@ -226,7 +225,7 @@ export default function CustomerVehiclesPage() {
               />
             </div>
             <div className="field">
-              <label>Năm sản xuất</label>
+              <label>Manufacture Year</label>
               <input
                 type="number"
                 name="manufactureYear"
@@ -238,35 +237,35 @@ export default function CustomerVehiclesPage() {
               />
             </div>
             <div className="field">
-              <label>Màu sắc</label>
+              <label>Color</label>
               <input
                 type="text"
                 name="color"
                 value={form.color}
                 onChange={handleChange}
-                placeholder="Trắng, Đen, Xám..."
+                placeholder="White, Black, Gray..."
               />
             </div>
             <div className="field">
-              <label>Loại xăng</label>
+              <label>Fuel Type</label>
               <select name="fuelType" value={form.fuelType} onChange={handleChange}>
-                <option value="">Chọn loại xăng</option>
-                <option value="Gasoline">Xăng</option>
-                <option value="Diesel">Dầu diesel</option>
-                <option value="LPG">Gas LPG</option>
-                <option value="Electric">Điện</option>
+                <option value="">Select fuel type</option>
+                <option value="Gasoline">Gasoline</option>
+                <option value="Diesel">Diesel</option>
+                <option value="LPG">LPG</option>
+                <option value="Electric">Electric</option>
                 <option value="Hybrid">Hybrid</option>
               </select>
             </div>
           </div>
 
           <div className="field">
-            <label>Ghi chú</label>
+            <label>Notes</label>
             <textarea
               name="notes"
               value={form.notes}
               onChange={handleChange}
-              placeholder="Ghi chú thêm về chiếc xe (tùy chọn)"
+              placeholder="Additional notes about this vehicle (optional)"
               style={{ minHeight: '80px' }}
             />
           </div>

@@ -35,7 +35,7 @@ export default function CreateRequest() {
     setMessage('');
 
     if (form.latitude == null || form.longitude == null) {
-      setMessage('Vui lòng chọn vị trí trước khi gửi yêu cầu.');
+      setMessage('Please choose a location before submitting the request.');
       return;
     }
 
@@ -50,9 +50,9 @@ export default function CreateRequest() {
         longitude: form.longitude,
       });
 
-      setMessage('Tạo yêu cầu thành công.');
+      setMessage('Request created successfully.');
     } catch (error) {
-      setMessage(error?.message || 'Tạo yêu cầu thất bại.');
+      setMessage(error?.message || 'Request creation failed.');
     } finally {
       setSubmitting(false);
     }
@@ -60,11 +60,11 @@ export default function CreateRequest() {
 
   return (
     <div>
-      <h1>Tạo yêu cầu cứu hộ</h1>
+      <h1>Create Rescue Request</h1>
 
       <form onSubmit={handleSubmit}>
         <div>
-          <label>Loại sự cố</label>
+          <label>Incident Type</label>
           <input
             name="incidentTypeId"
             value={form.incidentTypeId}
@@ -73,7 +73,7 @@ export default function CreateRequest() {
         </div>
 
         <div>
-          <label>Loại dịch vụ</label>
+          <label>Service Type</label>
           <input
             name="serviceTypeId"
             value={form.serviceTypeId}
@@ -82,7 +82,7 @@ export default function CreateRequest() {
         </div>
 
         <div>
-          <label>Mô tả</label>
+          <label>Description</label>
           <textarea
             name="description"
             value={form.description}
@@ -91,7 +91,7 @@ export default function CreateRequest() {
         </div>
 
         <div style={{ marginTop: 16, marginBottom: 16 }}>
-          <label>Vị trí sự cố</label>
+          <label>Incident Location</label>
           <LocationPickerMap
             value={{
               latitude: form.latitude,
@@ -102,7 +102,7 @@ export default function CreateRequest() {
         </div>
 
         <button type="submit" disabled={submitting}>
-          {submitting ? 'Đang gửi...' : 'Gửi yêu cầu'}
+          {submitting ? 'Submitting...' : 'Submit request'}
         </button>
       </form>
 

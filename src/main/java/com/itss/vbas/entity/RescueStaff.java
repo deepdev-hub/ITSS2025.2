@@ -40,6 +40,10 @@ public class RescueStaff {
     @JoinColumn(name = "company_id", nullable = false)
     private RescueCompany company;
 
+    @OneToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "rescue_vehicle_id", unique = true)
+    private RescueVehicle vehicle;
+
     @Column(name = "job_title", length = 255)
     private String jobTitle;
 

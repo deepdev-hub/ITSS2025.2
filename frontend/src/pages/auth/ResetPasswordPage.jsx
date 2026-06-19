@@ -1,12 +1,14 @@
 import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { useSearchParams } from 'react-router-dom';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { authApi } from '../../api/authApi';
 import { getApiError } from '../../api/client';
 
+const RESET_EMAIL_KEY = 'vbas.resetEmail';
+const RESET_TOKEN_KEY = 'vbas.resetToken';
+
 export default function ResetPasswordPage() {
-  const [searchParams] = useSearchParams();
-  const token = useMemo(() => searchParams.get('token') || '', [searchParams]);
+  const navigate = useNavigate();
+  const resetToken = useMemo(() => sessionStorage.getItem(RESET_TOKEN_KEY) || '', []);
 
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -14,7 +16,9 @@ export default function ResetPasswordPage() {
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
 
-  const tokenMissing = !token;
+  if (!resetToken) {
+    return <Navigate to="/forgot-password" replace />;
+  }
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -22,32 +26,34 @@ export default function ResetPasswordPage() {
     setError('');
     setMessage('');
 
-    if (tokenMissing) {
-      setError('Token khong hop le hoac da thieu trong URL.');
-      setSubmitting(false);
-      return;
-    }
-
     if (password.length < 6) {
-      setError('Mat khau moi phai co it nhat 6 ky tu.');
+      setError('The new password must be at least 6 characters.');
       setSubmitting(false);
       return;
     }
 
     if (password !== confirmPassword) {
-      setError('Xac nhan mat khau khong khop.');
+      setError('Password confirmation does not match.');
       setSubmitting(false);
       return;
     }
 
     try {
       const response = await authApi.resetPassword({
-        token,
+        resetToken,
         newPassword: password,
       });
-      setMessage(response?.message || 'Doi mat khau thanh cong.');
+      sessionStorage.removeItem(RESET_EMAIL_KEY);
+      sessionStorage.removeItem(RESET_TOKEN_KEY);
+      setMessage(response?.message || 'Password changed successfully.');
       setPassword('');
       setConfirmPassword('');
+      window.setTimeout(() => {
+        navigate('/login', {
+          replace: true,
+          state: { notice: 'Password reset successfully. Please sign in.' },
+        });
+      }, 1200);
     } catch (err) {
       setError(getApiError(err));
     } finally {
@@ -59,9 +65,8 @@ export default function ResetPasswordPage() {
     <div className="hero">
       <form className="auth-card card" style={{ maxWidth: '520px', width: '100%' }} onSubmit={handleSubmit}>
         <h1>Reset Password</h1>
-        <p>Nhap mat khau moi cho tai khoan cua ban.</p>
+        <p>Enter a new password for your account.</p>
 
-        {tokenMissing ? <div className="notice error">Khong tim thay token trong URL.</div> : null}
         {error ? <div className="notice error">{error}</div> : null}
         {message ? <div className="notice success">{message}</div> : null}
 
@@ -75,7 +80,7 @@ export default function ResetPasswordPage() {
             onChange={(event) => setPassword(event.target.value)}
             required
             minLength={6}
-            disabled={tokenMissing || submitting}
+            disabled={submitting}
           />
         </div>
 
@@ -89,12 +94,12 @@ export default function ResetPasswordPage() {
             onChange={(event) => setConfirmPassword(event.target.value)}
             required
             minLength={6}
-            disabled={tokenMissing || submitting}
+            disabled={submitting}
           />
         </div>
 
         <div className="actions-row">
-          <button className="button button-primary" type="submit" disabled={tokenMissing || submitting}>
+          <button className="button button-primary" type="submit" disabled={submitting}>
             {submitting ? 'Updating...' : 'Reset password'}
           </button>
           <Link className="button button-secondary" to="/login">Back to login</Link>

@@ -118,19 +118,19 @@ export default function RegisterPage() {
             <LifeBuoy size={40} />
           </div>
           <h1>VBAS Rescue</h1>
-          <p className="auth-card-subtitle">Đăng ký tài khoản khách hàng</p>
+          <p className="auth-card-subtitle">Create a customer account</p>
         </div>
 
-        {error ? <Alert variant="error" title="Đăng ký thất bại">{error}</Alert> : null}
+        {error ? <Alert variant="error" title="Registration failed">{error}</Alert> : null}
 
-        <h2 className="section-title">Thông tin cá nhân</h2>
+        <h2 className="section-title">Personal Information</h2>
         <div className="form-grid">
           <div className="field modern-field">
             <label htmlFor="fullName">
               <User size={16} style={{ marginRight: '8px', verticalAlign: 'middle' }} />
               Full Name
             </label>
-            <input id="fullName" name="fullName" value={form.fullName} onChange={handleChange} required placeholder="Nhập họ tên của bạn" />
+            <input id="fullName" name="fullName" value={form.fullName} onChange={handleChange} required placeholder="Enter your full name" />
           </div>
 
           <div className="field modern-field">
@@ -138,7 +138,7 @@ export default function RegisterPage() {
               <Phone size={16} style={{ marginRight: '8px', verticalAlign: 'middle' }} />
               Phone
             </label>
-            <input id="phone" name="phone" value={form.phone} onChange={handleChange} placeholder="Nhập số điện thoại" />
+            <input id="phone" name="phone" value={form.phone} onChange={handleChange} placeholder="Enter your phone number" />
           </div>
 
           <div className="field modern-field">
@@ -146,7 +146,7 @@ export default function RegisterPage() {
               <Mail size={16} style={{ marginRight: '8px', verticalAlign: 'middle' }} />
               Email
             </label>
-            <input id="email" name="email" type="email" value={form.email} onChange={handleChange} required placeholder="Nhập email của bạn" />
+            <input id="email" name="email" type="email" value={form.email} onChange={handleChange} required placeholder="Enter your email" />
           </div>
 
           <div className="field modern-field">
@@ -171,7 +171,7 @@ export default function RegisterPage() {
           </div>
         </div>
 
-        <h2 className="section-title">Mật khẩu</h2>
+        <h2 className="section-title">Password</h2>
         <div className="form-grid">
           <div className="field modern-field">
             <label htmlFor="password">
@@ -187,7 +187,7 @@ export default function RegisterPage() {
                 onChange={handleChange}
                 required
                 minLength={6}
-                placeholder="Nhập mật khẩu (tối thiểu 6 ký tự)"
+                placeholder="Enter a password (at least 6 characters)"
               />
               <button
                 type="button"
@@ -214,7 +214,7 @@ export default function RegisterPage() {
                 onChange={handleChange}
                 required
                 minLength={6}
-                placeholder="Xác nhận mật khẩu"
+                placeholder="Confirm your password"
               />
               <button
                 type="button"
@@ -228,7 +228,7 @@ export default function RegisterPage() {
           </div>
         </div>
 
-        <h2 className="section-title">Địa chỉ mặc định</h2>
+        <h2 className="section-title">Default Address</h2>
         <div className="form-grid">
           <div className="field modern-field">
             <label htmlFor="country">Country</label>
@@ -261,7 +261,7 @@ export default function RegisterPage() {
             <MapPin size={16} style={{ marginRight: '8px', verticalAlign: 'middle' }} />
             Address Detail
           </label>
-          <textarea id="detail" name="defaultAddress.detail" value={form.defaultAddress.detail} onChange={handleChange} placeholder="Nhập địa chỉ chi tiết" />
+          <textarea id="detail" name="defaultAddress.detail" value={form.defaultAddress.detail} onChange={handleChange} placeholder="Enter detailed address" />
         </div>
 
         <div className="actions-row">
@@ -271,12 +271,12 @@ export default function RegisterPage() {
             disabled={submitting}
           >
             <UserPlus size={20} style={{ marginRight: '8px', verticalAlign: 'middle' }} />
-            {submitting ? 'Đang tạo tài khoản...' : 'Đăng ký'}
+            {submitting ? 'Creating account...' : 'Register'}
           </button>
         </div>
 
         <div className="auth-card-footer">
-          <Link className="auth-link" to="/login">Quay lại đăng nhập</Link>
+          <Link className="auth-link" to="/login">Back to login</Link>
         </div>
       </form>
 
@@ -406,7 +406,6 @@ export default function RegisterPage() {
           color: #764ba2;
           text-decoration: underline;
         }
-        /* Dark mode styles */
         .dark-mode {
           --bg-primary: #1a1a2e;
           --bg-secondary: #16213e;

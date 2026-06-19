@@ -1,5 +1,6 @@
 package com.itss.vbas.service.impl;
 
+import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -12,7 +13,6 @@ import com.itss.vbas.entity.Role;
 import com.itss.vbas.enums.AccountStatus;
 import com.itss.vbas.enums.RoleName;
 import com.itss.vbas.exception.BadRequestException;
-import com.itss.vbas.exception.BusinessException;
 import com.itss.vbas.exception.UnauthorizedException;
 import com.itss.vbas.mapper.AppMapper;
 import com.itss.vbas.repository.AccountRepository;
@@ -39,6 +39,10 @@ import org.springframework.web.multipart.MultipartFile;
 @Transactional
 public class AuthServiceImpl implements AuthService {
 
+    private static final int OTP_BOUND = 1_000_000;
+    private static final int MAX_OTP_ATTEMPTS = 5;
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+
     private final EmailService emailService;
     private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final AccountRepository accountRepository;
@@ -52,7 +56,6 @@ public class AuthServiceImpl implements AuthService {
     private final JwtUtil jwtUtil;
     private final AuthContext authContext;
     private final FileStorageService fileStorageService;
-    private final String frontendBaseUrl;
     private final long passwordResetExpirationMinutes;
 
     public AuthServiceImpl(
@@ -69,7 +72,6 @@ public class AuthServiceImpl implements AuthService {
             JwtUtil jwtUtil,
             AuthContext authContext,
             FileStorageService fileStorageService,
-            @Value("${app.frontend.base-url:http://localhost:5173}") String frontendBaseUrl,
             @Value("${app.password-reset.expiration-minutes:15}") long passwordResetExpirationMinutes
     ) {
         this.emailService = emailService;
@@ -85,7 +87,6 @@ public class AuthServiceImpl implements AuthService {
         this.jwtUtil = jwtUtil;
         this.authContext = authContext;
         this.fileStorageService = fileStorageService;
-        this.frontendBaseUrl = frontendBaseUrl;
         this.passwordResetExpirationMinutes = passwordResetExpirationMinutes;
     }
 
@@ -186,52 +187,79 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    public AuthDto.PasswordResetResponse forgotPassword(String email) {
-        if (email == null || email.isBlank()) {
-            throw new BadRequestException("Email is required");
-        }
-
-        Account account = accountRepository.findByEmailIgnoreCase(email.trim().toLowerCase())
+    public AuthDto.PasswordResetResponse forgotPassword(AuthDto.PasswordResetRequest request) {
+        Account account = accountRepository.findByEmailIgnoreCase(request.email().trim().toLowerCase())
                 .orElseThrow(() -> new BadRequestException("Email does not exist"));
 
+        LocalDateTime now = LocalDateTime.now();
+        invalidateActiveResetTokens(account, now);
+
+        String otp = generateOtp();
         PasswordResetToken resetToken = PasswordResetToken.builder()
                 .user(account)
                 .token(UUID.randomUUID().toString())
+                .otpHash(PasswordUtil.hash(otp))
                 .expiresAt(LocalDateTime.now().plusMinutes(passwordResetExpirationMinutes))
+                .attemptCount(0)
                 .build();
 
         passwordResetTokenRepository.save(resetToken);
-        String link = buildResetPasswordLink(resetToken.getToken());
-        boolean emailSent = emailService.sendResetPasswordEmail(account.getEmail(), link);
+        boolean emailSent = emailService.sendResetPasswordOtp(account.getEmail(), otp, passwordResetExpirationMinutes);
         if (!emailSent) {
-            throw new BusinessException("Could not send reset password email. Please try again later.");
+            resetToken.setUsedAt(LocalDateTime.now());
+            passwordResetTokenRepository.save(resetToken);
+            throw new BadRequestException("Could not send reset password OTP email. Please contact support or try again later.");
         }
-        return new AuthDto.PasswordResetResponse(null, true);
+        return new AuthDto.PasswordResetResponse(true, passwordResetExpirationMinutes);
     }
 
     @Override
-    public void resetPassword(String token, String newPassword) {
-        if (token == null || token.isBlank()) {
-            throw new BadRequestException("Invalid token");
+    @Transactional(noRollbackFor = BadRequestException.class)
+    public AuthDto.PasswordResetVerificationResponse verifyResetOtp(AuthDto.VerifyPasswordResetOtpRequest request) {
+        Account account = accountRepository.findByEmailIgnoreCase(request.email().trim().toLowerCase())
+                .orElseThrow(() -> new BadRequestException("Email does not exist"));
+
+        PasswordResetToken resetToken = passwordResetTokenRepository.findFirstByUserIdAndUsedAtIsNullOrderByIdDesc(account.getId())
+                .orElseThrow(() -> new BadRequestException("No active password reset OTP was found"));
+
+        validateResetTokenUsable(resetToken);
+
+        int attemptCount = resetToken.getAttemptCount() == null ? 0 : resetToken.getAttemptCount();
+        if (attemptCount >= MAX_OTP_ATTEMPTS) {
+            resetToken.setUsedAt(LocalDateTime.now());
+            passwordResetTokenRepository.save(resetToken);
+            throw new BadRequestException("OTP attempt limit exceeded. Please request a new OTP.");
         }
 
-        if (newPassword == null || newPassword.length() < 6 || newPassword.length() > 100) {
-            throw new BadRequestException("New password must be between 6 and 100 characters");
+        if (resetToken.getOtpHash() == null || !PasswordUtil.matches(request.otp(), resetToken.getOtpHash())) {
+            int newAttemptCount = attemptCount + 1;
+            resetToken.setAttemptCount(newAttemptCount);
+            if (newAttemptCount >= MAX_OTP_ATTEMPTS) {
+                resetToken.setUsedAt(LocalDateTime.now());
+                passwordResetTokenRepository.save(resetToken);
+                throw new BadRequestException("OTP attempt limit exceeded. Please request a new OTP.");
+            }
+            passwordResetTokenRepository.save(resetToken);
+            throw new BadRequestException("Invalid OTP");
         }
 
-        PasswordResetToken resetToken = passwordResetTokenRepository.findByToken(token.trim())
-                .orElseThrow(() -> new BadRequestException("Invalid token"));
+        resetToken.setVerifiedAt(LocalDateTime.now());
+        passwordResetTokenRepository.save(resetToken);
+        return new AuthDto.PasswordResetVerificationResponse(resetToken.getToken());
+    }
 
-        if (resetToken.getUsedAt() != null) {
-            throw new BadRequestException("Token has already been used");
-        }
+    @Override
+    public void resetPassword(AuthDto.ResetPasswordRequest request) {
+        PasswordResetToken resetToken = passwordResetTokenRepository.findByToken(request.resetToken().trim())
+                .orElseThrow(() -> new BadRequestException("Invalid reset token"));
 
-        if (resetToken.getExpiresAt().isBefore(LocalDateTime.now())) {
-            throw new BadRequestException("Token has expired");
+        validateResetTokenUsable(resetToken);
+        if (resetToken.getVerifiedAt() == null) {
+            throw new BadRequestException("OTP has not been verified");
         }
 
         Account account = resetToken.getUser();
-        account.setPasswordHash(PasswordUtil.hash(newPassword));
+        account.setPasswordHash(PasswordUtil.hash(request.newPassword()));
         accountRepository.save(account);
 
         resetToken.setUsedAt(LocalDateTime.now());
@@ -271,13 +299,23 @@ public class AuthServiceImpl implements AuthService {
                 .orElseGet(() -> roleRepository.save(Role.builder().roleName(roleName).build()));
     }
 
-    private String buildResetPasswordLink(String token) {
-        String baseUrl = frontendBaseUrl == null || frontendBaseUrl.isBlank()
-                ? "http://localhost:5173"
-                : frontendBaseUrl.trim();
-        if (baseUrl.endsWith("/")) {
-            baseUrl = baseUrl.substring(0, baseUrl.length() - 1);
+    private void invalidateActiveResetTokens(Account account, LocalDateTime usedAt) {
+        List<PasswordResetToken> activeTokens = passwordResetTokenRepository.findByUserIdAndUsedAtIsNull(account.getId());
+        activeTokens.forEach(token -> token.setUsedAt(usedAt));
+        passwordResetTokenRepository.saveAll(activeTokens);
+    }
+
+    private void validateResetTokenUsable(PasswordResetToken resetToken) {
+        if (resetToken.getUsedAt() != null) {
+            throw new BadRequestException("Reset token has already been used");
         }
-        return baseUrl + "/reset-password?token=" + token;
+
+        if (resetToken.getExpiresAt().isBefore(LocalDateTime.now())) {
+            throw new BadRequestException("OTP has expired");
+        }
+    }
+
+    private String generateOtp() {
+        return String.format("%06d", SECURE_RANDOM.nextInt(OTP_BOUND));
     }
 }

@@ -18,6 +18,7 @@ import com.itss.vbas.entity.RequestStatusHistory;
 import com.itss.vbas.entity.RescueCompany;
 import com.itss.vbas.entity.RescueRequest;
 import com.itss.vbas.entity.RescueStaff;
+import com.itss.vbas.entity.RescueVehicle;
 import com.itss.vbas.entity.Role;
 import com.itss.vbas.entity.ServiceType;
 import com.itss.vbas.entity.Address;
@@ -25,6 +26,7 @@ import com.itss.vbas.enums.AccountStatus;
 import com.itss.vbas.enums.AssignmentStatus;
 import com.itss.vbas.enums.CompanyStatus;
 import com.itss.vbas.enums.RescueRequestStatus;
+import com.itss.vbas.enums.RescueVehicleStatus;
 import com.itss.vbas.enums.RoleName;
 import com.itss.vbas.enums.StaffStatus;
 import com.itss.vbas.exception.BadRequestException;
@@ -37,6 +39,7 @@ import com.itss.vbas.repository.RequestStatusHistoryRepository;
 import com.itss.vbas.repository.RescueCompanyRepository;
 import com.itss.vbas.repository.RescueRequestRepository;
 import com.itss.vbas.repository.RescueStaffRepository;
+import com.itss.vbas.repository.RescueVehicleRepository;
 import com.itss.vbas.repository.RoleRepository;
 import com.itss.vbas.repository.ServiceTypeRepository;
 import com.itss.vbas.security.AuthContext;
@@ -73,6 +76,7 @@ public class AdminServiceImpl implements AdminService {
     private final AuthContext authContext;
     private final AppMapper appMapper;
     private final RescueStaffRepository rescueStaffRepository;
+    private final RescueVehicleRepository rescueVehicleRepository;
     private final RequestStatusHistoryRepository requestStatusHistoryRepository;
 
     public AdminServiceImpl(
@@ -82,6 +86,7 @@ public class AdminServiceImpl implements AdminService {
             ServiceTypeRepository serviceTypeRepository,
             RescueCompanyRepository rescueCompanyRepository,
             RescueStaffRepository rescueStaffRepository,
+            RescueVehicleRepository rescueVehicleRepository,
             RescueRequestRepository rescueRequestRepository,
             RequestAssignmentRepository requestAssignmentRepository,
             RequestStatusHistoryRepository requestStatusHistoryRepository,
@@ -97,6 +102,7 @@ public class AdminServiceImpl implements AdminService {
         this.serviceTypeRepository = serviceTypeRepository;
         this.rescueCompanyRepository = rescueCompanyRepository;
         this.rescueStaffRepository = rescueStaffRepository;
+        this.rescueVehicleRepository = rescueVehicleRepository;
         this.rescueRequestRepository = rescueRequestRepository;
         this.requestAssignmentRepository = requestAssignmentRepository;
         this.requestStatusHistoryRepository = requestStatusHistoryRepository;
@@ -388,6 +394,7 @@ public class AdminServiceImpl implements AdminService {
         RescueCompany company = findCompany(companyId);
         RescueStaff staff = RescueStaff.builder()
                 .company(company)
+                .vehicle(resolveAssignedVehicle(company.getId(), request.vehicleId(), null))
                 .jobTitle(request.jobTitle())
                 .yearsExperience(request.yearsExperience())
                 .bio(request.bio())
@@ -426,6 +433,7 @@ public class AdminServiceImpl implements AdminService {
         staff.setYearsExperience(request.yearsExperience());
         staff.setBio(request.bio());
         staff.setStatus(parseStaffStatus(request.status()));
+        staff.setVehicle(resolveAssignedVehicle(companyId, request.vehicleId(), staff.getId()));
         return appMapper.toStaffResponse(rescueStaffRepository.save(staff));
     }
 
@@ -473,6 +481,7 @@ public class AdminServiceImpl implements AdminService {
                 .request(rescueRequest)
                 .company(company)
                 .staff(staff)
+                .vehicle(requireAssignedVehicle(staff))
                 .assignedByUser(authContext.getCurrentAccount())
                 .status(AssignmentStatus.PENDING)
                 .build();
@@ -557,6 +566,8 @@ public class AdminServiceImpl implements AdminService {
         List<StaffCandidate> candidates = rescueStaffRepository.findAll().stream()
                 .filter(staff -> staff.getStatus() == StaffStatus.ACTIVE)
                 .filter(staff -> staff.getUser() != null && staff.getUser().getDefaultAddress() != null)
+                .filter(staff -> staff.getVehicle() != null)
+                .filter(staff -> staff.getVehicle().getStatus() == RescueVehicleStatus.AVAILABLE)
                 .filter(staff -> !previousStaffIds.contains(staff.getId()))
                 .filter(staff -> !requestAssignmentRepository.existsByStaffIdAndStatusIn(staff.getId(), BUSY_ASSIGNMENT_STATUSES))
                 .map(staff -> toStaffCandidate(staff, reqLat, reqLng))
@@ -577,6 +588,7 @@ public class AdminServiceImpl implements AdminService {
                         .request(rescueRequest)
                         .company(candidate.staff().getCompany())
                         .staff(candidate.staff())
+                        .vehicle(candidate.staff().getVehicle())
                         .assignedByUser(assignedBy)
                         .status(AssignmentStatus.PENDING)
                         .assignedAt(LocalDateTime.now())
@@ -698,6 +710,34 @@ public class AdminServiceImpl implements AdminService {
                 .status(AccountStatus.ACTIVE)
                 .role(getOrCreateRole(RoleName.RESCUE_STAFF))
                 .build());
+    }
+
+    private RescueVehicle resolveAssignedVehicle(Long companyId, Long vehicleId, Long currentStaffId) {
+        if (vehicleId == null) {
+            return null;
+        }
+
+        RescueVehicle vehicle = rescueVehicleRepository.findByIdAndCompanyId(vehicleId, companyId)
+                .orElseThrow(() -> new BadRequestException("Vehicle does not belong to the selected company"));
+
+        rescueStaffRepository.findByVehicleId(vehicleId)
+                .filter(existing -> currentStaffId == null || !existing.getId().equals(currentStaffId))
+                .ifPresent(existing -> {
+                    throw new BadRequestException("Vehicle is already assigned to another staff");
+                });
+
+        return vehicle;
+    }
+
+    private RescueVehicle requireAssignedVehicle(RescueStaff staff) {
+        RescueVehicle vehicle = staff.getVehicle();
+        if (vehicle == null) {
+            throw new BadRequestException("Staff must be assigned a rescue vehicle before dispatching");
+        }
+        if (vehicle.getStatus() != RescueVehicleStatus.AVAILABLE) {
+            throw new BadRequestException("Staff's assigned vehicle is not available");
+        }
+        return vehicle;
     }
 
     private RoleName parseRoleName(String value) {

@@ -8,6 +8,7 @@ import NotFoundPage from '../pages/NotFoundPage';
 import LoginPage from '../pages/auth/LoginPage';
 import RegisterPage from '../pages/auth/RegisterPage';
 import ForgotPasswordPage from '../pages/auth/ForgotPasswordPage';
+import VerifyResetOtpPage from '../pages/auth/VerifyResetOtpPage';
 import ResetPasswordPage from '../pages/auth/ResetPasswordPage';
 import CustomerVehiclesPage from '../pages/customer/CustomerVehiclesPage';
 import CreateRequestPage from '../pages/customer/CreateRequestPage';
@@ -39,6 +40,7 @@ export default function AppRouter() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/verify-reset-otp" element={<VerifyResetOtpPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/403" element={<ForbiddenPage />} />
 

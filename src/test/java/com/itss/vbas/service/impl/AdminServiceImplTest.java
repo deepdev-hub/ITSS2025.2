@@ -17,6 +17,8 @@ import com.itss.vbas.entity.RequestStatusHistory;
 import com.itss.vbas.entity.RescueCompany;
 import com.itss.vbas.entity.RescueRequest;
 import com.itss.vbas.entity.RescueStaff;
+import com.itss.vbas.entity.RescueVehicle;
+import com.itss.vbas.enums.RescueVehicleStatus;
 import com.itss.vbas.enums.RescueRequestStatus;
 import com.itss.vbas.enums.StaffStatus;
 import com.itss.vbas.mapper.AppMapper;
@@ -27,6 +29,7 @@ import com.itss.vbas.repository.RequestStatusHistoryRepository;
 import com.itss.vbas.repository.RescueCompanyRepository;
 import com.itss.vbas.repository.RescueRequestRepository;
 import com.itss.vbas.repository.RescueStaffRepository;
+import com.itss.vbas.repository.RescueVehicleRepository;
 import com.itss.vbas.repository.RoleRepository;
 import com.itss.vbas.repository.ServiceTypeRepository;
 import com.itss.vbas.security.AuthContext;
@@ -56,6 +59,8 @@ class AdminServiceImplTest {
     @Mock
     private RescueStaffRepository rescueStaffRepository;
     @Mock
+    private RescueVehicleRepository rescueVehicleRepository;
+    @Mock
     private RescueRequestRepository rescueRequestRepository;
     @Mock
     private RequestAssignmentRepository requestAssignmentRepository;
@@ -83,6 +88,7 @@ class AdminServiceImplTest {
                 serviceTypeRepository,
                 rescueCompanyRepository,
                 rescueStaffRepository,
+                rescueVehicleRepository,
                 rescueRequestRepository,
                 requestAssignmentRepository,
                 requestStatusHistoryRepository,
@@ -120,6 +126,11 @@ class AdminServiceImplTest {
                 .id(34L)
                 .user(staffAccount)
                 .company(company)
+                .vehicle(RescueVehicle.builder()
+                        .id(88L)
+                        .company(company)
+                        .status(RescueVehicleStatus.AVAILABLE)
+                        .build())
                 .status(StaffStatus.ACTIVE)
                 .build();
 

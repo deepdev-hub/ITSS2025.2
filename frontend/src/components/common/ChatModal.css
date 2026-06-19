@@ -16,6 +16,29 @@
   border-bottom: 1px solid var(--border);
 }
 
+.chat-status {
+  color: var(--muted);
+  font-size: 0.8rem;
+  min-height: 1rem;
+}
+
+.chat-error {
+  color: #b91c1c;
+  background: #fee2e2;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  padding: 0.65rem 0.8rem;
+  font-size: 0.85rem;
+}
+
+.chat-empty {
+  color: var(--muted);
+  text-align: center;
+  margin: auto;
+  padding: 1rem;
+  font-size: 0.9rem;
+}
+
 .chat-message-row {
   display: flex;
   justify-content: flex-start;
@@ -46,6 +69,16 @@
   margin-bottom: 4px;
   text-transform: uppercase;
   letter-spacing: 0.02em;
+}
+
+.chat-role-pill {
+  background: rgba(91, 141, 239, 0.14);
+  border-radius: 999px;
+  color: var(--muted);
+  display: inline-flex;
+  font-size: 0.65rem;
+  margin-left: 0.4rem;
+  padding: 0.1rem 0.35rem;
 }
 
 .chat-text {

@@ -109,6 +109,7 @@ class AdminControllerIntegrationTest extends IntegrationTestSupport {
         assertEquals(AssignmentStatus.PENDING, savedAssignment.getStatus());
         assertEquals(admin.getId(), savedAssignment.getAssignedByUser().getId());
         assertNotNull(savedAssignment.getCompany());
+        assertNotNull(savedAssignment.getVehicle());
     }
 
     @Test

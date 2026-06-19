@@ -203,9 +203,11 @@ abstract class IntegrationTestSupport {
 
     protected RescueStaff createStaff(RescueCompany company, StaffStatus status, double latitude, double longitude) {
         Account staffAccount = createStaffAccount(createAddress(latitude, longitude));
+        RescueVehicle vehicle = createVehicle(company);
         return rescueStaffRepository.save(RescueStaff.builder()
                 .user(staffAccount)
                 .company(company)
+                .vehicle(vehicle)
                 .jobTitle("Technician")
                 .yearsExperience(3)
                 .bio("Integration test staff")

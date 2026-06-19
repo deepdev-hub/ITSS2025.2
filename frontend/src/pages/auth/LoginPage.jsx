@@ -2,13 +2,14 @@ import { useState, useEffect } from 'react';
 import { LifeBuoy, LogIn, Mail, Lock, Eye, EyeOff, Moon, Sun } from 'lucide-react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { getDefaultRoute } from '../../utils/roles';
+import { getDefaultRoute, getPostLoginRoute } from '../../utils/roles';
 import Alert from '../../components/common/Alert';
 
 export default function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { login, user, isAuthenticated, getApiError } = useAuth();
+  const notice = location.state?.notice;
   const [form, setForm] = useState({ email: '', password: '' });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -49,7 +50,7 @@ export default function LoginPage() {
     setError('');
     try {
       const response = await login(form);
-      const destination = location.state?.from?.pathname || getDefaultRoute(response.user.roleName);
+      const destination = getPostLoginRoute(response.user.roleName, location.state?.from?.pathname);
       navigate(destination, { replace: true });
     } catch (err) {
       setError(getApiError(err));
@@ -74,10 +75,11 @@ export default function LoginPage() {
             <LifeBuoy size={40} />
           </div>
           <h1>VBAS Rescue</h1>
-          <p className="auth-card-subtitle">Đăng nhập để tiếp tục</p>
+          <p className="auth-card-subtitle">Sign in to continue</p>
         </div>
 
-        {error ? <Alert variant="error" title="Đăng nhập thất bại">{error}</Alert> : null}
+        {notice ? <Alert variant="success">{notice}</Alert> : null}
+        {error ? <Alert variant="error" title="Login failed">{error}</Alert> : null}
 
         <div className="field modern-field">
           <label htmlFor="email">
@@ -91,14 +93,14 @@ export default function LoginPage() {
             value={form.email}
             onChange={handleChange}
             required
-            placeholder="Nhập email của bạn"
+            placeholder="Enter your email"
           />
         </div>
 
         <div className="field modern-field">
           <label htmlFor="password">
             <Lock size={16} style={{ marginRight: '8px', verticalAlign: 'middle' }} />
-            Mật khẩu
+            Password
           </label>
           <div className="password-input-wrapper">
             <input
@@ -108,7 +110,7 @@ export default function LoginPage() {
               value={form.password}
               onChange={handleChange}
               required
-              placeholder="Nhập mật khẩu của bạn"
+              placeholder="Enter your password"
             />
             <button
               type="button"
@@ -128,14 +130,14 @@ export default function LoginPage() {
             disabled={submitting}
           >
             <LogIn size={20} style={{ marginRight: '8px', verticalAlign: 'middle' }} />
-            {submitting ? 'Đang đăng nhập...' : 'Đăng nhập'}
+            {submitting ? 'Signing in...' : 'Sign in'}
           </button>
         </div>
 
         <div className="auth-card-footer">
-          <Link className="auth-link" to="/register">Tạo tài khoản mới</Link>
-          <span className="auth-divider">•</span>
-          <Link className="auth-link" to="/forgot-password">Quên mật khẩu?</Link>
+          <Link className="auth-link" to="/register">Create a new account</Link>
+          <span className="auth-divider">|</span>
+          <Link className="auth-link" to="/forgot-password">Forgot password?</Link>
         </div>
       </form>
 
@@ -263,7 +265,6 @@ export default function LoginPage() {
         .auth-divider {
           color: #ccc;
         }
-        /* Dark mode styles */
         .dark-mode {
           --bg-primary: #1a1a2e;
           --bg-secondary: #16213e;
