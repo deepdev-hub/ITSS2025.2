@@ -25,7 +25,7 @@ public final class AdminDto {
             @NotBlank String status,
             LocalDate dateOfBirth,
             @Size(max = 20) String gender,
-            @Size(max = 20) String cccd,
+            @NotBlank @Size(max = 20) String cccd,
             @Valid CommonDto.AddressRequest defaultAddress
     ) {
     }

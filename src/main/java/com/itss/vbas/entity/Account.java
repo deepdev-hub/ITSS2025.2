@@ -72,6 +72,6 @@ public class Account {
     @JoinColumn(name = "default_address_id")
     private Address defaultAddress;
 
-    @Column(length = 20)
+    @Column(length = 20, unique = true)
     private String cccd;
 }

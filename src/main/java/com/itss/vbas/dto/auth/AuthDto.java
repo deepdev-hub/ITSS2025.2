@@ -7,6 +7,7 @@ import com.itss.vbas.dto.common.CommonDto;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
@@ -20,9 +21,9 @@ public final class AuthDto {
             @NotBlank @Size(min = 6, max = 100) String password,
             @NotBlank @Size(max = 255) String fullName,
             @Size(max = 20) String phone,
-            LocalDate dateOfBirth,
+            @NotNull LocalDate dateOfBirth,
             @Size(max = 20) String gender,
-            @Size(max = 20) String cccd,
+            @NotBlank @Size(max = 20) String cccd,
             @Valid CommonDto.AddressRequest defaultAddress
     ) {
     }
@@ -39,7 +40,7 @@ public final class AuthDto {
             @Size(max = 1000) String avatarUrl,
             LocalDate dateOfBirth,
             @Size(max = 20) String gender,
-            @Size(max = 20) String cccd,
+            @NotBlank @Size(max = 20) String cccd,
             @Valid CommonDto.AddressRequest defaultAddress
     ) {
     }
