@@ -7,9 +7,7 @@ import {
   CheckCircle,
   XCircle,
   ArrowRight,
-  User,
   Truck,
-  AlertTriangle
 } from 'lucide-react';
 import { companyApi } from '../../api/companyApi';
 import { requestApi } from '../../api/requestApi';
@@ -20,9 +18,9 @@ import PageHeader from '../../components/common/PageHeader';
 import StatusBadge from '../../components/common/StatusBadge';
 import { formatDateTime, getAllowedStatusOptions } from '../../utils/requestUi';
 
-function AssignmentCard({ assignment, onReload, busyAction, setBusyAction, setNotice, setError, activeAssignmentId, setActiveAssignmentId }) {
+function AssignmentCard({ assignment, onQuickAction, busyAction, activeAssignmentId, setActiveAssignmentId }) {
   const { requestDetail } = assignment;
-  
+
   const plateNumber = assignment.vehiclePlateNumber || requestDetail?.vehicle?.plateNumber || 'N/A';
   const customerName = requestDetail?.customer?.fullName || 'N/A';
   const incidentName = requestDetail?.incidentType?.name || 'N/A';
@@ -31,19 +29,6 @@ function AssignmentCard({ assignment, onReload, busyAction, setBusyAction, setNo
   const isPending = assignment.status === 'PENDING';
   const isBusyQuick = busyAction === 'quick-' + assignment.id;
 
-  const handleQuickAction = async (newStatus) => {
-    try {
-      setBusyAction('quick-' + assignment.id);
-      setError('');
-      await companyApi.updateAssignmentStatus(assignment.id, { status: newStatus });
-      setNotice(`Assignment ${newStatus.toLowerCase()} successfully.`);
-      onReload();
-    } catch (err) {
-      setError(getApiError(err));
-    } finally {
-      setBusyAction('');
-    }
-  };
 
   return (
     <div className={`premium-assignment-card ${isExpanded ? 'expanded' : ''} ${isPending ? 'pending' : ''}`}>
@@ -100,10 +85,10 @@ function AssignmentCard({ assignment, onReload, busyAction, setBusyAction, setNo
                     <Countdown expiresAt={assignment.expiresAt} status={assignment.status} />
                   </div>
                   <div className="pac-action-buttons">
-                    <button className="button pac-btn-accept" disabled={isBusyQuick} onClick={() => handleQuickAction('ACCEPTED')}>
+                    <button className="button pac-btn-accept" disabled={isBusyQuick} onClick={() => onQuickAction(assignment, 'ACCEPTED')}>
                       <CheckCircle size={18} /> Accept
                     </button>
-                    <button className="button pac-btn-reject" disabled={isBusyQuick} onClick={() => handleQuickAction('REJECTED')}>
+                    <button className="button pac-btn-reject" disabled={isBusyQuick} onClick={() => onQuickAction(assignment, 'REJECTED')}>
                       <XCircle size={18} /> Reject
                     </button>
                   </div>
@@ -133,11 +118,16 @@ export default function StaffAssignmentsPage() {
       
       const detailedAssignments = await Promise.all(
         assignmentList.map(async (assignment) => {
+          if (assignment.status === 'REJECTED') {
+            return assignment;
+          }
           try {
             const reqDetail = await requestApi.getRequestDetail(assignment.requestId);
             return { ...assignment, requestDetail: reqDetail };
           } catch (err) {
-            console.error('Failed to load detail for request', assignment.requestId, err);
+            if (err?.response?.status !== 403) {
+              console.error('Failed to load detail for request', assignment.requestId, err);
+            }
             return assignment;
           }
         })
@@ -152,6 +142,27 @@ export default function StaffAssignmentsPage() {
       setError(getApiError(err));
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleQuickAction = async (assignment, statusAction) => {
+    if (!assignment?.id) return;
+    setBusyAction(`quick-${assignment.id}`);
+    setNotice('');
+    setError('');
+    try {
+      if (statusAction === 'ACCEPTED') {
+        await companyApi.acceptAssignment(assignment.id);
+        setNotice('Request accepted successfully. Please proceed to the location.');
+      } else {
+        await companyApi.rejectAssignment(assignment.id);
+        setNotice('You have rejected the request.');
+      }
+      await loadAssignments();
+    } catch (err) {
+      setError(getApiError(err));
+    } finally {
+      setBusyAction('');
     }
   };
 
@@ -181,11 +192,8 @@ export default function StaffAssignmentsPage() {
               <AssignmentCard 
                 key={assignment.id} 
                 assignment={assignment} 
-                onReload={loadAssignments}
+                onQuickAction={handleQuickAction}
                 busyAction={busyAction}
-                setBusyAction={setBusyAction}
-                setNotice={setNotice}
-                setError={setError}
                 activeAssignmentId={activeAssignmentId}
                 setActiveAssignmentId={setActiveAssignmentId}
               />
