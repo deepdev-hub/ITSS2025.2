@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { LifeBuoy, UserPlus, Mail, Lock, Eye, EyeOff, User, Phone, MapPin, Calendar, CreditCard } from 'lucide-react';
+import { LifeBuoy, UserPlus, Mail, Lock, Eye, EyeOff, User, Phone, Calendar, CreditCard } from 'lucide-react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { getDefaultRoute } from '../../utils/roles';
@@ -14,15 +14,24 @@ const initialForm = {
   dateOfBirth: '',
   gender: '',
   cccd: '',
-  defaultAddress: {
-    country: 'Vietnam',
-    province: '',
-    district: '',
-    ward: '',
-    street: '',
-    detail: '',
-  },
 };
+
+function getMinimumAdultBirthDate() {
+  const today = new Date();
+  return new Date(today.getFullYear() - 18, today.getMonth(), today.getDate());
+}
+
+function toDateInputValue(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function isAtLeast18YearsOld(dateOfBirth) {
+  if (!dateOfBirth) return false;
+  return new Date(dateOfBirth) <= getMinimumAdultBirthDate();
+}
 
 export default function RegisterPage() {
   const navigate = useNavigate();
@@ -32,6 +41,7 @@ export default function RegisterPage() {
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const maxBirthDate = toDateInputValue(getMinimumAdultBirthDate());
   useEffect(() => {
     // Remove dark mode class if it was previously set
     document.documentElement.classList.remove('dark-mode');
@@ -43,22 +53,25 @@ export default function RegisterPage() {
 
   const handleChange = (event) => {
     const { name, value } = event.target;
-    if (name.startsWith('defaultAddress.')) {
-      const key = name.replace('defaultAddress.', '');
-      setForm((previous) => ({
-        ...previous,
-        defaultAddress: {
-          ...previous.defaultAddress,
-          [key]: value,
-        },
-      }));
-      return;
-    }
     setForm((previous) => ({ ...previous, [name]: value }));
   };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+    const normalizedCccd = form.cccd.trim();
+
+    if (!form.dateOfBirth) {
+      setError('Date of Birth is required.');
+      return;
+    }
+    if (!isAtLeast18YearsOld(form.dateOfBirth)) {
+      setError('You must be at least 18 years old to register.');
+      return;
+    }
+    if (!normalizedCccd) {
+      setError('CCCD is required.');
+      return;
+    }
     if (form.password !== form.confirmPassword) {
       setError('Password confirmation does not match.');
       return;
@@ -72,10 +85,9 @@ export default function RegisterPage() {
         email: form.email,
         password: form.password,
         phone: form.phone,
-        dateOfBirth: form.dateOfBirth || null,
+        dateOfBirth: form.dateOfBirth,
         gender: form.gender,
-        cccd: form.cccd,
-        defaultAddress: form.defaultAddress,
+        cccd: normalizedCccd,
       };
       const response = await register(payload);
       navigate(getDefaultRoute(response.user.roleName), { replace: true });
@@ -129,12 +141,25 @@ export default function RegisterPage() {
               <Calendar size={16} style={{ marginRight: '8px', verticalAlign: 'middle' }} />
               Date of Birth
             </label>
-            <input id="dateOfBirth" name="dateOfBirth" type="date" value={form.dateOfBirth} onChange={handleChange} />
+            <input
+              id="dateOfBirth"
+              name="dateOfBirth"
+              type="date"
+              value={form.dateOfBirth}
+              onChange={handleChange}
+              required
+              max={maxBirthDate}
+            />
           </div>
 
           <div className="field modern-field">
             <label htmlFor="gender">Gender</label>
-            <input id="gender" name="gender" value={form.gender} onChange={handleChange} placeholder="Optional" />
+            <select id="gender" name="gender" value={form.gender} onChange={handleChange}>
+              <option value="">Select gender</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+              <option value="others">Others</option>
+            </select>
           </div>
 
           <div className="field modern-field">
@@ -142,7 +167,7 @@ export default function RegisterPage() {
               <CreditCard size={16} style={{ marginRight: '8px', verticalAlign: 'middle' }} />
               CCCD
             </label>
-            <input id="cccd" name="cccd" value={form.cccd} onChange={handleChange} placeholder="Optional" />
+            <input id="cccd" name="cccd" value={form.cccd} onChange={handleChange} required placeholder="Enter your CCCD" />
           </div>
         </div>
 
@@ -201,42 +226,6 @@ export default function RegisterPage() {
               </button>
             </div>
           </div>
-        </div>
-
-        <h2 className="section-title">Default Address</h2>
-        <div className="form-grid">
-          <div className="field modern-field">
-            <label htmlFor="country">Country</label>
-            <input id="country" name="defaultAddress.country" value={form.defaultAddress.country} onChange={handleChange} />
-          </div>
-
-          <div className="field modern-field">
-            <label htmlFor="province">Province</label>
-            <input id="province" name="defaultAddress.province" value={form.defaultAddress.province} onChange={handleChange} />
-          </div>
-
-          <div className="field modern-field">
-            <label htmlFor="district">District</label>
-            <input id="district" name="defaultAddress.district" value={form.defaultAddress.district} onChange={handleChange} />
-          </div>
-
-          <div className="field modern-field">
-            <label htmlFor="ward">Ward</label>
-            <input id="ward" name="defaultAddress.ward" value={form.defaultAddress.ward} onChange={handleChange} />
-          </div>
-
-          <div className="field modern-field">
-            <label htmlFor="street">Street</label>
-            <input id="street" name="defaultAddress.street" value={form.defaultAddress.street} onChange={handleChange} />
-          </div>
-        </div>
-
-        <div className="field modern-field">
-          <label htmlFor="detail">
-            <MapPin size={16} style={{ marginRight: '8px', verticalAlign: 'middle' }} />
-            Address Detail
-          </label>
-          <textarea id="detail" name="defaultAddress.detail" value={form.defaultAddress.detail} onChange={handleChange} placeholder="Enter detailed address" />
         </div>
 
         <div className="actions-row">

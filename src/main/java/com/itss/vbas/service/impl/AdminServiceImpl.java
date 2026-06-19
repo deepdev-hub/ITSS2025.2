@@ -1,6 +1,8 @@
 package com.itss.vbas.service.impl;
 
+import java.math.BigDecimal;
 import java.time.Duration;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
@@ -57,6 +59,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class AdminServiceImpl implements AdminService {
 
     private static final int AUTO_DISPATCH_STAFF_LIMIT = 5;
+    private static final int MINIMUM_ACCOUNT_AGE = 18;
     private static final double INITIAL_SEARCH_RADIUS_KM = 2.0;
     private static final double SEARCH_RADIUS_GROWTH_KM_PER_SECOND = 0.5;
     private static final List<AssignmentStatus> BUSY_ASSIGNMENT_STATUSES = List.of(
@@ -138,6 +141,11 @@ public class AdminServiceImpl implements AdminService {
         if (accountRepository.existsByEmailIgnoreCase(request.email())) {
             throw new BadRequestException("Email is already in use");
         }
+        validateAdultDateOfBirth(request.dateOfBirth());
+        String normalizedCccd = normalizeRequiredCccd(request.cccd());
+        if (accountRepository.existsByCccd(normalizedCccd)) {
+            throw new BadRequestException("CCCD is already in use");
+        }
 
         Role role = getOrCreateRole(parseRoleName(request.roleName()));
         Account account = Account.builder()
@@ -150,7 +158,7 @@ public class AdminServiceImpl implements AdminService {
                 .role(role)
                 .dateOfBirth(request.dateOfBirth())
                 .gender(request.gender())
-                .cccd(request.cccd())
+                .cccd(normalizedCccd)
                 .defaultAddress(addressService.createAddress(request.defaultAddress()))
                 .build();
 
@@ -163,6 +171,11 @@ public class AdminServiceImpl implements AdminService {
         if (!account.getEmail().equalsIgnoreCase(request.email()) && accountRepository.existsByEmailIgnoreCase(request.email())) {
             throw new BadRequestException("Email is already in use");
         }
+        validateAdultDateOfBirth(request.dateOfBirth());
+        String normalizedCccd = normalizeRequiredCccd(request.cccd());
+        if (accountRepository.existsByCccdAndIdNot(normalizedCccd, account.getId())) {
+            throw new BadRequestException("CCCD is already in use");
+        }
 
         account.setEmail(request.email().trim().toLowerCase());
         account.setFullName(request.fullName());
@@ -172,7 +185,7 @@ public class AdminServiceImpl implements AdminService {
         account.setRole(getOrCreateRole(parseRoleName(request.roleName())));
         account.setDateOfBirth(request.dateOfBirth());
         account.setGender(request.gender());
-        account.setCccd(request.cccd());
+        account.setCccd(normalizedCccd);
         if (request.defaultAddress() != null) {
             account.setDefaultAddress(account.getDefaultAddress() == null
                     ? addressService.createAddress(request.defaultAddress())
@@ -303,6 +316,7 @@ public class AdminServiceImpl implements AdminService {
                 .serviceCode(request.serviceCode())
                 .serviceName(request.serviceName())
                 .description(request.description())
+                .basePrice(request.basePrice() == null ? BigDecimal.ZERO : request.basePrice())
                 .build();
         return appMapper.toServiceTypeResponse(serviceTypeRepository.save(serviceType));
     }
@@ -314,6 +328,7 @@ public class AdminServiceImpl implements AdminService {
         serviceType.setServiceCode(request.serviceCode());
         serviceType.setServiceName(request.serviceName());
         serviceType.setDescription(request.description());
+        serviceType.setBasePrice(request.basePrice() == null ? BigDecimal.ZERO : request.basePrice());
         return appMapper.toServiceTypeResponse(serviceTypeRepository.save(serviceType));
     }
 
@@ -777,6 +792,20 @@ public class AdminServiceImpl implements AdminService {
         } catch (Exception ex) {
             throw new BadRequestException("Invalid staff status: " + value);
         }
+    }
+
+    private void validateAdultDateOfBirth(LocalDate dateOfBirth) {
+        if (dateOfBirth == null || dateOfBirth.isAfter(LocalDate.now().minusYears(MINIMUM_ACCOUNT_AGE))) {
+            throw new BadRequestException("dateOfBirth: must be at least 18 years old");
+        }
+    }
+
+    private String normalizeRequiredCccd(String cccd) {
+        String normalized = cccd == null ? "" : cccd.trim();
+        if (normalized.isEmpty()) {
+            throw new BadRequestException("CCCD is required");
+        }
+        return normalized;
     }
 
     private String defaultIfBlank(String value, String defaultValue) {

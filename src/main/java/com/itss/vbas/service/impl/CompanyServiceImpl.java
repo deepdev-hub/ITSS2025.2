@@ -565,7 +565,7 @@ public class CompanyServiceImpl implements CompanyService {
 
         RequestAssignment savedAssignment = requestAssignmentRepository.save(assignment);
         rejectOtherPendingAssignments(request, savedAssignment.getId());
-        requestSupportService.changeRequestStatus(request, RescueRequestStatus.IN_PROGRESS, account, "Accepted by nearby staff");
+        requestSupportService.changeRequestStatus(request, RescueRequestStatus.MATCHED, account, "Accepted by nearby staff");
         staff.setStatus(StaffStatus.BUSY);
         rescueStaffRepository.save(staff);
         return appMapper.toAssignmentResponse(savedAssignment);

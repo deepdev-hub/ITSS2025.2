@@ -9,6 +9,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.verify;
 
+import java.time.LocalDate;
 import java.util.Map;
 
 import com.itss.vbas.entity.Account;
@@ -38,7 +39,9 @@ class AuthControllerIntegrationTest extends IntegrationTestSupport {
                                 "email", "new.customer@test.local",
                                 "password", PASSWORD,
                                 "fullName", "New Customer",
-                                "phone", "0901234567"
+                                "phone", "0901234567",
+                                "dateOfBirth", LocalDate.now().minusYears(18).toString(),
+                                "cccd", "123456789001"
                         ))))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.success").value(true))
@@ -56,10 +59,60 @@ class AuthControllerIntegrationTest extends IntegrationTestSupport {
                         .content(json(Map.of(
                                 "email", "duplicate@test.local",
                                 "password", PASSWORD,
-                                "fullName", "Duplicate Customer"
+                                "fullName", "Duplicate Customer",
+                                "dateOfBirth", LocalDate.now().minusYears(25).toString(),
+                                "cccd", "123456789002"
                         ))))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.success").value(false));
+    }
+
+    @Test
+    void registerWithMissingCccdReturnsBadRequest() throws Exception {
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(jsonContentType())
+                        .content(json(Map.of(
+                                "email", "missing-cccd@test.local",
+                                "password", PASSWORD,
+                                "fullName", "Missing CCCD",
+                                "dateOfBirth", LocalDate.now().minusYears(20).toString()
+                        ))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false));
+    }
+
+    @Test
+    void registerUnder18ReturnsBadRequest() throws Exception {
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(jsonContentType())
+                        .content(json(Map.of(
+                                "email", "underage@test.local",
+                                "password", PASSWORD,
+                                "fullName", "Under Age",
+                                "dateOfBirth", LocalDate.now().minusYears(17).toString(),
+                                "cccd", "123456789003"
+                        ))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value("dateOfBirth: must be at least 18 years old"));
+    }
+
+    @Test
+    void registerWithDuplicateCccdReturnsBadRequest() throws Exception {
+        Account existingCustomer = createCustomer("existing-cccd@test.local");
+
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(jsonContentType())
+                        .content(json(Map.of(
+                                "email", "duplicate-cccd@test.local",
+                                "password", PASSWORD,
+                                "fullName", "Duplicate CCCD",
+                                "dateOfBirth", LocalDate.now().minusYears(22).toString(),
+                                "cccd", existingCustomer.getCccd()
+                        ))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value("CCCD is already in use"));
     }
 
     @Test

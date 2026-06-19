@@ -279,3 +279,9 @@ vehicle-breakdown-assistance-system/
 │   └── SRS.doc
 │
 └── README.md
+## Local configuration
+
+- Backend can read local runtime configuration from repo-root `.env`.
+- Mail variables can be written with `scripts/setup-gmail-smtp.ps1`.
+- OpenRouteService variables can be written with `scripts/setup-openrouteservice.ps1`.
+- After changing `.env`, restart the backend so the new values are reloaded.

@@ -28,6 +28,8 @@ export default function AdminLookupCatalogPage({
   descriptionLabel = 'Description',
   entityLabel,
   api,
+  extraColumns = [],
+  renderExtraFormFields = null,
 }) {
   const [items, setItems] = useState([]);
   const [form, setForm] = useState(initialForm);
@@ -86,11 +88,17 @@ export default function AdminLookupCatalogPage({
 
   const openEdit = (item) => {
     setEditingId(item.id);
-    setForm({
+    const nextForm = {
       [codeKey]: item[codeKey] || '',
       [nameKey]: item[nameKey] || '',
       description: item.description || '',
+    };
+    Object.keys(initialForm).forEach((key) => {
+      if (!(key in nextForm)) {
+        nextForm[key] = item[key] ?? initialForm[key];
+      }
     });
+    setForm(nextForm);
     setFormOpen(true);
   };
 
@@ -257,6 +265,9 @@ export default function AdminLookupCatalogPage({
                       <th>{codeLabel}</th>
                       <th>{nameLabel}</th>
                       <th>{descriptionLabel}</th>
+                      {extraColumns.map((column) => (
+                        <th key={column.key}>{column.label}</th>
+                      ))}
                       <th aria-label="Actions" />
                     </tr>
                   </thead>
@@ -281,6 +292,11 @@ export default function AdminLookupCatalogPage({
                             {item.description?.trim() || '-'}
                           </span>
                         </td>
+                        {extraColumns.map((column) => (
+                          <td key={column.key} data-label={column.label}>
+                            {column.render(item)}
+                          </td>
+                        ))}
                         <td>
                           <div className="lookup-row-actions">
                             <button
@@ -352,6 +368,7 @@ export default function AdminLookupCatalogPage({
               rows={4}
             />
           </div>
+          {renderExtraFormFields ? renderExtraFormFields({ form, setForm }) : null}
         </form>
       </Modal>
 

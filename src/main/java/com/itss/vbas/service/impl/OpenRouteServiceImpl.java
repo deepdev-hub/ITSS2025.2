@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import com.itss.vbas.config.DotEnvUtils;
 import com.itss.vbas.service.RouteService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,24 +38,24 @@ public class OpenRouteServiceImpl implements RouteService {
             @Value("${app.ors.connect-timeout:5s}") Duration connectTimeout,
             @Value("${app.ors.read-timeout:10s}") Duration readTimeout
     ) {
+        Map<String, String> dotenv = DotEnvUtils.loadDotEnv();
         this.restTemplate = restTemplateBuilder
                 .setConnectTimeout(connectTimeout)
                 .setReadTimeout(readTimeout)
                 .build();
-        this.baseUrl = baseUrl == null ? "" : baseUrl.trim();
-        this.apiKey = apiKey == null ? "" : apiKey.trim();
+        this.baseUrl = normalizeValue(DotEnvUtils.firstText(baseUrl, System.getenv("APP_ORS_BASE_URL"), dotenv.get("APP_ORS_BASE_URL"), "https://api.openrouteservice.org/v2"));
+        this.apiKey = normalizeValue(DotEnvUtils.firstText(apiKey, System.getenv("OpenRouteService_KEY"), dotenv.get("OpenRouteService_KEY")));
     }
 
     @Override
     @SuppressWarnings("unchecked")
     public RouteResult getDrivingRoute(BigDecimal fromLatitude, BigDecimal fromLongitude, BigDecimal toLatitude, BigDecimal toLongitude) {
         if (baseUrl.isBlank() || apiKey.isBlank()) {
+            log.warn("OpenRouteService is not configured. baseUrlBlank={}, apiKeyBlank={}", baseUrl.isBlank(), apiKey.isBlank());
             return null;
         }
 
-        String url = baseUrl.endsWith("/directions/driving-car")
-                ? baseUrl
-                : baseUrl.replaceAll("/+$", "") + "/directions/driving-car";
+        String url = buildDirectionsUrl();
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -80,20 +81,16 @@ public class OpenRouteServiceImpl implements RouteService {
                 return null;
             }
 
-            List<Map<String, Object>> features = (List<Map<String, Object>>) body.get("features");
-            if (features == null || features.isEmpty()) {
-                return null;
-            }
-
-            Map<String, Object> feature = features.get(0);
-            Map<String, Object> geometry = (Map<String, Object>) feature.get("geometry");
-            Map<String, Object> properties = (Map<String, Object>) feature.get("properties");
-            Map<String, Object> summary = properties == null ? null : (Map<String, Object>) properties.get("summary");
-
-            List<List<Number>> coordinates = geometry == null ? null : (List<List<Number>>) geometry.get("coordinates");
+            List<List<Number>> coordinates = extractCoordinates(body);
             if (coordinates == null || coordinates.size() < 2) {
+                log.warn(
+                        "OpenRouteService returned no usable route geometry from ({}, {}) to ({}, {})",
+                        fromLatitude, fromLongitude, toLatitude, toLongitude
+                );
                 return null;
             }
+
+            Map<String, Object> summary = extractSummary(body);
 
             List<RoutePoint> points = new ArrayList<>();
             for (List<Number> coordinate : coordinates) {
@@ -105,6 +102,10 @@ public class OpenRouteServiceImpl implements RouteService {
                 points.add(new RoutePoint(latitude, longitude));
             }
             if (points.size() < 2) {
+                log.warn(
+                        "OpenRouteService route had fewer than 2 valid points from ({}, {}) to ({}, {})",
+                        fromLatitude, fromLongitude, toLatitude, toLongitude
+                );
                 return null;
             }
 
@@ -117,8 +118,77 @@ public class OpenRouteServiceImpl implements RouteService {
 
             return new RouteResult(points, distanceKm, durationMinutes);
         } catch (RestClientException ex) {
-            log.warn("OpenRouteService request failed: {}", ex.getMessage());
+            log.warn(
+                    "OpenRouteService request failed from ({}, {}) to ({}, {}): {}",
+                    fromLatitude,
+                    fromLongitude,
+                    toLatitude,
+                    toLongitude,
+                    ex.getMessage()
+            );
             return null;
         }
+    }
+
+    private String buildDirectionsUrl() {
+        String normalizedBaseUrl = baseUrl.replaceAll("/+$", "");
+        if (normalizedBaseUrl.endsWith("/geojson")
+                || normalizedBaseUrl.endsWith("/json")
+                || normalizedBaseUrl.endsWith("/gpx")) {
+            return normalizedBaseUrl;
+        }
+        if (normalizedBaseUrl.endsWith("/directions/driving-car")) {
+            return normalizedBaseUrl + "/geojson";
+        }
+        return normalizedBaseUrl + "/directions/driving-car/geojson";
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<List<Number>> extractCoordinates(Map<String, Object> body) {
+        List<Map<String, Object>> features = (List<Map<String, Object>>) body.get("features");
+        if (features != null && !features.isEmpty()) {
+            Map<String, Object> feature = features.get(0);
+            Map<String, Object> geometry = feature == null ? null : (Map<String, Object>) feature.get("geometry");
+            List<List<Number>> coordinates = geometry == null ? null : (List<List<Number>>) geometry.get("coordinates");
+            if (coordinates != null && coordinates.size() >= 2) {
+                return coordinates;
+            }
+        }
+
+        List<Map<String, Object>> routes = (List<Map<String, Object>>) body.get("routes");
+        if (routes == null || routes.isEmpty()) {
+            return null;
+        }
+
+        Object geometry = routes.get(0).get("geometry");
+        if (geometry instanceof Map<?, ?> geometryMap) {
+            Object coordinates = geometryMap.get("coordinates");
+            if (coordinates instanceof List<?> coordinateList) {
+                return (List<List<Number>>) coordinateList;
+            }
+        }
+        return null;
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> extractSummary(Map<String, Object> body) {
+        List<Map<String, Object>> features = (List<Map<String, Object>>) body.get("features");
+        if (features != null && !features.isEmpty()) {
+            Map<String, Object> properties = (Map<String, Object>) features.get(0).get("properties");
+            Map<String, Object> summary = properties == null ? null : (Map<String, Object>) properties.get("summary");
+            if (summary != null) {
+                return summary;
+            }
+        }
+
+        List<Map<String, Object>> routes = (List<Map<String, Object>>) body.get("routes");
+        if (routes == null || routes.isEmpty()) {
+            return null;
+        }
+        return (Map<String, Object>) routes.get(0).get("summary");
+    }
+
+    private String normalizeValue(String value) {
+        return value == null ? "" : value.trim();
     }
 }

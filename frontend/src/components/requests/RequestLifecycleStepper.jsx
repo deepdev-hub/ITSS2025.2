@@ -2,8 +2,8 @@ import Stepper from '../common/Stepper';
 
 const TRACKING_STEPS = [
   { id: 'submitted', label: 'Request Submitted', hint: 'Received and searching for a rescue team' },
-  { id: 'matched', label: 'Team Matched', hint: 'A rescue company accepted the task' },
-  { id: 'progress', label: 'In Progress', hint: 'Staff is assisting the customer' },
+  { id: 'matched', label: 'Staff Matched', hint: 'A staff member has accepted the request' },
+  { id: 'progress', label: 'In Progress', hint: 'Staff has checked in and is assisting the customer' },
   { id: 'completed', label: 'Completed', hint: 'The request has ended' },
 ];
 

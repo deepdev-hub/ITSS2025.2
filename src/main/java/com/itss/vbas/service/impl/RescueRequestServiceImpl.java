@@ -46,6 +46,8 @@ import com.itss.vbas.service.RequestSupportService;
 import com.itss.vbas.service.RouteService;
 import com.itss.vbas.service.RescueRequestService;
 import com.itss.vbas.service.AdminService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Lazy;
 import com.itss.vbas.util.CodeGenerator;
 import com.itss.vbas.service.FileStorageService;
@@ -56,6 +58,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Transactional
 public class RescueRequestServiceImpl implements RescueRequestService {
+
+    private static final Logger log = LoggerFactory.getLogger(RescueRequestServiceImpl.class);
 
     private final RescueRequestRepository rescueRequestRepository;
     private final CustomerVehicleRepository customerVehicleRepository;
@@ -236,6 +240,7 @@ public class RescueRequestServiceImpl implements RescueRequestService {
                     null,
                     pendingStaff,
                     List.of(),
+                    "NONE",
                     null,
                     null,
                     LocalDateTime.now()
@@ -262,11 +267,24 @@ public class RescueRequestServiceImpl implements RescueRequestService {
         Integer etaMinutes = routeResult != null && routeResult.durationMinutes() != null
                 ? routeResult.durationMinutes()
                 : estimateEtaMinutes(movementStatus, distanceKm);
+        String routeSource = routeResult != null && routeResult.points() != null && routeResult.points().size() >= 2
+                ? "ORS"
+                : "FALLBACK";
         List<RequestDto.TrackingPointResponse> route = routeResult != null && routeResult.points() != null && routeResult.points().size() >= 2
                 ? routeResult.points().stream()
                     .map(point -> new RequestDto.TrackingPointResponse(point.latitude(), point.longitude(), null))
                     .toList()
                 : (staffLocation != null && destination != null ? List.of(staffLocation, destination) : List.of());
+
+        if ("FALLBACK".equals(routeSource)) {
+            log.warn(
+                    "Tracking route fallback in use for request {}. staffLocation={}, destination={}, requestStatus={}",
+                    rescueRequest.getId(),
+                    staffLocation,
+                    destination,
+                    rescueRequest.getStatus()
+            );
+        }
 
         return new RequestDto.TrackingResponse(
                 rescueRequest.getId(),
@@ -290,6 +308,7 @@ public class RescueRequestServiceImpl implements RescueRequestService {
                 ),
                 pendingStaff,
                 route,
+                routeSource,
                 movementStatus,
                 etaMinutes,
                 LocalDateTime.now()

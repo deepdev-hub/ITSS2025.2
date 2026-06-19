@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.time.LocalDate;
 import java.util.Map;
 
 import com.itss.vbas.entity.Account;
@@ -77,6 +78,55 @@ class AdminControllerIntegrationTest extends IntegrationTestSupport {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.status").value("ACTIVE"));
+    }
+
+    @Test
+    void adminCreateAccountRejectsDuplicateCccd() throws Exception {
+        Account admin = createAdmin();
+        Account existingCustomer = createCustomer("existing-admin-cccd@test.local");
+
+        mockMvc.perform(post("/api/admin/accounts")
+                        .header("Authorization", bearer(admin))
+                        .contentType(jsonContentType())
+                        .content(json(Map.of(
+                                "email", "new-admin-account@test.local",
+                                "password", PASSWORD,
+                                "fullName", "New Account",
+                                "roleName", "CUSTOMER",
+                                "status", "ACTIVE",
+                                "dateOfBirth", LocalDate.now().minusYears(25).toString(),
+                                "cccd", existingCustomer.getCccd(),
+                                "defaultAddress", addressBody(21.0285, 105.8542)
+                        ))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value("CCCD is already in use"));
+    }
+
+    @Test
+    void adminUpdateAccountRejectsDuplicateCccd() throws Exception {
+        Account admin = createAdmin();
+        Account firstCustomer = createCustomer("first-update-cccd@test.local");
+        Account secondCustomer = createCustomer("second-update-cccd@test.local");
+
+        mockMvc.perform(put("/api/admin/accounts/{id}", secondCustomer.getId())
+                        .header("Authorization", bearer(admin))
+                        .contentType(jsonContentType())
+                        .content(json(Map.of(
+                                "email", secondCustomer.getEmail(),
+                                "fullName", secondCustomer.getFullName(),
+                                "phone", secondCustomer.getPhone(),
+                                "avatarUrl", "",
+                                "roleName", secondCustomer.getRole().getRoleName().name(),
+                                "status", secondCustomer.getStatus().name(),
+                                "dateOfBirth", LocalDate.now().minusYears(23).toString(),
+                                "gender", "",
+                                "cccd", firstCustomer.getCccd(),
+                                "defaultAddress", addressBody(21.0285, 105.8542)
+                        ))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value("CCCD is already in use"));
     }
 
     @Test

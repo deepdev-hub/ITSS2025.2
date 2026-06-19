@@ -152,7 +152,8 @@ public class AppMapper {
                 serviceType.getId(),
                 serviceType.getServiceCode(),
                 serviceType.getServiceName(),
-                serviceType.getDescription()
+                serviceType.getDescription(),
+                serviceType.getBasePrice()
         );
     }
 
