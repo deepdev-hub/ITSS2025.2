@@ -69,7 +69,8 @@ public final class AdminDto {
     public record ServiceTypeRequest(
             @NotBlank @Size(max = 50) String serviceCode,
             @NotBlank @Size(max = 255) String serviceName,
-            @Size(max = 1000) String description
+            @Size(max = 1000) String description,
+            @jakarta.validation.constraints.DecimalMin(value = "0.0", inclusive = true) java.math.BigDecimal basePrice
     ) {
     }
 
@@ -77,7 +78,8 @@ public final class AdminDto {
             Long id,
             String serviceCode,
             String serviceName,
-            String description
+            String description,
+            java.math.BigDecimal basePrice
     ) {
     }
 
