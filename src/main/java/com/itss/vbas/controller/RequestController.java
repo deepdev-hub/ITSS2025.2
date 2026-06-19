@@ -303,7 +303,7 @@ public class RequestController {
         }
         requestSupportService.changeRequestStatus(
                 request,
-                RescueRequestStatus.IN_PROGRESS,
+                RescueRequestStatus.MATCHED,
                 authContext.getCurrentAccount(),
                 "Assignment accepted by staff"
         );

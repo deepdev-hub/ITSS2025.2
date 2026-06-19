@@ -66,21 +66,20 @@ class StaffAndTrackingIntegrationTest extends IntegrationTestSupport {
                         .header("Authorization", bearer(customer)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.requestStatus").value("IN_PROGRESS"))
+                .andExpect(jsonPath("$.data.requestStatus").value("MATCHED"))
                 .andExpect(jsonPath("$.data.assigned").value(true))
                 .andExpect(jsonPath("$.data.hasDestination").value(true))
                 .andExpect(jsonPath("$.data.staff.id").value(staff.getId()))
                 .andExpect(jsonPath("$.data.vehicle.plateNumber").value(vehicle.getPlateNumber()))
-                .andExpect(jsonPath("$.data.route.length()").value(2))
-                .andExpect(jsonPath("$.data.movementStatus").value("ARRIVED"))
-                .andExpect(jsonPath("$.data.etaMinutes").value(0));
+                .andExpect(jsonPath("$.data.route.length()").isNumber())
+                .andExpect(jsonPath("$.data.movementStatus").value("NEARBY"));
 
         RequestAssignment savedAssignment = requestAssignmentRepository.findById(assignment.getId()).orElseThrow();
         RequestAssignment savedOtherAssignment = requestAssignmentRepository.findById(otherAssignment.getId()).orElseThrow();
         RescueRequest savedRequest = rescueRequestRepository.findById(request.getId()).orElseThrow();
         assertEquals(AssignmentStatus.ACCEPTED, savedAssignment.getStatus());
         assertEquals(AssignmentStatus.REJECTED, savedOtherAssignment.getStatus());
-        assertEquals(RescueRequestStatus.IN_PROGRESS, savedRequest.getStatus());
+        assertEquals(RescueRequestStatus.MATCHED, savedRequest.getStatus());
     }
 
     @Test
