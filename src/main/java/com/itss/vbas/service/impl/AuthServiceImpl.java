@@ -12,6 +12,7 @@ import com.itss.vbas.entity.Role;
 import com.itss.vbas.enums.AccountStatus;
 import com.itss.vbas.enums.RoleName;
 import com.itss.vbas.exception.BadRequestException;
+import com.itss.vbas.exception.BusinessException;
 import com.itss.vbas.exception.UnauthorizedException;
 import com.itss.vbas.mapper.AppMapper;
 import com.itss.vbas.repository.AccountRepository;
@@ -202,7 +203,10 @@ public class AuthServiceImpl implements AuthService {
         passwordResetTokenRepository.save(resetToken);
         String link = buildResetPasswordLink(resetToken.getToken());
         boolean emailSent = emailService.sendResetPasswordEmail(account.getEmail(), link);
-        return new AuthDto.PasswordResetResponse(emailSent ? null : link, emailSent);
+        if (!emailSent) {
+            throw new BusinessException("Could not send reset password email. Please try again later.");
+        }
+        return new AuthDto.PasswordResetResponse(null, true);
     }
 
     @Override

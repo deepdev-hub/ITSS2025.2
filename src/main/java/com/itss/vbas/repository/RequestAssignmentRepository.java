@@ -1,6 +1,7 @@
 package com.itss.vbas.repository;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -20,11 +21,19 @@ public interface RequestAssignmentRepository extends JpaRepository<RequestAssign
 
     Optional<RequestAssignment> findFirstByRequestIdAndCompanyIdOrderByAssignedAtDesc(Long requestId, Long companyId);
 
+    Optional<RequestAssignment> findFirstByRequestIdAndStaffIdOrderByAssignedAtDesc(Long requestId, Long staffId);
+
     Optional<RequestAssignment> findFirstByRequestIdAndStatusOrderByAssignedAtDesc(Long requestId, AssignmentStatus status);
+
+    List<RequestAssignment> findByRequestIdAndStatus(Long requestId, AssignmentStatus status);
 
     List<RequestAssignment> findByStatusOrderByAssignedAtAsc(AssignmentStatus status);
 
     List<RequestAssignment> findByStaffIdOrderByAssignedAtDesc(Long staffId);
+
+    boolean existsByRequestIdAndStatus(Long requestId, AssignmentStatus status);
+
+    boolean existsByStaffIdAndStatusIn(Long staffId, Collection<AssignmentStatus> statuses);
 
     long countByCompanyId(Long companyId);
 

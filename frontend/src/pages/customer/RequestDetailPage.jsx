@@ -287,7 +287,8 @@ export default function RequestDetailPage() {
     () => detail?.payments?.some((item) => item.paymentStatus === 'PAID') ?? false,
     [detail],
   );
-  const assignedStaffPath = detail?.currentAssignment?.staffId
+  const currentAssignmentAccepted = ['ACCEPTED', 'COMPLETED'].includes(detail?.currentAssignment?.status);
+  const assignedStaffPath = currentAssignmentAccepted && detail?.currentAssignment?.staffId
     ? `/staff/${detail.currentAssignment.staffId}/profile`
     : null;
 
@@ -301,6 +302,7 @@ export default function RequestDetailPage() {
   const latestPriceStatus = getPriceStatusLabel(latestQuote, hasPaidPayment, detail?.status);
   const customerDirectionsUrl = getGoogleMapsDirectionsUrl(detail?.location);
   const canManageDealPrice = isStaff
+    && currentAssignmentAccepted
     && !requestFinalized
     && !acceptedQuote
     && !hasPaidPayment;
@@ -758,13 +760,21 @@ export default function RequestDetailPage() {
           <div className="grid-three" style={{ marginTop: '1rem' }}>
             <div className="card card-muted">
               <h3>Company</h3>
-              <p>{detail.assignedCompany?.companyName || 'Not assigned yet'}</p>
-              <p className="muted-line">{detail.assignedCompany?.phone || detail.assignedCompany?.email || 'Waiting for dispatch'}</p>
+              <p>{currentAssignmentAccepted ? (detail.assignedCompany?.companyName || 'Not assigned yet') : 'Searching for staff'}</p>
+              <p className="muted-line">
+                {currentAssignmentAccepted
+                  ? (detail.assignedCompany?.phone || detail.assignedCompany?.email || 'Waiting for dispatch')
+                  : 'No staff has accepted this request yet.'}
+              </p>
             </div>
             <div className="card card-muted">
               <h3>Rescue Vehicle</h3>
-              <p>{detail.currentAssignment?.vehicleCode || 'Not assigned yet'}</p>
-              <p className="muted-line">{detail.currentAssignment?.vehiclePlateNumber || 'No plate information'}</p>
+              <p>{currentAssignmentAccepted ? (detail.currentAssignment?.vehicleCode || 'Not assigned yet') : 'Pending acceptance'}</p>
+              <p className="muted-line">
+                {currentAssignmentAccepted
+                  ? (detail.currentAssignment?.vehiclePlateNumber || 'No plate information')
+                  : 'Vehicle details will appear after staff accepts.'}
+              </p>
             </div>
           </div>
 
@@ -793,7 +803,7 @@ export default function RequestDetailPage() {
             </div>
           ) : null}
 
-          {isOpsRole && statusOptions.length > 0 ? (
+          {isOpsRole && statusOptions.length > 0 && (!isStaff || currentAssignmentAccepted) ? (
             <form className="card card-muted" style={{ marginTop: '1rem' }} onSubmit={updateStatus}>
               <h3>{getProgressTitle(user?.roleName)}</h3>
               <p className="muted-line">Only the allowed status options for your role are shown here.</p>

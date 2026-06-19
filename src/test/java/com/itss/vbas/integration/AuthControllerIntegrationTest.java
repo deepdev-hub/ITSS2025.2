@@ -129,6 +129,7 @@ class AuthControllerIntegrationTest extends IntegrationTestSupport {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.message").value("Reset password link sent successfully"))
+                .andExpect(jsonPath("$.data.resetLink").value(org.hamcrest.Matchers.nullValue()))
                 .andExpect(jsonPath("$.data.emailSent").value(true));
 
         PasswordResetToken token = passwordResetTokenRepository.findAll().get(0);
@@ -137,22 +138,22 @@ class AuthControllerIntegrationTest extends IntegrationTestSupport {
     }
 
     @Test
-    void forgotPasswordReturnsResetLinkWhenEmailIsNotConfigured() throws Exception {
+    void forgotPasswordReturnsBadRequestWhenEmailCannotBeSent() throws Exception {
         Account customer = createCustomer("forgot-local@test.local");
         when(emailService.sendResetPasswordEmail(anyString(), anyString())).thenReturn(false);
 
         mockMvc.perform(post("/api/auth/forgot-password")
                         .param("email", customer.getEmail()))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.emailSent").value(false))
-                .andExpect(jsonPath("$.data.resetLink").value(org.hamcrest.Matchers.containsString("/reset-password?token=")));
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false));
+
+        org.assertj.core.api.Assertions.assertThat(passwordResetTokenRepository.findAll()).isEmpty();
     }
 
     @Test
     void resetPasswordWithValidTokenUpdatesPasswordAndRejectsReuse() throws Exception {
         Account customer = createCustomer("reset@test.local");
-        when(emailService.sendResetPasswordEmail(anyString(), anyString())).thenReturn(false);
+        when(emailService.sendResetPasswordEmail(anyString(), anyString())).thenReturn(true);
 
         mockMvc.perform(post("/api/auth/forgot-password")
                         .param("email", customer.getEmail()))

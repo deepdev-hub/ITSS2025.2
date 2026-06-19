@@ -1,8 +1,10 @@
 package com.itss.vbas.service.impl;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 import com.itss.vbas.dto.admin.AdminDto;
@@ -49,6 +51,14 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Transactional
 public class AdminServiceImpl implements AdminService {
+
+    private static final int AUTO_DISPATCH_STAFF_LIMIT = 5;
+    private static final double INITIAL_SEARCH_RADIUS_KM = 2.0;
+    private static final double SEARCH_RADIUS_GROWTH_KM_PER_SECOND = 0.5;
+    private static final List<AssignmentStatus> BUSY_ASSIGNMENT_STATUSES = List.of(
+            AssignmentStatus.PENDING,
+            AssignmentStatus.ACCEPTED
+    );
 
     private final AccountRepository accountRepository;
     private final RoleRepository roleRepository;
@@ -470,7 +480,7 @@ public class AdminServiceImpl implements AdminService {
         RequestAssignment savedAssignment = requestAssignmentRepository.save(assignment);
 
         RescueRequestStatus oldStatus = rescueRequest.getStatus();
-        rescueRequest.setStatus(RescueRequestStatus.MATCHED);
+        rescueRequest.setStatus(RescueRequestStatus.SEARCHING);
         rescueRequestRepository.save(rescueRequest);
 
         String historyNote = defaultIfBlank(request.note(), 
@@ -479,7 +489,7 @@ public class AdminServiceImpl implements AdminService {
         requestStatusHistoryRepository.save(RequestStatusHistory.builder()
                 .request(rescueRequest)
                 .oldStatus(oldStatus)
-                .newStatus(RescueRequestStatus.MATCHED)
+                .newStatus(RescueRequestStatus.SEARCHING)
                 .changedByUser(authContext.getCurrentAccount())
                 .note(historyNote)
                 .build());
@@ -508,75 +518,118 @@ public class AdminServiceImpl implements AdminService {
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy yêu cầu ID: " + requestId));
         Account assignedBy = findAccount(assignedByAccountId);
 
+        if (isDispatchClosed(rescueRequest)) {
+            return null;
+        }
+
+        RequestDto.AssignmentResponse existingAccepted = requestAssignmentRepository
+                .findFirstByRequestIdAndStatusOrderByAssignedAtDesc(requestId, AssignmentStatus.ACCEPTED)
+                .map(appMapper::toAssignmentResponse)
+                .orElse(null);
+        if (existingAccepted != null) {
+            return existingAccepted;
+        }
+
+        RequestDto.AssignmentResponse existingPending = requestAssignmentRepository
+                .findFirstByRequestIdAndStatusOrderByAssignedAtDesc(requestId, AssignmentStatus.PENDING)
+                .map(appMapper::toAssignmentResponse)
+                .orElse(null);
+        if (existingPending != null) {
+            return existingPending;
+        }
+
         if (rescueRequest.getLocation() == null || 
             rescueRequest.getLocation().getLatitude() == null || 
             rescueRequest.getLocation().getLongitude() == null) {
             throw new BadRequestException("Yêu cầu không có tọa độ GPS hợp lệ.");
         }
 
-        // Lấy danh sách ID nhân viên đã từng được gán cho ca này (để loại trừ)
         List<Long> previousStaffIds = requestAssignmentRepository.findByRequestId(requestId).stream()
-                .map(a -> a.getStaff().getId())
+                .map(RequestAssignment::getStaff)
+                .filter(Objects::nonNull)
+                .map(RescueStaff::getId)
                 .collect(Collectors.toList());
 
         double reqLat = rescueRequest.getLocation().getLatitude().doubleValue();
         double reqLng = rescueRequest.getLocation().getLongitude().doubleValue();
+        double radiusKm = calculateSearchRadiusKm(rescueRequest);
 
-        // Lọc nhân viên: ACTIVE và CHƯA TỪNG được gán cho yêu cầu này
-        List<RescueStaff> candidates = rescueStaffRepository.findAll().stream()
-                .filter(s -> s.getStatus() == StaffStatus.ACTIVE)
-                .filter(s -> !previousStaffIds.contains(s.getId()))
-                .collect(Collectors.toList());
+        List<StaffCandidate> candidates = rescueStaffRepository.findAll().stream()
+                .filter(staff -> staff.getStatus() == StaffStatus.ACTIVE)
+                .filter(staff -> staff.getUser() != null && staff.getUser().getDefaultAddress() != null)
+                .filter(staff -> !previousStaffIds.contains(staff.getId()))
+                .filter(staff -> !requestAssignmentRepository.existsByStaffIdAndStatusIn(staff.getId(), BUSY_ASSIGNMENT_STATUSES))
+                .map(staff -> toStaffCandidate(staff, reqLat, reqLng))
+                .filter(Objects::nonNull)
+                .filter(candidate -> candidate.distanceKm() <= radiusKm)
+                .sorted(Comparator.comparingDouble(StaffCandidate::distanceKm))
+                .limit(AUTO_DISPATCH_STAFF_LIMIT)
+                .toList();
 
-        RescueStaff nearestStaff = null;
-        double minDistance = Double.MAX_VALUE;
-
-        for (RescueStaff staff : candidates) {
-            Address staffAddr = staff.getUser().getDefaultAddress();
-            if (staffAddr != null && staffAddr.getLatitude() != null && staffAddr.getLongitude() != null) {
-                double staffLat = staffAddr.getLatitude().doubleValue();
-                double staffLng = staffAddr.getLongitude().doubleValue();
-
-                double distance = calculateDistance(reqLat, reqLng, staffLat, staffLng);
-                if (distance < minDistance) {
-                    minDistance = distance;
-                    nearestStaff = staff;
-                }
-            }
-        }
-
-        if (nearestStaff == null) {
-            // Không tìm thấy ai mới, chuyển request về trạng thái chờ tìm kiếm thủ công
+        if (candidates.isEmpty()) {
             rescueRequest.setStatus(RescueRequestStatus.SEARCHING);
             rescueRequestRepository.save(rescueRequest);
             return null;
         }
 
-        // Tạo bản ghi gán việc mới
-        RequestAssignment assignment = RequestAssignment.builder()
-                .request(rescueRequest)
-                .company(nearestStaff.getCompany())
-                .staff(nearestStaff)
-                .assignedByUser(assignedBy)
-                .status(AssignmentStatus.PENDING)
-                .assignedAt(LocalDateTime.now())
-                .build();
-
-        RequestAssignment saved = requestAssignmentRepository.save(assignment);
+        List<RequestAssignment> savedAssignments = candidates.stream()
+                .map(candidate -> RequestAssignment.builder()
+                        .request(rescueRequest)
+                        .company(candidate.staff().getCompany())
+                        .staff(candidate.staff())
+                        .assignedByUser(assignedBy)
+                        .status(AssignmentStatus.PENDING)
+                        .assignedAt(LocalDateTime.now())
+                        .build())
+                .map(requestAssignmentRepository::save)
+                .toList();
 
         RescueRequestStatus oldStatus = rescueRequest.getStatus();
-        rescueRequest.setStatus(RescueRequestStatus.MATCHED);
+        rescueRequest.setStatus(RescueRequestStatus.SEARCHING);
         rescueRequestRepository.save(rescueRequest);
 
         requestStatusHistoryRepository.save(RequestStatusHistory.builder()
                 .request(rescueRequest)
                 .oldStatus(oldStatus)
-                .newStatus(RescueRequestStatus.MATCHED)
+                .newStatus(RescueRequestStatus.SEARCHING)
                 .changedByUser(assignedBy)
-                .note("Hệ thống tự động gán nhân viên gần nhất: " + nearestStaff.getUser().getFullName())
+                .note("System dispatched request to " + savedAssignments.size()
+                        + " nearby staff within " + String.format("%.1f", radiusKm) + " km.")
                 .build());
 
-        return appMapper.toAssignmentResponse(saved);
+        return appMapper.toAssignmentResponse(savedAssignments.get(0));
+    }
+
+    private boolean isDispatchClosed(RescueRequest request) {
+        return request.getStatus() == RescueRequestStatus.IN_PROGRESS
+                || request.getStatus() == RescueRequestStatus.COMPLETED
+                || request.getStatus() == RescueRequestStatus.CANCELED;
+    }
+
+    private StaffCandidate toStaffCandidate(RescueStaff staff, double requestLatitude, double requestLongitude) {
+        Address staffAddress = staff.getUser().getDefaultAddress();
+        if (staffAddress.getLatitude() == null || staffAddress.getLongitude() == null) {
+            return null;
+        }
+
+        double distanceKm = calculateDistance(
+                requestLatitude,
+                requestLongitude,
+                staffAddress.getLatitude().doubleValue(),
+                staffAddress.getLongitude().doubleValue()
+        );
+        return new StaffCandidate(staff, distanceKm);
+    }
+
+    private double calculateSearchRadiusKm(RescueRequest request) {
+        long elapsedSeconds = 0;
+        if (request.getCreatedAt() != null) {
+            elapsedSeconds = Math.max(0, Duration.between(request.getCreatedAt(), LocalDateTime.now()).toSeconds());
+        }
+        return INITIAL_SEARCH_RADIUS_KM + (SEARCH_RADIUS_GROWTH_KM_PER_SECOND * elapsedSeconds);
+    }
+
+    private record StaffCandidate(RescueStaff staff, double distanceKm) {
     }
 
     private double calculateDistance(double lat1, double lon1, double lat2, double lon2) {

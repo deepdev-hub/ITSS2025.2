@@ -21,6 +21,9 @@
         <java.version>17</java.version>
         <jjwt.version>0.12.7</jjwt.version>
         <lombok.version>1.18.34</lombok.version>
+        <local.datasource.url>jdbc:postgresql://localhost:5432/vbas</local.datasource.url>
+        <local.datasource.username>postgres</local.datasource.username>
+        <local.datasource.password>2005</local.datasource.password>
     </properties>
 
     <dependencies>
@@ -114,6 +117,12 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
+                    <systemPropertyVariables>
+                        <spring.datasource.url>${local.datasource.url}</spring.datasource.url>
+                        <spring.datasource.username>${local.datasource.username}</spring.datasource.username>
+                        <spring.datasource.password>${local.datasource.password}</spring.datasource.password>
+                        <spring.jpa.hibernate.ddl-auto>update</spring.jpa.hibernate.ddl-auto>
+                    </systemPropertyVariables>
                     <excludes>
                         <exclude>
                             <groupId>org.projectlombok</groupId>

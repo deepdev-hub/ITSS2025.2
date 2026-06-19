@@ -13,7 +13,7 @@ public class AssignmentTimeoutScheduler {
         this.assignmentTimeoutService = assignmentTimeoutService;
     }
 
-    @Scheduled(fixedDelay = 60_000)
+    @Scheduled(fixedDelayString = "${assignment.timeout-scheduler.fixed-delay:1000}")
     public void processTimeoutAssignments() {
         assignmentTimeoutService.processTimeoutAssignments();
     }

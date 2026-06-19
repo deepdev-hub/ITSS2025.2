@@ -45,6 +45,7 @@ public final class RequestDto {
             LocalDateTime createdAt,
             LocalDateTime updatedAt,
             CommonDto.BasicCompanyResponse assignedCompany,
+            String assignmentStatus,
             Integer timeoutSeconds,
             LocalDateTime expiresAt
     ) {

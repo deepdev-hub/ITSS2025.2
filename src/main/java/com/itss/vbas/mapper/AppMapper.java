@@ -343,6 +343,7 @@ public class AppMapper {
                 request.getCreatedAt(),
                 request.getUpdatedAt(),
                 toBasicCompanyResponse(assignedCompany),
+                currentAssignment == null ? null : currentAssignment.getStatus().name(),
                 currentAssignment == null ? null : assignmentTimeoutService.getTimeoutSeconds(currentAssignment),
                 currentAssignment == null ? null : assignmentTimeoutService.getExpiresAt(currentAssignment)
         );

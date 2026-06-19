@@ -8,7 +8,6 @@ export default function ForgotPasswordPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
-  const [resetLink, setResetLink] = useState('');
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -22,11 +21,9 @@ export default function ForgotPasswordPage() {
     setSubmitting(true);
     setError('');
     setMessage('');
-    setResetLink('');
     try {
       const response = await authApi.forgotPassword(normalizedEmail);
-      setMessage(response?.message || 'Da tao link dat lai mat khau.');
-      setResetLink(response?.data?.resetLink || '');
+      setMessage(response?.message || 'Neu email da dang ky, vui long kiem tra hop thu de dat lai mat khau.');
     } catch (err) {
       setError(getApiError(err));
     } finally {
@@ -42,12 +39,6 @@ export default function ForgotPasswordPage() {
 
         {error ? <div className="notice error">{error}</div> : null}
         {message ? <div className="notice success">{message}</div> : null}
-        {resetLink ? (
-          <div className="notice success">
-            <p style={{ marginTop: 0 }}>Moi truong hien tai chua gui email, dung link ben duoi de tiep tuc:</p>
-            <a href={resetLink}>{resetLink}</a>
-          </div>
-        ) : null}
 
         <div className="field">
           <label htmlFor="email">Email</label>
