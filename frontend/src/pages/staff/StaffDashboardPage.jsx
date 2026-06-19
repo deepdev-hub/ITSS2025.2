@@ -73,17 +73,6 @@ export default function StaffDashboardPage() {
               <ArrowRight className="action-card-arrow" size={20} />
             </Link>
 
-            <Link className="action-card" to="/staff/nearby-requests">
-              <div className="action-card-icon">
-                <Radio size={32} />
-              </div>
-              <div className="action-card-content">
-                <h3>Nearby Requests</h3>
-                <p className="muted-line">Go online and accept nearby rescue requests</p>
-              </div>
-              <ArrowRight className="action-card-arrow" size={20} />
-            </Link>
-
             <Link className="action-card" to="/staff/location">
               <div className="action-card-icon">
                 <MapPin size={32} />
