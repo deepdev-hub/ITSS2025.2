@@ -8,6 +8,11 @@ app:
     expiration-hours: ${APP_JWT_EXPIRATION_HOURS:24}
   mail:
     from: ${APP_MAIL_FROM:}
+  ors:
+    base-url: ${APP_ORS_BASE_URL:https://api.openrouteservice.org/v2}
+    api-key: ${OpenRouteService_KEY:}
+    connect-timeout: ${APP_ORS_CONNECT_TIMEOUT:5s}
+    read-timeout: ${APP_ORS_READ_TIMEOUT:10s}
 
 resend:
   api:
