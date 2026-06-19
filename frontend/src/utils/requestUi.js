@@ -1,7 +1,7 @@
-const currencyFormatter = new Intl.NumberFormat('en-US', {
+const currencyFormatter = new Intl.NumberFormat('vi-VN', {
   style: 'currency',
-  currency: 'USD',
-  maximumFractionDigits: 2,
+  currency: 'VND',
+  maximumFractionDigits: 0,
 });
 
 export function formatDateTime(value) {

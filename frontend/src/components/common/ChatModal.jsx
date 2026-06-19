@@ -124,7 +124,8 @@ export default function ChatModal({ isOpen, onClose, requestId, companyName, sta
   };
 
   const peerName = getPeerName(userRole, customerName, staffName, companyName);
-  const canSend = Boolean(requestId);
+  const isReadOnlyRole = ['ADMIN', 'RESCUE_COMPANY'].includes(user?.roleName);
+  const canSend = Boolean(requestId) && !isReadOnlyRole;
 
   return (
     <Modal
@@ -183,24 +184,32 @@ export default function ChatModal({ isOpen, onClose, requestId, companyName, sta
           <div ref={messagesEndRef} />
         </div>
 
-        <form onSubmit={handleSendMessage} className="chat-input-form">
-          <input
-            type="text"
-            value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            placeholder="Type a message..."
-            className="chat-input"
-            disabled={sending || !canSend}
-          />
-          <button
-            type="submit"
-            className="chat-send-btn"
-            disabled={sending || !canSend || !newMessage.trim()}
-            aria-label="Send message"
-          >
-            <Send size={20} />
-          </button>
-        </form>
+        {isReadOnlyRole ? (
+          <div className="chat-input-form" style={{ justifyContent: 'center', backgroundColor: '#f8f9fa', borderTop: '1px solid #e2e8f0' }}>
+            <span className="muted-line" style={{ padding: '0.75rem', textAlign: 'center', width: '100%', fontSize: '0.9rem' }}>
+              You have read-only access to this conversation.
+            </span>
+          </div>
+        ) : (
+          <form onSubmit={handleSendMessage} className="chat-input-form">
+            <input
+              type="text"
+              value={newMessage}
+              onChange={(e) => setNewMessage(e.target.value)}
+              placeholder="Type a message..."
+              className="chat-input"
+              disabled={sending || !canSend}
+            />
+            <button
+              type="submit"
+              className="chat-send-btn"
+              disabled={sending || !canSend || !newMessage.trim()}
+              aria-label="Send message"
+            >
+              <Send size={20} />
+            </button>
+          </form>
+        )}
       </div>
     </Modal>
   );

@@ -16,6 +16,7 @@ import Countdown from '../../components/common/Countdown';
 import Loader from '../../components/common/Loader';
 import PageHeader from '../../components/common/PageHeader';
 import StatusBadge from '../../components/common/StatusBadge';
+import Pagination from '../../components/common/Pagination';
 import { formatDateTime, getAllowedStatusOptions } from '../../utils/requestUi';
 
 function AssignmentCard({ assignment, onQuickAction, busyAction, activeAssignmentId, setActiveAssignmentId }) {
@@ -109,6 +110,8 @@ export default function StaffAssignmentsPage() {
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
   const [activeAssignmentId, setActiveAssignmentId] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 15;
 
   const loadAssignments = async () => {
     setLoading(true);
@@ -170,7 +173,15 @@ export default function StaffAssignmentsPage() {
     loadAssignments();
   }, []);
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [assignments]);
+
   if (loading) return <Loader label="Loading your assignments..." />;
+
+  const totalPages = Math.ceil(assignments.length / pageSize);
+  const startIndex = (currentPage - 1) * pageSize;
+  const paginatedAssignments = assignments.slice(startIndex, startIndex + pageSize);
 
   return (
     <>
@@ -188,7 +199,7 @@ export default function StaffAssignmentsPage() {
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column' }}>
-            {assignments.map((assignment) => (
+            {paginatedAssignments.map((assignment) => (
               <AssignmentCard 
                 key={assignment.id} 
                 assignment={assignment} 
@@ -198,6 +209,13 @@ export default function StaffAssignmentsPage() {
                 setActiveAssignmentId={setActiveAssignmentId}
               />
             ))}
+            {assignments.length > 0 && (
+              <Pagination 
+                currentPage={currentPage} 
+                totalPages={totalPages} 
+                onPageChange={setCurrentPage} 
+              />
+            )}
           </div>
         )}
       </div>

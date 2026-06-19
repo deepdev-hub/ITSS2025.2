@@ -352,7 +352,8 @@ public class AppMapper {
                 toBasicCompanyResponse(assignedCompany),
                 currentAssignment == null ? null : currentAssignment.getStatus().name(),
                 currentAssignment == null ? null : assignmentTimeoutService.getTimeoutSeconds(currentAssignment),
-                currentAssignment == null ? null : assignmentTimeoutService.getExpiresAt(currentAssignment)
+                currentAssignment == null ? null : assignmentTimeoutService.getExpiresAt(currentAssignment),
+                (currentAssignment == null || currentAssignment.getStaff() == null) ? null : currentAssignment.getStaff().getUser().getFullName()
         );
     }
 

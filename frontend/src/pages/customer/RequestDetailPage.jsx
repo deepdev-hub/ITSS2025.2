@@ -939,6 +939,39 @@ export default function RequestDetailPage() {
                     <div style={{ color: '#64748b', fontSize: '0.85rem', fontWeight: 600, textTransform: 'uppercase', marginBottom: '0.75rem' }}>Assigned Company</div>
                     <div style={{ color: '#0f172a', fontWeight: 700, fontSize: '1.25rem' }}>{detail.assignedCompany?.companyName || <span style={{ color: '#fb923c' }}>Waiting for assignment</span>}</div>
                   </div>
+                  
+                  {detail.currentAssignment?.staffName && (
+                    <>
+                      <div style={{ background: '#fff', padding: '1.5rem', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.05)' }}>
+                        <div style={{ color: '#64748b', fontSize: '0.85rem', fontWeight: 600, textTransform: 'uppercase', marginBottom: '0.75rem' }}>Assigned Staff</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                          <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                            {detail.currentAssignment.staffAvatarUrl ? (
+                              <img src={detail.currentAssignment.staffAvatarUrl} alt="Staff" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            ) : (
+                              <span style={{ fontWeight: 'bold', color: '#64748b' }}>{detail.currentAssignment.staffName.charAt(0)}</span>
+                            )}
+                          </div>
+                          <div>
+                            <div style={{ color: '#0f172a', fontWeight: 700, fontSize: '1.1rem' }}>{detail.currentAssignment.staffName}</div>
+                            <div style={{ color: '#64748b', fontSize: '0.85rem' }}>{detail.currentAssignment.staffJobTitle || 'Staff'}</div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div style={{ background: '#fff', padding: '1.5rem', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.05)' }}>
+                        <div style={{ color: '#64748b', fontSize: '0.85rem', fontWeight: 600, textTransform: 'uppercase', marginBottom: '0.75rem' }}>Rescue Vehicle</div>
+                        {detail.currentAssignment.vehicleCode ? (
+                          <div>
+                            <div style={{ color: '#0f172a', fontWeight: 700, fontSize: '1.1rem' }}>{detail.currentAssignment.vehicleCode}</div>
+                            <div style={{ color: '#64748b', fontSize: '0.85rem' }}>Plate: {detail.currentAssignment.vehiclePlateNumber || 'N/A'}</div>
+                          </div>
+                        ) : (
+                          <div style={{ color: '#64748b', fontStyle: 'italic' }}>No vehicle assigned</div>
+                        )}
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
 

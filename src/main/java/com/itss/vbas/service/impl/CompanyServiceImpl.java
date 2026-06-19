@@ -259,7 +259,12 @@ public class CompanyServiceImpl implements CompanyService {
         RescueCompany company = getCurrentCompany();
         return rescueRequestRepository.findAssignedRequestsByCompanyId(company.getId())
                 .stream()
-                .map(request -> appMapper.toRequestSummaryResponse(request, company,null))
+                .map(request -> {
+                    RequestAssignment currentAssignment = requestAssignmentRepository
+                            .findFirstByRequestIdAndCompanyIdOrderByAssignedAtDesc(request.getId(), company.getId())
+                            .orElse(null);
+                    return appMapper.toRequestSummaryResponse(request, company, currentAssignment);
+                })
                 .toList();
     }
 

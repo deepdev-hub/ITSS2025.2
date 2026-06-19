@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
+import { PieChart, Pie, Cell, Tooltip as RechartsTooltip, ResponsiveContainer, Legend } from 'recharts';
 import { Link } from 'react-router-dom';
 import {
   Building2,
   CheckCircle2,
   ClipboardList,
-  DollarSign,
+  Banknote,
   LayoutDashboard,
   Star,
   Users,
@@ -70,6 +71,50 @@ function CompanyMetricChart({ title, items, valueKey, maxValue, formatValue, ton
           })}
         </div>
       )}
+    </div>
+  );
+}
+
+function RequestStatusChart({ dashboard }) {
+  const data = [
+    { name: 'Completed', value: dashboard?.completedRequestCount ?? 0, color: '#10b981' },
+    { name: 'Canceled', value: dashboard?.canceledRequestCount ?? 0, color: '#ef4444' },
+    { name: 'In Progress', value: dashboard?.inProgressRequestCount ?? 0, color: '#f59e0b' },
+  ];
+  
+  const otherCount = (dashboard?.requestCount ?? 0) - data.reduce((sum, item) => sum + item.value, 0);
+  if (otherCount > 0) {
+    data.push({ name: 'Pending/Other', value: otherCount, color: '#6366f1' });
+  }
+
+  return (
+    <div className="card" style={{ display: 'flex', flexDirection: 'column', minHeight: '350px' }}>
+      <div style={{ marginBottom: '1rem' }}>
+         <h2 style={{ margin: 0 }}>Request Status Distribution</h2>
+         <p className="muted-line" style={{ margin: 0 }}>Total Requests: {dashboard?.requestCount ?? 0}</p>
+      </div>
+      <div style={{ flex: 1, minHeight: '280px' }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie
+              data={data}
+              cx="50%"
+              cy="50%"
+              innerRadius={70}
+              outerRadius={100}
+              paddingAngle={5}
+              dataKey="value"
+              label={({ name, value }) => `${name}: ${value}`}
+            >
+              {data.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={entry.color} />
+              ))}
+            </Pie>
+            <RechartsTooltip />
+            <Legend verticalAlign="bottom" height={36}/>
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
     </div>
   );
 }
@@ -204,15 +249,21 @@ export default function AdminDashboardPage() {
             </div>
           </div>
 
-          <div className="stats-grid">
-            <StatCard label="Requests" value={dashboard?.requestCount ?? 0} icon={<ClipboardList size={20} />} variant="info" />
-            <StatCard label="Completed" value={dashboard?.completedRequestCount ?? 0} icon={<CheckCircle2 size={20} />} variant="success" />
-            <StatCard label="Canceled" value={dashboard?.canceledRequestCount ?? 0} icon={<XCircle size={20} />} variant="danger" />
-            <StatCard label="In Progress" value={dashboard?.inProgressRequestCount ?? 0} icon={<ClipboardList size={20} />} variant="warning" />
-            <StatCard label="Paid Payments" value={dashboard?.paidPaymentCount ?? 0} icon={<DollarSign size={20} />} variant="success" />
-            <StatCard label="Revenue" value={formatCurrency(dashboard?.revenue ?? 0)} icon={<DollarSign size={20} />} variant="info" />
-            <StatCard label="Reviews" value={dashboard?.reviewCount ?? 0} icon={<Star size={20} />} />
-            <StatCard label="Avg Rating" value={averageRatingLabel} icon={<Star size={20} />} variant="warning" />
+          <div className="grid-two" style={{ marginBottom: '1.5rem', alignItems: 'stretch' }}>
+            <RequestStatusChart dashboard={dashboard} />
+            <div className="card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+               <h2 style={{ marginBottom: '1rem' }}>Quick Stats</h2>
+               <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
+                  <StatCard label="Paid Payments" value={dashboard?.paidPaymentCount ?? 0} icon={<Banknote size={20} />} variant="success" />
+                  <StatCard label="Revenue" value={formatCurrency(dashboard?.revenue ?? 0)} icon={<Banknote size={20} />} variant="info" />
+                  <StatCard label="Reviews" value={dashboard?.reviewCount ?? 0} icon={<Star size={20} />} />
+                  <StatCard label="Avg Rating" value={averageRatingLabel} icon={<Star size={20} />} variant="warning" />
+               </div>
+            </div>
+          </div>
+
+          <div className="stats-grid" style={{ marginBottom: '1.5rem' }}>
+
             <StatCard label="Customers" value={dashboard?.customerCount ?? 0} icon={<Users size={20} />} />
             <StatCard label="Staff" value={dashboard?.staffCount ?? 0} icon={<Users size={20} />} variant="info" />
             <StatCard label="Companies" value={dashboard?.companyCount ?? 0} icon={<Building2 size={20} />} />

@@ -18,6 +18,7 @@ import Loader from '../../components/common/Loader';
 import PageHeader from '../../components/common/PageHeader';
 import StatusBadge from '../../components/common/StatusBadge';
 import ChatModal from '../../components/common/ChatModal';
+import Pagination from '../../components/common/Pagination';
 import { canCustomerCancel, formatDateTime, getRequestLocationLabel } from '../../utils/requestUi';
 
 export default function MyRequestsPage() {
@@ -28,6 +29,8 @@ export default function MyRequestsPage() {
   const [actionId, setActionId] = useState(null);
   const [chatRequest, setChatRequest] = useState(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 15;
 
   const loadRequests = async () => {
     setLoading(true);
@@ -44,6 +47,10 @@ export default function MyRequestsPage() {
   useEffect(() => {
     loadRequests();
   }, []);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [requests]);
 
   const handleCancel = async (requestId) => {
     setActionId(requestId);
@@ -66,6 +73,10 @@ export default function MyRequestsPage() {
   };
 
   const activeCount = requests.filter((r) => !['COMPLETED', 'CANCELED'].includes(r.status)).length;
+
+  const totalPages = Math.ceil(requests.length / pageSize);
+  const startIndex = (currentPage - 1) * pageSize;
+  const paginatedRequests = requests.slice(startIndex, startIndex + pageSize);
 
   return (
     <>
@@ -117,7 +128,7 @@ export default function MyRequestsPage() {
               </Link>
             </div>
           ) : (
-            requests.map((request) => (
+            paginatedRequests.map((request) => (
               <article key={request.id} className="history-card">
                 <div className="history-card-header">
                   <div>
@@ -192,6 +203,13 @@ export default function MyRequestsPage() {
                 </div>
               </article>
             ))
+          )}
+          {requests.length > 0 && (
+            <Pagination 
+              currentPage={currentPage} 
+              totalPages={totalPages} 
+              onPageChange={setCurrentPage} 
+            />
           )}
         </div>
       ) : null}
