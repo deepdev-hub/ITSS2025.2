@@ -52,9 +52,7 @@ public class OpenRouteServiceImpl implements RouteService {
             return null;
         }
 
-        String url = baseUrl.endsWith("/directions/driving-car")
-                ? baseUrl
-                : baseUrl.replaceAll("/+$", "") + "/directions/driving-car";
+        String url = buildDirectionsUrl();
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -80,20 +78,12 @@ public class OpenRouteServiceImpl implements RouteService {
                 return null;
             }
 
-            List<Map<String, Object>> features = (List<Map<String, Object>>) body.get("features");
-            if (features == null || features.isEmpty()) {
-                return null;
-            }
-
-            Map<String, Object> feature = features.get(0);
-            Map<String, Object> geometry = (Map<String, Object>) feature.get("geometry");
-            Map<String, Object> properties = (Map<String, Object>) feature.get("properties");
-            Map<String, Object> summary = properties == null ? null : (Map<String, Object>) properties.get("summary");
-
-            List<List<Number>> coordinates = geometry == null ? null : (List<List<Number>>) geometry.get("coordinates");
+            List<List<Number>> coordinates = extractCoordinates(body);
             if (coordinates == null || coordinates.size() < 2) {
                 return null;
             }
+
+            Map<String, Object> summary = extractSummary(body);
 
             List<RoutePoint> points = new ArrayList<>();
             for (List<Number> coordinate : coordinates) {
@@ -120,5 +110,63 @@ public class OpenRouteServiceImpl implements RouteService {
             log.warn("OpenRouteService request failed: {}", ex.getMessage());
             return null;
         }
+    }
+
+    private String buildDirectionsUrl() {
+        String normalizedBaseUrl = baseUrl.replaceAll("/+$", "");
+        if (normalizedBaseUrl.endsWith("/geojson")
+                || normalizedBaseUrl.endsWith("/json")
+                || normalizedBaseUrl.endsWith("/gpx")) {
+            return normalizedBaseUrl;
+        }
+        if (normalizedBaseUrl.endsWith("/directions/driving-car")) {
+            return normalizedBaseUrl + "/geojson";
+        }
+        return normalizedBaseUrl + "/directions/driving-car/geojson";
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<List<Number>> extractCoordinates(Map<String, Object> body) {
+        List<Map<String, Object>> features = (List<Map<String, Object>>) body.get("features");
+        if (features != null && !features.isEmpty()) {
+            Map<String, Object> feature = features.get(0);
+            Map<String, Object> geometry = feature == null ? null : (Map<String, Object>) feature.get("geometry");
+            List<List<Number>> coordinates = geometry == null ? null : (List<List<Number>>) geometry.get("coordinates");
+            if (coordinates != null && coordinates.size() >= 2) {
+                return coordinates;
+            }
+        }
+
+        List<Map<String, Object>> routes = (List<Map<String, Object>>) body.get("routes");
+        if (routes == null || routes.isEmpty()) {
+            return null;
+        }
+
+        Object geometry = routes.get(0).get("geometry");
+        if (geometry instanceof Map<?, ?> geometryMap) {
+            Object coordinates = geometryMap.get("coordinates");
+            if (coordinates instanceof List<?> coordinateList) {
+                return (List<List<Number>>) coordinateList;
+            }
+        }
+        return null;
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> extractSummary(Map<String, Object> body) {
+        List<Map<String, Object>> features = (List<Map<String, Object>>) body.get("features");
+        if (features != null && !features.isEmpty()) {
+            Map<String, Object> properties = (Map<String, Object>) features.get(0).get("properties");
+            Map<String, Object> summary = properties == null ? null : (Map<String, Object>) properties.get("summary");
+            if (summary != null) {
+                return summary;
+            }
+        }
+
+        List<Map<String, Object>> routes = (List<Map<String, Object>>) body.get("routes");
+        if (routes == null || routes.isEmpty()) {
+            return null;
+        }
+        return (Map<String, Object>) routes.get(0).get("summary");
     }
 }
