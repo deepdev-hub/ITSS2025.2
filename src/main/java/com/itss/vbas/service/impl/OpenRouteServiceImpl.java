@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import com.itss.vbas.config.DotEnvUtils;
 import com.itss.vbas.service.RouteService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,18 +38,20 @@ public class OpenRouteServiceImpl implements RouteService {
             @Value("${app.ors.connect-timeout:5s}") Duration connectTimeout,
             @Value("${app.ors.read-timeout:10s}") Duration readTimeout
     ) {
+        Map<String, String> dotenv = DotEnvUtils.loadDotEnv();
         this.restTemplate = restTemplateBuilder
                 .setConnectTimeout(connectTimeout)
                 .setReadTimeout(readTimeout)
                 .build();
-        this.baseUrl = baseUrl == null ? "" : baseUrl.trim();
-        this.apiKey = apiKey == null ? "" : apiKey.trim();
+        this.baseUrl = normalizeValue(DotEnvUtils.firstText(baseUrl, System.getenv("APP_ORS_BASE_URL"), dotenv.get("APP_ORS_BASE_URL"), "https://api.openrouteservice.org/v2"));
+        this.apiKey = normalizeValue(DotEnvUtils.firstText(apiKey, System.getenv("OpenRouteService_KEY"), dotenv.get("OpenRouteService_KEY")));
     }
 
     @Override
     @SuppressWarnings("unchecked")
     public RouteResult getDrivingRoute(BigDecimal fromLatitude, BigDecimal fromLongitude, BigDecimal toLatitude, BigDecimal toLongitude) {
         if (baseUrl.isBlank() || apiKey.isBlank()) {
+            log.warn("OpenRouteService is not configured. baseUrlBlank={}, apiKeyBlank={}", baseUrl.isBlank(), apiKey.isBlank());
             return null;
         }
 
@@ -80,6 +83,10 @@ public class OpenRouteServiceImpl implements RouteService {
 
             List<List<Number>> coordinates = extractCoordinates(body);
             if (coordinates == null || coordinates.size() < 2) {
+                log.warn(
+                        "OpenRouteService returned no usable route geometry from ({}, {}) to ({}, {})",
+                        fromLatitude, fromLongitude, toLatitude, toLongitude
+                );
                 return null;
             }
 
@@ -95,6 +102,10 @@ public class OpenRouteServiceImpl implements RouteService {
                 points.add(new RoutePoint(latitude, longitude));
             }
             if (points.size() < 2) {
+                log.warn(
+                        "OpenRouteService route had fewer than 2 valid points from ({}, {}) to ({}, {})",
+                        fromLatitude, fromLongitude, toLatitude, toLongitude
+                );
                 return null;
             }
 
@@ -107,7 +118,14 @@ public class OpenRouteServiceImpl implements RouteService {
 
             return new RouteResult(points, distanceKm, durationMinutes);
         } catch (RestClientException ex) {
-            log.warn("OpenRouteService request failed: {}", ex.getMessage());
+            log.warn(
+                    "OpenRouteService request failed from ({}, {}) to ({}, {}): {}",
+                    fromLatitude,
+                    fromLongitude,
+                    toLatitude,
+                    toLongitude,
+                    ex.getMessage()
+            );
             return null;
         }
     }
@@ -168,5 +186,9 @@ public class OpenRouteServiceImpl implements RouteService {
             return null;
         }
         return (Map<String, Object>) routes.get(0).get("summary");
+    }
+
+    private String normalizeValue(String value) {
+        return value == null ? "" : value.trim();
     }
 }

@@ -390,6 +390,26 @@ export default function RequestTrackingMap({ requestId, requestStatus, staffProf
           {refreshing ? 'Updating...' : movementLabel}
         </div>
 
+        {tracking?.routeSource ? (
+          <div
+            style={{
+              position: 'absolute',
+              top: '16px',
+              right: '16px',
+              zIndex: 500,
+              background: tracking.routeSource === 'ORS' ? 'rgba(22, 143, 87, 0.92)' : 'rgba(245, 158, 11, 0.92)',
+              color: '#fff',
+              borderRadius: '999px',
+              padding: '6px 12px',
+              fontSize: '0.8rem',
+              fontWeight: 700,
+              boxShadow: '0 4px 10px rgba(15, 23, 42, 0.18)',
+            }}
+          >
+            {tracking.routeSource === 'ORS' ? 'Live route' : 'Fallback route'}
+          </div>
+        ) : null}
+
         {error ? (
           <div className="tracking-map-warning">
             Unable to update the latest location. Retrying...
