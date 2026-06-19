@@ -1,6 +1,7 @@
 package com.itss.vbas.integration;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -171,6 +172,8 @@ abstract class IntegrationTestSupport {
                 .phone("0900000000")
                 .status(status)
                 .role(ensureRole(roleName))
+                .dateOfBirth(LocalDate.now().minusYears(30))
+                .cccd("CCCD-" + next())
                 .defaultAddress(defaultAddress)
                 .build());
     }

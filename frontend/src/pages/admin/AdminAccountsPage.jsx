@@ -9,6 +9,15 @@ import Modal from '../../components/common/Modal';
 import ListTable from '../../components/common/ListTable';
 import { formatDateTime } from '../../utils/requestUi';
 
+function getMinimumAdultBirthDate() {
+  const today = new Date();
+  const date = new Date(today.getFullYear() - 18, today.getMonth(), today.getDate());
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 const emptyAddress = {
   country: 'Vietnam',
   province: '',
@@ -110,6 +119,7 @@ export default function AdminAccountsPage() {
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const maxBirthDate = getMinimumAdultBirthDate();
 
   const defaultRole = roles[0]?.roleName || 'CUSTOMER';
 
@@ -379,6 +389,18 @@ export default function AdminAccountsPage() {
                 name="dateOfBirth"
                 value={form.dateOfBirth}
                 onChange={handleChange}
+                required
+                max={maxBirthDate}
+              />
+            </div>
+            <div className="field">
+              <label>CCCD</label>
+              <input
+                type="text"
+                name="cccd"
+                value={form.cccd}
+                onChange={handleChange}
+                required
               />
             </div>
           </div>

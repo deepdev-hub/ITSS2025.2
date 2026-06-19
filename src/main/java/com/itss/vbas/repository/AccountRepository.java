@@ -11,5 +11,9 @@ public interface AccountRepository extends JpaRepository<Account, Long> {
 
     boolean existsByEmailIgnoreCase(String email);
 
+    boolean existsByCccd(String cccd);
+
+    boolean existsByCccdAndIdNot(String cccd, Long id);
+
     long countByRoleRoleName(RoleName roleName);
 }

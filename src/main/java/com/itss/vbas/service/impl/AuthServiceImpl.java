@@ -1,6 +1,7 @@
 package com.itss.vbas.service.impl;
 
 import java.security.SecureRandom;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -41,6 +42,7 @@ public class AuthServiceImpl implements AuthService {
 
     private static final int OTP_BOUND = 1_000_000;
     private static final int MAX_OTP_ATTEMPTS = 5;
+    private static final int MINIMUM_CUSTOMER_AGE = 18;
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     private final EmailService emailService;
@@ -95,6 +97,11 @@ public class AuthServiceImpl implements AuthService {
         if (accountRepository.existsByEmailIgnoreCase(request.email())) {
             throw new BadRequestException("Email is already in use");
         }
+        validateAdultDateOfBirth(request.dateOfBirth());
+        String normalizedCccd = normalizeRequiredCccd(request.cccd());
+        if (accountRepository.existsByCccd(normalizedCccd)) {
+            throw new BadRequestException("CCCD is already in use");
+        }
 
         Account account = Account.builder()
                 .email(request.email().trim().toLowerCase())
@@ -105,7 +112,7 @@ public class AuthServiceImpl implements AuthService {
                 .role(getOrCreateRole(RoleName.CUSTOMER))
                 .dateOfBirth(request.dateOfBirth())
                 .gender(request.gender())
-                .cccd(request.cccd())
+                .cccd(normalizedCccd)
                 .defaultAddress(
                         request.defaultAddress() != null
                                 ? addressService.createAddress(request.defaultAddress())
@@ -144,12 +151,16 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public AuthDto.ProfileResponse updateProfile(AuthDto.UpdateProfileRequest request) {
         Account account = authContext.getCurrentAccount();
+        String normalizedCccd = normalizeRequiredCccd(request.cccd());
+        if (accountRepository.existsByCccdAndIdNot(normalizedCccd, account.getId())) {
+            throw new BadRequestException("CCCD is already in use");
+        }
         account.setFullName(request.fullName());
         account.setPhone(request.phone());
         account.setAvatarUrl(request.avatarUrl());
         account.setDateOfBirth(request.dateOfBirth());
         account.setGender(request.gender());
-        account.setCccd(request.cccd());
+        account.setCccd(normalizedCccd);
         if (request.defaultAddress() != null) {
             account.setDefaultAddress(account.getDefaultAddress() == null
                     ? addressService.createAddress(request.defaultAddress())
@@ -317,5 +328,19 @@ public class AuthServiceImpl implements AuthService {
 
     private String generateOtp() {
         return String.format("%06d", SECURE_RANDOM.nextInt(OTP_BOUND));
+    }
+
+    private void validateAdultDateOfBirth(LocalDate dateOfBirth) {
+        if (dateOfBirth == null || dateOfBirth.isAfter(LocalDate.now().minusYears(MINIMUM_CUSTOMER_AGE))) {
+            throw new BadRequestException("dateOfBirth: must be at least 18 years old");
+        }
+    }
+
+    private String normalizeRequiredCccd(String cccd) {
+        String normalized = cccd == null ? "" : cccd.trim();
+        if (normalized.isEmpty()) {
+            throw new BadRequestException("CCCD is required");
+        }
+        return normalized;
     }
 }
