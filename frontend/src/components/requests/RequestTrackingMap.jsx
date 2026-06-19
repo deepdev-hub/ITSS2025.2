@@ -7,7 +7,6 @@ import { requestApi } from '../../api/requestApi';
 
 const DEFAULT_CENTER = [21.0285, 105.8542];
 const TRACKING_POLL_INTERVAL = 5000;
-const TECHNICIAN_WORKING_STATUSES = ['IN_PROGRESS'];
 
 const staffMarkerIcon = L.divIcon({
   className: 'tracking-div-icon',
@@ -115,10 +114,6 @@ function getSearchingStatusText(tracking) {
     : 'Dang thong bao cho cac staff phu hop gan nhat';
 }
 
-function isTechnicianWorkingStatus(status) {
-  return TECHNICIAN_WORKING_STATUSES.includes(status);
-}
-
 function FitTrackingBounds({ points, boundsKey }) {
   const map = useMap();
 
@@ -170,9 +165,6 @@ export default function RequestTrackingMap({ requestId, requestStatus, staffProf
 
     try {
       const nextTracking = await requestApi.getRequestTracking(requestId);
-      if (isTechnicianWorkingStatus(nextTracking?.requestStatus)) {
-        trackingStoppedRef.current = true;
-      }
       setTracking(nextTracking);
       setError('');
     } catch (err) {
@@ -187,13 +179,7 @@ export default function RequestTrackingMap({ requestId, requestStatus, staffProf
   useEffect(() => {
     setTracking(null);
     setError('');
-    trackingStoppedRef.current = isTechnicianWorkingStatus(requestStatus);
-
-    if (trackingStoppedRef.current) {
-      setLoading(false);
-      setRefreshing(false);
-      return undefined;
-    }
+    trackingStoppedRef.current = false;
 
     loadTracking({ initial: true });
 
@@ -235,7 +221,6 @@ export default function RequestTrackingMap({ requestId, requestStatus, staffProf
 
   const boundsKey = mapPoints.map((point) => point.join(',')).join('|');
   const effectiveRequestStatus = tracking?.requestStatus || requestStatus;
-  const technicianStartedTask = isTechnicianWorkingStatus(effectiveRequestStatus);
   const movementLabel = getMovementLabel(tracking, staffPosition, destinationPosition);
   const etaLabel = getEtaLabel(tracking);
   const vehicleLabel = tracking?.vehicle
@@ -248,23 +233,6 @@ export default function RequestTrackingMap({ requestId, requestStatus, staffProf
 
   const resolvedStaffProfilePath = staffProfilePath || (tracking?.staff?.id ? `/staff/${tracking.staff.id}/profile` : null);
   const pendingStaff = Array.isArray(tracking?.pendingStaff) ? tracking.pendingStaff : [];
-
-  if (technicianStartedTask) {
-    return (
-      <div className="card tracking-state-card tracking-task-card">
-        <div className="tracking-search-icon">OK</div>
-        <div>
-          {resolvedStaffProfilePath ? (
-            <Link className="button button-secondary tracking-profile-action" to={resolvedStaffProfilePath}>
-              View profile
-            </Link>
-          ) : null}
-          <h2>Technician is working on the task</h2>
-          <p>Staff has checked in at the rescue point. The arrival tracking flow has stopped.</p>
-        </div>
-      </div>
-    );
-  }
 
   if (loading && !tracking) {
     return (

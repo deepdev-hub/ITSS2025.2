@@ -638,7 +638,7 @@ export default function RequestDetailPage() {
 
       <RequestLifecycleStepper status={detail.status} hasPaidPayment={hasPaidPayment} />
 
-      {isCustomer ? (
+      {((isCustomer || isStaff) && !['IN_PROGRESS', 'COMPLETED', 'CANCELED'].includes(detail.status)) ? (
         <RequestTrackingMap
           requestId={id}
           requestStatus={detail.status}
@@ -712,7 +712,7 @@ export default function RequestDetailPage() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1.5rem', background: '#eff6ff', padding: '1.5rem 2rem', borderRadius: '16px', border: '1px solid #bfdbfe', boxShadow: '0 4px 6px -1px rgba(59, 130, 246, 0.1)' }}>
                     <div>
                       <strong style={{ display: 'block', color: '#1e40af', fontSize: '1.25rem', marginBottom: '0.35rem' }}>Check in after arrival</strong>
-                      <span style={{ color: '#3b82f6', fontSize: '1.05rem' }}>Confirm to move request to in-progress.</span>
+                      <span style={{ color: '#3b82f6', fontSize: '1.05rem' }}>Confirm when you have arrived to move request to in-progress.</span>
                     </div>
                     <button
                       className="button button-primary"
