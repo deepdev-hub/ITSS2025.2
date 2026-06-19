@@ -5,6 +5,7 @@ import {
   MapPin,
   Clock,
   CheckCircle,
+  XCircle,
   ArrowRight,
   Truck,
 } from 'lucide-react';
@@ -15,6 +16,7 @@ import Countdown from '../../components/common/Countdown';
 import Loader from '../../components/common/Loader';
 import PageHeader from '../../components/common/PageHeader';
 import StatusBadge from '../../components/common/StatusBadge';
+import Pagination from '../../components/common/Pagination';
 import { formatDateTime, getAllowedStatusOptions } from '../../utils/requestUi';
 
 function AssignmentCard({ assignment, onQuickAction, busyAction, activeAssignmentId, setActiveAssignmentId }) {
@@ -28,103 +30,73 @@ function AssignmentCard({ assignment, onQuickAction, busyAction, activeAssignmen
   const isPending = assignment.status === 'PENDING';
   const isBusyQuick = busyAction === 'quick-' + assignment.id;
 
+
   return (
-    <div className={`card assignment-accordion-card ${isExpanded ? 'expanded' : ''}`} style={{ padding: '0', overflow: 'hidden', marginBottom: '1rem', transition: 'all 0.3s ease', border: isExpanded ? '1px solid var(--primary, #667eea)' : '1px solid #e0e0e0' }}>
-      
-      {/* Accordion Header (Always visible) */}
-      <div 
-        className="accordion-header" 
-        onClick={() => setActiveAssignmentId(isExpanded ? null : assignment.id)}
-        style={{ padding: '1.25rem 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', backgroundColor: isPending ? '#fffcf2' : (isExpanded ? '#f8faff' : '#ffffff') }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', flex: 1 }}>
-          <div style={{ width: '45px', height: '45px', borderRadius: '10px', background: isPending ? '#ffc107' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: isPending ? '#856404' : 'white', flexShrink: 0 }}>
-            <Truck size={22} />
+    <div className={`premium-assignment-card ${isExpanded ? 'expanded' : ''} ${isPending ? 'pending' : ''}`}>
+      <div className="pac-header" onClick={() => setActiveAssignmentId(isExpanded ? null : assignment.id)}>
+        <div className="pac-header-left">
+          <div className="pac-icon">
+            <Truck size={24} />
           </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2rem', flex: 1, alignItems: 'center' }}>
-            <div style={{ minWidth: '150px' }}>
-              <h3 style={{ margin: '0 0 0.25rem 0', fontSize: '1.1rem', color: '#333' }}>{plateNumber}</h3>
-              <div className="muted-line" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', margin: 0 }}>
-                <Clock size={14} /> {formatDateTime(assignment.assignedAt)}
-              </div>
+          <div className="pac-info-grid">
+            <div className="pac-info-item">
+              <h3>{plateNumber}</h3>
+              <span className="pac-date"><Clock size={14} /> {formatDateTime(assignment.assignedAt)}</span>
             </div>
-            <div style={{ minWidth: '150px' }}>
-              <span style={{ display: 'block', fontSize: '0.8rem', color: '#888', marginBottom: '0.2rem' }}>Customer</span>
-              <strong style={{ fontSize: '0.95rem', color: '#333' }}>{customerName}</strong>
+            <div className="pac-info-item">
+              <label>Customer</label>
+              <strong>{customerName}</strong>
             </div>
-            <div style={{ minWidth: '150px' }}>
-              <span style={{ display: 'block', fontSize: '0.8rem', color: '#888', marginBottom: '0.2rem' }}>Incident</span>
-              <strong style={{ fontSize: '0.95rem', color: '#333' }}>{incidentName}</strong>
+            <div className="pac-info-item">
+              <label>Incident</label>
+              <strong>{incidentName}</strong>
             </div>
           </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }} onClick={(e) => e.stopPropagation()}>
+        <div className="pac-header-right" onClick={(e) => e.stopPropagation()}>
           <StatusBadge value={assignment.status} />
           {assignment.status !== 'REJECTED' && (
-            <Link className="button button-secondary" to={`/requests/${assignment.requestId}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.4rem 0.8rem', fontSize: '0.85rem', borderRadius: '6px' }}>
+            <Link className="button pac-btn-outline" to={`/requests/${assignment.requestId}`}>
               Open Detail <ArrowRight size={14} />
             </Link>
           )}
-          <div 
-            onClick={() => setActiveAssignmentId(isExpanded ? null : assignment.id)}
-            style={{ transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.3s ease', color: '#666', cursor: 'pointer', padding: '0.25rem' }}
-          >
+          <div className={`pac-expand-icon ${isExpanded ? 'rotated' : ''}`} onClick={() => setActiveAssignmentId(isExpanded ? null : assignment.id)}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
           </div>
         </div>
       </div>
 
-      {/* Accordion Body (Collapsible) */}
       {isExpanded && (
-        <div className="accordion-body" style={{ borderTop: '1px solid #eee', padding: '1.5rem', backgroundColor: '#fafafa', animation: 'fadeIn 0.3s ease' }}>
-          
-          <div style={{ display: 'grid', gridTemplateColumns: isPending ? 'repeat(auto-fit, minmax(300px, 1fr))' : '1fr', gap: '1.5rem' }}>
-            
-            {/* Location Section */}
-            <div style={{ background: '#fff', border: '1px solid #e0e0e0', borderRadius: '8px', padding: '1.25rem' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#333', fontWeight: '600', marginBottom: '0.75rem', fontSize: '0.95rem' }}>
-                <MapPin size={16} /> Incident Location
-              </label>
-              <div style={{ color: '#444', lineHeight: '1.5', fontSize: '0.95rem', background: '#f8faff', padding: '1rem', borderRadius: '6px', borderLeft: '3px solid #667eea' }}>
+        <div className="pac-body">
+          <div className="pac-body-grid">
+            <div className="pac-location-section">
+              <label><MapPin size={16} /> Incident Location</label>
+              <div className="pac-location-box">
                 {location}
               </div>
-              {!isPending && (
-                <div style={{ marginTop: '1.25rem', padding: '1rem', background: '#f8f9fa', borderRadius: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
-                  <div>
-                    <h4 style={{ fontSize: '0.9rem', color: '#555', margin: '0 0 0.25rem 0' }}>Quick Note</h4>
-                    <p className="muted-line" style={{ fontSize: '0.85rem', margin: 0 }}>To view full details, update progress, or chat with the customer, please open the full detail page.</p>
-                  </div>
-                  {assignment.status !== 'REJECTED' && (
-                    <Link className="button button-primary" to={`/requests/${assignment.requestId}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 1.2rem', borderRadius: '6px' }}>
-                      Open Full Detail <ArrowRight size={16} />
-                    </Link>
-                  )}
-                </div>
-              )}
+
             </div>
 
-            {/* Actions Section */}
             {isPending && (
-              <div>
-                <div className="alert-box" style={{ background: '#fff3cd', border: '1px solid #ffeeba', borderLeft: '4px solid #ffc107', padding: '1.25rem', borderRadius: '8px', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                  <h4 style={{ margin: '0 0 0.5rem 0', color: '#856404', fontSize: '1.05rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Clock size={16} />NEW DISPATCH</h4>
-                  <p style={{ color: '#664d03', margin: '0 0 0.75rem 0', fontSize: '0.9rem', lineHeight: '1.4' }}>You have been assigned a new rescue request. Confirm before the timer runs out.</p>
-                  <div className="countdown-highlight" style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#dc3545', margin: '0.5rem 0' }}>
+              <div className="pac-action-section">
+                <div className="pac-alert-box">
+                  <h4><Clock size={18} /> NEW DISPATCH</h4>
+                  <p>You have been assigned a new rescue request. Confirm before the timer runs out.</p>
+                  <div className="pac-countdown">
                     <Countdown expiresAt={assignment.expiresAt} status={assignment.status} />
                   </div>
-                  <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem' }}>
-                    <button className="button button-primary" style={{ flex: 1, padding: '10px' }} disabled={isBusyQuick} onClick={() => onQuickAction(assignment, 'ACCEPTED')}>
-                      <CheckCircle size={16} style={{ marginRight: '6px', verticalAlign: 'middle' }} /> Accept
+                  <div className="pac-action-buttons">
+                    <button className="button pac-btn-accept" disabled={isBusyQuick} onClick={() => onQuickAction(assignment, 'ACCEPTED')}>
+                      <CheckCircle size={18} /> Accept
                     </button>
-                    <button className="button button-danger" style={{ padding: '10px 20px', background: '#dc3545', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer' }} disabled={isBusyQuick} onClick={() => onQuickAction(assignment, 'REJECTED')}>
-                      Reject
+                    <button className="button pac-btn-reject" disabled={isBusyQuick} onClick={() => onQuickAction(assignment, 'REJECTED')}>
+                      <XCircle size={18} /> Reject
                     </button>
                   </div>
                 </div>
               </div>
             )}
           </div>
-
         </div>
       )}
     </div>
@@ -138,6 +110,8 @@ export default function StaffAssignmentsPage() {
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
   const [activeAssignmentId, setActiveAssignmentId] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 15;
 
   const loadAssignments = async () => {
     setLoading(true);
@@ -199,7 +173,15 @@ export default function StaffAssignmentsPage() {
     loadAssignments();
   }, []);
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [assignments]);
+
   if (loading) return <Loader label="Loading your assignments..." />;
+
+  const totalPages = Math.ceil(assignments.length / pageSize);
+  const startIndex = (currentPage - 1) * pageSize;
+  const paginatedAssignments = assignments.slice(startIndex, startIndex + pageSize);
 
   return (
     <>
@@ -217,7 +199,7 @@ export default function StaffAssignmentsPage() {
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column' }}>
-            {assignments.map((assignment) => (
+            {paginatedAssignments.map((assignment) => (
               <AssignmentCard 
                 key={assignment.id} 
                 assignment={assignment} 
@@ -227,33 +209,340 @@ export default function StaffAssignmentsPage() {
                 setActiveAssignmentId={setActiveAssignmentId}
               />
             ))}
+            {assignments.length > 0 && (
+              <Pagination 
+                currentPage={currentPage} 
+                totalPages={totalPages} 
+                onPageChange={setCurrentPage} 
+              />
+            )}
           </div>
         )}
       </div>
 
       <style>{`
-        .button-danger:hover { background-color: #c82333; }
-        .button-danger:disabled { opacity: 0.6; cursor: not-allowed; }
+        .premium-assignment-card {
+          padding: 0;
+          overflow: hidden;
+          margin-bottom: 1.5rem;
+          border-radius: 16px;
+          border: 1px solid rgba(0,0,0,0.05);
+          background: #ffffff;
+          box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+          transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+        }
+        .premium-assignment-card:hover {
+          transform: translateY(-4px);
+          box-shadow: 0 12px 30px rgba(0,0,0,0.08);
+        }
+        .premium-assignment-card.expanded {
+          border: 1px solid rgba(102, 126, 234, 0.3);
+          box-shadow: 0 8px 30px rgba(102, 126, 234, 0.15);
+        }
+        .premium-assignment-card.pending {
+          border: 1px solid rgba(255, 193, 7, 0.4);
+        }
+        
+        .pac-header {
+          padding: 1.5rem;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          cursor: pointer;
+          transition: background 0.3s ease;
+        }
+        .premium-assignment-card.expanded .pac-header {
+          background: linear-gradient(to right, rgba(248, 250, 255, 0.8), rgba(255, 255, 255, 1));
+        }
+        .premium-assignment-card.pending .pac-header {
+          background: linear-gradient(to right, rgba(255, 252, 242, 0.8), rgba(255, 255, 255, 1));
+        }
+        .pac-header-left {
+          display: flex;
+          align-items: center;
+          gap: 1.5rem;
+          flex: 1;
+        }
+        .pac-icon {
+          width: 52px;
+          height: 52px;
+          border-radius: 14px;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: white;
+          flex-shrink: 0;
+          box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+        .premium-assignment-card.pending .pac-icon {
+          background: linear-gradient(135deg, #f6d365 0%, #fda085 100%);
+          box-shadow: 0 4px 15px rgba(253, 160, 133, 0.3);
+          color: white;
+        }
+        .pac-info-grid {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 2.5rem;
+          flex: 1;
+          align-items: center;
+        }
+        .pac-info-item h3 {
+          margin: 0 0 0.4rem 0;
+          font-size: 1.15rem;
+          font-weight: 700;
+          color: #1e293b;
+          letter-spacing: -0.02em;
+        }
+        .pac-date {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.4rem;
+          font-size: 0.85rem;
+          color: #64748b;
+          background: #f1f5f9;
+          padding: 0.3rem 0.6rem;
+          border-radius: 20px;
+          font-weight: 500;
+        }
+        .pac-info-item label {
+          display: block;
+          font-size: 0.75rem;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+          color: #94a3b8;
+          margin-bottom: 0.3rem;
+          font-weight: 600;
+        }
+        .pac-info-item strong {
+          font-size: 0.95rem;
+          color: #334155;
+          font-weight: 600;
+        }
+        
+        .pac-header-right {
+          display: flex;
+          align-items: center;
+          gap: 1rem;
+        }
+        .pac-btn-outline {
+          background: transparent !important;
+          border: 1px solid #e2e8f0 !important;
+          color: #475569 !important;
+          display: inline-flex;
+          align-items: center;
+          gap: 0.5rem;
+          padding: 0.5rem 1rem !important;
+          border-radius: 8px !important;
+          font-weight: 600 !important;
+          transition: all 0.2s ease !important;
+        }
+        .pac-btn-outline:hover {
+          background: #f8fafc !important;
+          border-color: #cbd5e1 !important;
+          color: #0f172a !important;
+        }
+        .pac-expand-icon {
+          color: #94a3b8;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 32px;
+          height: 32px;
+          border-radius: 50%;
+          transition: all 0.3s ease;
+        }
+        .pac-expand-icon:hover {
+          background: #f1f5f9;
+          color: #475569;
+        }
+        .pac-expand-icon.rotated {
+          transform: rotate(180deg);
+        }
+        
+        .pac-body {
+          border-top: 1px solid #f1f5f9;
+          padding: 1.5rem;
+          background: #fafafc;
+          animation: slideDown 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
+        }
+        @keyframes slideDown {
+          from { opacity: 0; transform: translateY(-10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .pac-body-grid {
+          display: grid;
+          gap: 1.5rem;
+        }
+        .premium-assignment-card.pending .pac-body-grid {
+          grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        }
+        
+        .pac-location-section {
+          background: #ffffff;
+          border: 1px solid #e2e8f0;
+          border-radius: 12px;
+          padding: 1.5rem;
+          box-shadow: 0 2px 10px rgba(0,0,0,0.02);
+        }
+        .pac-location-section > label {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          color: #334155;
+          font-weight: 700;
+          margin-bottom: 1rem;
+          font-size: 0.95rem;
+        }
+        .pac-location-box {
+          color: #475569;
+          line-height: 1.6;
+          font-size: 0.95rem;
+          background: rgba(102, 126, 234, 0.05);
+          padding: 1rem 1.25rem;
+          border-radius: 8px;
+          border-left: 3px solid #667eea;
+        }
+        
+        .pac-quick-note {
+          margin-top: 1.5rem;
+          padding: 1.25rem;
+          background: #f8fafc;
+          border-radius: 10px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          flex-wrap: wrap;
+          gap: 1rem;
+          border: 1px solid #f1f5f9;
+        }
+        .pac-quick-note h4 {
+          font-size: 0.9rem;
+          color: #334155;
+          margin: 0 0 0.3rem 0;
+          font-weight: 600;
+        }
+        .pac-quick-note p {
+          font-size: 0.85rem;
+          color: #64748b;
+          margin: 0;
+        }
+        
+        .pac-btn-primary {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.5rem;
+          padding: 0.6rem 1.2rem !important;
+          border-radius: 8px !important;
+          font-weight: 600 !important;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+          border: none !important;
+          box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3) !important;
+          color: white !important;
+          transition: all 0.3s ease !important;
+        }
+        .pac-btn-primary:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 6px 15px rgba(102, 126, 234, 0.4) !important;
+          color: white !important;
+        }
+        
+        .pac-alert-box {
+          background: linear-gradient(145deg, #fffcf2 0%, #fff9e6 100%);
+          border: 1px solid #ffecb3;
+          border-left: 4px solid #f6d365;
+          padding: 1.5rem;
+          border-radius: 12px;
+          height: 100%;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          box-shadow: 0 4px 15px rgba(246, 211, 101, 0.1);
+        }
+        .pac-alert-box h4 {
+          margin: 0 0 0.5rem 0;
+          color: #b07d12;
+          font-size: 1.1rem;
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          font-weight: 700;
+        }
+        .pac-alert-box p {
+          color: #8c6d1f;
+          margin: 0 0 1rem 0;
+          font-size: 0.95rem;
+          line-height: 1.5;
+        }
+        .pac-countdown {
+          font-size: 1.2rem;
+          font-weight: bold;
+          color: #e11d48;
+          margin-bottom: 1.25rem;
+          background: #fff;
+          display: inline-block;
+          padding: 0.5rem 1rem;
+          border-radius: 8px;
+          border: 1px solid #ffe4e6;
+          box-shadow: 0 2px 4px rgba(225, 29, 72, 0.05);
+        }
+        .pac-action-buttons {
+          display: flex;
+          gap: 1rem;
+        }
+        .pac-btn-accept {
+          flex: 1;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 0.5rem;
+          background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+          padding: 0.75rem !important;
+          border-radius: 8px !important;
+          font-weight: 600 !important;
+          border: none !important;
+          color: white !important;
+          box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3) !important;
+          transition: all 0.2s ease !important;
+        }
+        .pac-btn-accept:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 6px 15px rgba(16, 185, 129, 0.4) !important;
+          color: white !important;
+        }
+        .pac-btn-reject {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 0.5rem;
+          background: transparent !important;
+          border: 1px solid #e11d48 !important;
+          color: #e11d48 !important;
+          padding: 0.75rem 1.5rem !important;
+          border-radius: 8px !important;
+          font-weight: 600 !important;
+          transition: all 0.2s ease !important;
+        }
+        .pac-btn-reject:hover {
+          background: #fff1f2 !important;
+        }
+
         @media (max-width: 768px) {
-          .assignment-detail-header {
+          .pac-header-left {
             flex-direction: column;
-            align-items: flex-start !important;
+            align-items: flex-start;
           }
-          .assignment-detail-header > div:last-child {
-            text-align: left;
-            margin-top: 1rem;
-          }
-          .form-grid {
-            grid-template-columns: 1fr !important;
-          }
-          .assignment-detail-footer {
+          .pac-info-grid {
             flex-direction: column;
-            align-items: flex-start !important;
+            align-items: flex-start;
+            gap: 1rem;
           }
-          .assignment-detail-footer .button {
-            width: 100%;
-            justify-content: center;
-            margin-top: 1rem;
+          .pac-header-right {
+            flex-direction: column;
+            align-items: flex-end;
+          }
+          .pac-action-buttons {
+            flex-direction: column;
           }
         }
       `}</style>

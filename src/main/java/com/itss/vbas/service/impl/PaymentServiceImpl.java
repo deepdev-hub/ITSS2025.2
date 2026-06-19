@@ -132,6 +132,15 @@ public class PaymentServiceImpl implements PaymentService {
         Payment savedPayment = paymentRepository.save(payment);
         if (oldPaymentStatus != PaymentStatus.PAID && paymentStatus == PaymentStatus.PAID) {
             notificationService.notifyPaymentPaid(savedPayment);
+            if (payment.getRequest().getStatus() != RescueRequestStatus.COMPLETED) {
+                Account account = authContext.getCurrentAccount();
+                requestSupportService.changeRequestStatus(
+                        payment.getRequest(),
+                        RescueRequestStatus.COMPLETED,
+                        account,
+                        "Request automatically completed upon successful payment"
+                );
+            }
         }
         return appMapper.toPaymentResponse(savedPayment);
     }

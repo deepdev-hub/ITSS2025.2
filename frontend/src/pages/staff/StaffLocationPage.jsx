@@ -35,11 +35,28 @@ function MapUpdater({ center }) {
 }
 
 export default function StaffLocationPage() {
-  // Default to Hanoi area.
   const [location, setLocation] = useState({ lat: 21.0051, lng: 105.8456 }); 
   const [isLocating, setIsLocating] = useState(false);
   const [isSavingLocation, setIsSavingLocation] = useState(false);
   const [locationNotice, setLocationNotice] = useState({ type: '', text: '' });
+
+  // Load existing location from DB when page loads
+  useEffect(() => {
+    async function loadCurrentLocation() {
+      try {
+        const status = await companyApi.getMyStaffStatus();
+        if (status.currentLatitude && status.currentLongitude) {
+          setLocation({
+            lat: Number(status.currentLatitude),
+            lng: Number(status.currentLongitude)
+          });
+        }
+      } catch (err) {
+        console.error('Failed to fetch initial location:', err);
+      }
+    }
+    loadCurrentLocation();
+  }, []);
 
   // Read GPS coordinates from the device.
   const handleGetCurrentLocation = () => {

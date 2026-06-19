@@ -12,9 +12,9 @@ import com.itss.vbas.enums.RescueRequestStatus;
 import com.itss.vbas.repository.RequestAssignmentRepository;
 import com.itss.vbas.repository.RequestStatusHistoryRepository;
 import com.itss.vbas.repository.RescueRequestRepository;
-import com.itss.vbas.service.AdminService; // BỔ SUNG
+import com.itss.vbas.service.AdminService;
 import com.itss.vbas.service.AssignmentTimeoutService;
-import org.springframework.context.annotation.Lazy; // BỔ SUNG
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,7 +26,7 @@ public class AssignmentTimeoutServiceImpl implements AssignmentTimeoutService {
     private final RescueRequestRepository rescueRequestRepository;
     private final RequestStatusHistoryRepository requestStatusHistoryRepository;
     private final AssignmentTimeoutConfig assignmentTimeoutConfig;
-    private final AdminService adminService; // BỔ SUNG
+    private final AdminService adminService;
 
     public AssignmentTimeoutServiceImpl(
             RequestAssignmentRepository requestAssignmentRepository,

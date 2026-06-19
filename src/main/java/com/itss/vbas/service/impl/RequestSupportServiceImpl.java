@@ -107,7 +107,7 @@ public class RequestSupportServiceImpl implements RequestSupportService {
         RequestAssignment assignment = requestAssignmentRepository
                 .findFirstByRequestIdAndCompanyIdOrderByAssignedAtDesc(request.getId(), company.getId())
                 .orElse(null);
-        if (assignment == null || assignment.getStatus() == AssignmentStatus.REJECTED) {
+        if (assignment == null) {
             throw new ForbiddenException("This request is not assigned to your company");
         }
     }
@@ -118,7 +118,7 @@ public class RequestSupportServiceImpl implements RequestSupportService {
         RequestAssignment assignment = requestAssignmentRepository
                 .findFirstByRequestIdAndStaffIdOrderByAssignedAtDesc(request.getId(), staff.getId())
                 .orElse(null);
-        if (assignment == null || assignment.getStatus() == AssignmentStatus.REJECTED) {
+        if (assignment == null) {
             throw new ForbiddenException("This request is not assigned to you");
         }
     }
@@ -139,6 +139,18 @@ public class RequestSupportServiceImpl implements RequestSupportService {
                 .changedByUser(changedBy)
                 .note(note)
                 .build());
+
+        // Update active assignment if request is completed or canceled
+        if (newStatus == RescueRequestStatus.COMPLETED || newStatus == RescueRequestStatus.CANCELED) {
+            requestAssignmentRepository.findFirstByRequestIdOrderByAssignedAtDesc(request.getId())
+                    .ifPresent(assignment -> {
+                        if (assignment.getStatus() == AssignmentStatus.ACCEPTED) {
+                            assignment.setStatus(newStatus == RescueRequestStatus.COMPLETED ? AssignmentStatus.COMPLETED : AssignmentStatus.REJECTED);
+                            requestAssignmentRepository.save(assignment);
+                        }
+                    });
+        }
+
         return savedRequest;
     }
 }

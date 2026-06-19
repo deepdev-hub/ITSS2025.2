@@ -102,13 +102,13 @@ public class NotificationServiceImpl implements NotificationService {
 
         RescueRequest request = assignment.getRequest();
         String staffName = assignment.getStaff() == null || assignment.getStaff().getUser() == null
-                ? "Thợ cứu hộ"
+                ? "Rescue staff"
                 : assignment.getStaff().getUser().getFullName();
         createNotification(
                 request.getCustomer(),
                 NotificationType.ASSIGNMENT_ACCEPTED,
-                "Thợ đã nhận chuyến",
-                staffName + " đã nhận chuyến " + request.getRequestCode() + ".",
+                "Staff accepted the request",
+                staffName + " has accepted request " + request.getRequestCode() + ".",
                 request
         );
     }
@@ -122,8 +122,8 @@ public class NotificationServiceImpl implements NotificationService {
         createNotification(
                 request.getCustomer(),
                 NotificationType.REQUEST_COMPLETED,
-                "Chuyến cứu hộ đã hoàn thành",
-                "Yêu cầu " + request.getRequestCode() + " đã được thợ cập nhật hoàn thành.",
+                "Rescue request completed",
+                "Request " + request.getRequestCode() + " has been marked as completed by staff.",
                 request
         );
     }
@@ -141,8 +141,8 @@ public class NotificationServiceImpl implements NotificationService {
                 .ifPresent(staffUser -> createNotification(
                         staffUser,
                         NotificationType.PAYMENT_PAID,
-                        "Khách hàng đã thanh toán",
-                        "Khách hàng đã thanh toán cho chuyến " + payment.getRequest().getRequestCode() + ".",
+                        "Customer has paid",
+                        "Customer has paid for request " + payment.getRequest().getRequestCode() + ".",
                         payment.getRequest()
                 ));
     }

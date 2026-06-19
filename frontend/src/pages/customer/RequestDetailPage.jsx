@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { MessageCircle, Image as ImageIcon, CreditCard, Clock, FileText, CheckCircle, ArrowRight, ChevronRight, MapPin, Tag } from 'lucide-react';
 import { requestApi } from '../../api/requestApi';
+import { companyApi } from '../../api/companyApi';
 import { getApiError } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import Loader from '../../components/common/Loader';
@@ -68,11 +69,15 @@ function isValidCoordinate(value, min, max) {
   return Number.isFinite(numericValue) && numericValue >= min && numericValue <= max;
 }
 
-function getGoogleMapsDirectionsUrl(location) {
-  if (!isValidCoordinate(location?.latitude, -90, 90) || !isValidCoordinate(location?.longitude, -180, 180)) {
+function getGoogleMapsDirectionsUrl(destination, origin) {
+  if (!isValidCoordinate(destination?.latitude, -90, 90) || !isValidCoordinate(destination?.longitude, -180, 180)) {
     return null;
   }
-  return `https://www.google.com/maps/dir/?api=1&destination=${location.latitude},${location.longitude}&travelmode=driving`;
+  let url = `https://www.google.com/maps/dir/?api=1&destination=${destination.latitude},${destination.longitude}&travelmode=driving`;
+  if (isValidCoordinate(origin?.latitude, -90, 90) && isValidCoordinate(origin?.longitude, -180, 180)) {
+    url += `&origin=${origin.latitude},${origin.longitude}`;
+  }
+  return url;
 }
 
 function getPriceStatusLabel(quote, hasPaidPayment, requestStatus) {
@@ -250,6 +255,7 @@ export default function RequestDetailPage() {
   const [cancelForm, setCancelForm] = useState(defaultDecisionForm);
   const [reviewForm, setReviewForm] = useState(defaultReviewForm);
   const [activeModal, setActiveModal] = useState(null);
+  const [staffLocation, setStaffLocation] = useState(null);
   const refreshInFlightRef = useRef(false);
   const messageListRef = useRef(null);
   const shouldStickToBottomRef = useRef(true);
@@ -311,16 +317,22 @@ export default function RequestDetailPage() {
     ? `/staff/${detail.currentAssignment.staffId}/profile`
     : null;
 
-  const requestCanceled = detail?.status === 'CANCELED';
-  const requestClosed = ['CANCELED', 'COMPLETED'].includes(detail?.status);
+  const effectiveStatus = useMemo(() => {
+    if (detail?.status === 'CANCELED') return 'CANCELED';
+    if (hasPaidPayment) return 'COMPLETED';
+    return detail?.status;
+  }, [detail?.status, hasPaidPayment]);
+
+  const requestCanceled = effectiveStatus === 'CANCELED';
+  const requestClosed = ['CANCELED', 'COMPLETED'].includes(effectiveStatus);
   const requestFinalized = requestClosed || hasPaidPayment;
-  const staffCheckedIn = isStaff && detail?.status === 'IN_PROGRESS';
+  const staffCheckedIn = isStaff && effectiveStatus === 'IN_PROGRESS';
   const canStaffCheckIn = isStaff
     && detail?.currentAssignment?.status === 'ACCEPTED'
     && !staffCheckedIn
     && !requestClosed;
-  const latestPriceStatus = getPriceStatusLabel(latestQuote, hasPaidPayment, detail?.status);
-  const customerDirectionsUrl = getGoogleMapsDirectionsUrl(detail?.location);
+  const latestPriceStatus = getPriceStatusLabel(latestQuote, hasPaidPayment, effectiveStatus);
+  const customerDirectionsUrl = getGoogleMapsDirectionsUrl(detail?.location, staffLocation);
   const canManageDealPrice = isStaff
     && currentAssignmentAccepted
     && !requestFinalized
@@ -335,12 +347,12 @@ export default function RequestDetailPage() {
     && !requestCanceled
     && !hasPaidPayment;
 
-  const canLeaveReview = isCustomer && detail?.status === 'COMPLETED' && !detail?.review;
+  const canLeaveReview = isCustomer && effectiveStatus === 'COMPLETED' && !detail?.review;
   const stableRequest = useMemo(
-    () => ['COMPLETED', 'CANCELED'].includes(detail?.status)
+    () => ['COMPLETED', 'CANCELED'].includes(effectiveStatus)
       && !pendingPayment
-      && (detail?.status === 'CANCELED' || Boolean(detail?.review)),
-    [detail?.review, detail?.status, pendingPayment],
+      && (effectiveStatus === 'CANCELED' || Boolean(detail?.review)),
+    [detail?.review, effectiveStatus, pendingPayment],
   );
 
   const pollIntervalMs = pollMode === 'background'
@@ -405,7 +417,17 @@ export default function RequestDetailPage() {
 
   useEffect(() => {
     refreshData({ force: true });
-  }, [refreshData]);
+  }, [id, pollIntervalMs, refreshData]);
+
+  useEffect(() => {
+    if (isStaff) {
+      companyApi.getMyStaffStatus().then(status => {
+        if (status.latitude && status.longitude) {
+           setStaffLocation({ latitude: status.latitude, longitude: status.longitude });
+        }
+      }).catch(console.error);
+    }
+  }, [isStaff]);
 
   useEffect(() => {
     const onVisibilityChange = () => {
@@ -436,7 +458,7 @@ export default function RequestDetailPage() {
       return;
     }
 
-    const nextStatusOptions = getAllowedStatusOptions(user?.roleName, detail.status);
+    const nextStatusOptions = getAllowedStatusOptions(user?.roleName, effectiveStatus);
     const acceptedAmount = getQuoteAmount(detail.quotes?.find((item) => item.status === 'ACCEPTED'));
     const resolvedAmount = pendingPayment?.amount ?? acceptedAmount ?? '';
 
@@ -636,12 +658,12 @@ export default function RequestDetailPage() {
         )}
       />
 
-      <RequestLifecycleStepper status={detail.status} hasPaidPayment={hasPaidPayment} />
+      <RequestLifecycleStepper status={effectiveStatus} hasPaidPayment={hasPaidPayment} />
 
-      {((isCustomer || isStaff) && !['IN_PROGRESS', 'COMPLETED', 'CANCELED'].includes(detail.status)) ? (
+      {((isCustomer || isStaff) && !['COMPLETED', 'CANCELED'].includes(effectiveStatus)) ? (
         <RequestTrackingMap
           requestId={id}
-          requestStatus={detail.status}
+          requestStatus={effectiveStatus}
           staffProfilePath={assignedStaffPath}
         />
       ) : null}
@@ -659,7 +681,7 @@ export default function RequestDetailPage() {
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.5rem' }}>
                 <h2 style={{ margin: 0, fontSize: '1.75rem', color: '#0f172a', fontWeight: 800, letterSpacing: '-0.025em' }}>Request Overview</h2>
-                <StatusBadge value={detail.status} />
+                <StatusBadge value={effectiveStatus} />
               </div>
               <p style={{ margin: 0, color: '#64748b', fontSize: '1rem' }}>Comprehensive details and tracking for your rescue request.</p>
             </div>
@@ -680,12 +702,8 @@ export default function RequestDetailPage() {
               <button className="button" type="button" onClick={() => setActiveModal('timeline')} style={{ padding: '0.75rem 1.5rem', fontSize: '1.05rem', background: '#f8fafc', color: '#334155', border: '1px solid #e2e8f0', borderRadius: '999px', fontWeight: 600, transition: 'all 0.2s', boxShadow: '0 1px 2px 0 rgba(0,0,0,0.05)' }}>
                 <Clock size={18} style={{ marginRight: '8px', color: '#8b5cf6' }} /> Timeline
               </button>
-              {isOpsRole && !requestClosed && (
-                <button className="button button-primary" type="button" onClick={() => setActiveModal('progress')} style={{ padding: '0.75rem 1.5rem', fontSize: '1.05rem', borderRadius: '999px', boxShadow: '0 4px 6px -1px rgba(59, 130, 246, 0.3)' }}>
-                  <CheckCircle size={18} style={{ marginRight: '8px' }} /> Update Status
-                </button>
-              )}
-              {isCustomer && canCustomerCancel(detail.status) && (
+
+              {isCustomer && canCustomerCancel(effectiveStatus) && (
                 <button className="button button-danger" type="button" onClick={() => setActiveModal('progress')} style={{ padding: '0.75rem 1.5rem', fontSize: '1.05rem', background: '#fef2f2', color: '#ef4444', border: '1px solid #fecaca', borderRadius: '999px' }}>
                   <FileText size={18} style={{ marginRight: '8px' }} /> Cancel
                 </button>
@@ -940,6 +958,39 @@ export default function RequestDetailPage() {
                     <div style={{ color: '#64748b', fontSize: '0.85rem', fontWeight: 600, textTransform: 'uppercase', marginBottom: '0.75rem' }}>Assigned Company</div>
                     <div style={{ color: '#0f172a', fontWeight: 700, fontSize: '1.25rem' }}>{detail.assignedCompany?.companyName || <span style={{ color: '#fb923c' }}>Waiting for assignment</span>}</div>
                   </div>
+                  
+                  {detail.currentAssignment?.staffName && (
+                    <>
+                      <div style={{ background: '#fff', padding: '1.5rem', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.05)' }}>
+                        <div style={{ color: '#64748b', fontSize: '0.85rem', fontWeight: 600, textTransform: 'uppercase', marginBottom: '0.75rem' }}>Assigned Staff</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                          <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                            {detail.currentAssignment.staffAvatarUrl ? (
+                              <img src={detail.currentAssignment.staffAvatarUrl} alt="Staff" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            ) : (
+                              <span style={{ fontWeight: 'bold', color: '#64748b' }}>{detail.currentAssignment.staffName.charAt(0)}</span>
+                            )}
+                          </div>
+                          <div>
+                            <div style={{ color: '#0f172a', fontWeight: 700, fontSize: '1.1rem' }}>{detail.currentAssignment.staffName}</div>
+                            <div style={{ color: '#64748b', fontSize: '0.85rem' }}>{detail.currentAssignment.staffJobTitle || 'Staff'}</div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div style={{ background: '#fff', padding: '1.5rem', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.05)' }}>
+                        <div style={{ color: '#64748b', fontSize: '0.85rem', fontWeight: 600, textTransform: 'uppercase', marginBottom: '0.75rem' }}>Rescue Vehicle</div>
+                        {detail.currentAssignment.vehicleCode ? (
+                          <div>
+                            <div style={{ color: '#0f172a', fontWeight: 700, fontSize: '1.1rem' }}>{detail.currentAssignment.vehicleCode}</div>
+                            <div style={{ color: '#64748b', fontSize: '0.85rem' }}>Plate: {detail.currentAssignment.vehiclePlateNumber || 'N/A'}</div>
+                          </div>
+                        ) : (
+                          <div style={{ color: '#64748b', fontStyle: 'italic' }}>No vehicle assigned</div>
+                        )}
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -1068,6 +1119,37 @@ export default function RequestDetailPage() {
             ) : null}
           </div>
 
+          {detail?.quotes?.length > 1 && (
+            <div className="card card-muted" style={{ margin: 0 }}>
+              <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Clock size={18} /> Deal History</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                {detail.quotes.slice(1).map((quote, index) => (
+                  <div key={quote.id || index} style={{ padding: '1rem', background: '#fff', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                      <strong style={{ fontSize: '1.1rem', color: '#0f172a' }}>{formatCurrency(getQuoteAmount(quote))}</strong>
+                      <span className="muted-line" style={{ fontSize: '0.875rem' }}>{formatDateTime(quote.createdAt)}</span>
+                    </div>
+                    <div style={{ marginBottom: '0.5rem', display: 'flex' }}>
+                      <span style={{ fontSize: '0.85rem', fontWeight: 600, padding: '2px 8px', background: '#f1f5f9', color: '#475569', borderRadius: '4px' }}>
+                        {getPriceStatusLabel(quote, false, detail?.status)}
+                      </span>
+                    </div>
+                    {quote.note && (
+                      <div className="muted-line" style={{ fontSize: '0.9rem', marginBottom: '0.25rem' }}>
+                        <strong>Staff Note:</strong> {quote.note}
+                      </div>
+                    )}
+                    {quote.customerNote && (
+                      <div className="muted-line" style={{ fontSize: '0.9rem', color: '#991b1b' }}>
+                        <strong>Customer Reason:</strong> {quote.customerNote}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {canManageDealPrice ? (
             <form className="card card-muted" style={{ margin: 0 }} onSubmit={updateDealPrice}>
               <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Tag size={18} /> Update Deal Price</h3>
@@ -1194,7 +1276,7 @@ export default function RequestDetailPage() {
       <Modal isOpen={activeModal === 'progress'} onClose={() => setActiveModal(null)} title="Actions & Progress Control" size="medium">
         <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
           
-          {isCustomer && canCustomerCancel(detail.status) ? (
+          {isCustomer && canCustomerCancel(effectiveStatus) ? (
             <div className="card card-muted" style={{ margin: 0 }}>
               <h3>Cancel Request</h3>
               <p className="muted-line">You can cancel the request if price negotiation fails or you no longer need assistance.</p>
@@ -1222,39 +1304,7 @@ export default function RequestDetailPage() {
             </div>
           ) : null}
 
-          {isOpsRole && statusOptions.length > 0 ? (
-            <form className="card card-muted" style={{ margin: 0 }} onSubmit={async (e) => {
-              await updateStatus(e);
-              setActiveModal(null);
-            }}>
-              <h3>{getProgressTitle(user?.roleName)}</h3>
-              <p className="muted-line">Only the allowed status options for your role are shown here.</p>
-              <div className="form-grid">
-                <div className="field">
-                  <label>Next Status</label>
-                  <select
-                    value={statusForm.status}
-                    onChange={(event) => setStatusForm((previous) => ({ ...previous, status: event.target.value }))}
-                  >
-                    {statusOptions.map((option) => (
-                      <option key={option} value={option}>{option}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="field">
-                  <label>Note</label>
-                  <input
-                    value={statusForm.note}
-                    onChange={(event) => setStatusForm((previous) => ({ ...previous, note: event.target.value }))}
-                    placeholder="Optional progress note"
-                  />
-                </div>
-              </div>
-              <button className="button button-primary" type="submit" disabled={busyAction === 'status'}>
-                {busyAction === 'status' ? 'Updating...' : 'Update status'}
-              </button>
-            </form>
-          ) : null}
+
 
         </div>
       </Modal>

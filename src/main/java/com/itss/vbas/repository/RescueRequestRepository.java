@@ -20,6 +20,7 @@ public interface RescueRequestRepository extends JpaRepository<RescueRequest, Lo
             from RescueRequest r
             join RequestAssignment a on a.request.id = r.id
             where a.company.id = :companyId
+            and a.status <> com.itss.vbas.enums.AssignmentStatus.PENDING
             order by r.createdAt desc
             """)
     List<RescueRequest> findAssignedRequestsByCompanyId(@Param("companyId") Long companyId);

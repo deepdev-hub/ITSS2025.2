@@ -490,10 +490,10 @@ public class AdminServiceImpl implements AdminService {
                 .orElseThrow(() -> new ResourceNotFoundException("Staff not found with id: " + request.staffId()));
 
         if (staff.getStatus() != StaffStatus.ACTIVE) {
-            throw new BadRequestException("Nhân viên hiện không sẵn sàng (OFFLINE hoặc BUSY)");
+            throw new BadRequestException("Staff is currently unavailable (OFFLINE or BUSY)");
         }
 
-        // Lấy trực tiếp Company từ Staff thay vì qua request.companyId()
+        // Get Company directly from Staff instead of via request.companyId()
         RescueCompany company = staff.getCompany();
 
         RequestAssignment assignment = RequestAssignment.builder()
@@ -513,7 +513,7 @@ public class AdminServiceImpl implements AdminService {
         rescueRequestRepository.save(rescueRequest);
 
         String historyNote = defaultIfBlank(request.note(), 
-                "Admin gán trực tiếp cho nhân viên: " + staff.getUser().getFullName());
+                "Admin directly assigned to staff: " + staff.getUser().getFullName());
 
         requestStatusHistoryRepository.save(RequestStatusHistory.builder()
                 .request(rescueRequest)
@@ -535,7 +535,7 @@ public class AdminServiceImpl implements AdminService {
                 .toList();
     }
 
-    // Logic tự động điều phối Staff
+    // Auto dispatch logic for Staff
     @Override
     public RequestDto.AssignmentResponse autoAssignNearestStaff(Long requestId) {
         return autoAssignNearestStaff(requestId, authContext.getCurrentAccount().getId());
@@ -544,7 +544,7 @@ public class AdminServiceImpl implements AdminService {
     @Override
     public RequestDto.AssignmentResponse autoAssignNearestStaff(Long requestId, Long assignedByAccountId) {
         RescueRequest rescueRequest = rescueRequestRepository.findById(requestId)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy yêu cầu ID: " + requestId));
+                .orElseThrow(() -> new ResourceNotFoundException("Request ID not found: " + requestId));
         Account assignedBy = findAccount(assignedByAccountId);
 
         if (isDispatchClosed(rescueRequest)) {
@@ -570,7 +570,7 @@ public class AdminServiceImpl implements AdminService {
         if (rescueRequest.getLocation() == null || 
             rescueRequest.getLocation().getLatitude() == null || 
             rescueRequest.getLocation().getLongitude() == null) {
-            throw new BadRequestException("Yêu cầu không có tọa độ GPS hợp lệ.");
+            throw new BadRequestException("Request does not have valid GPS coordinates.");
         }
 
         List<Long> previousStaffIds = requestAssignmentRepository.findByRequestId(requestId).stream()

@@ -36,7 +36,7 @@ import com.itss.vbas.repository.RescueVehicleRepository;
 import com.itss.vbas.repository.ReviewRepository;
 import com.itss.vbas.repository.RoleRepository;
 import com.itss.vbas.security.AuthContext;
-import com.itss.vbas.service.AddressService; // Đã thêm import AddressService
+import com.itss.vbas.service.AddressService;
 import com.itss.vbas.service.CompanyService;
 import com.itss.vbas.service.RequestSupportService;
 import com.itss.vbas.util.PasswordUtil;
@@ -57,7 +57,7 @@ public class CompanyServiceImpl implements CompanyService {
     private final RequestAssignmentRepository requestAssignmentRepository;
     private final AccountRepository accountRepository;
     private final RoleRepository roleRepository;
-    private final AddressService addressService; // Đã khôi phục AddressService
+    private final AddressService addressService;
     private final RequestSupportService requestSupportService;
     private final AuthContext authContext;
     private final AppMapper appMapper;
@@ -71,7 +71,7 @@ public class CompanyServiceImpl implements CompanyService {
             RequestAssignmentRepository requestAssignmentRepository,
             AccountRepository accountRepository,
             RoleRepository roleRepository,
-            AddressService addressService, // Đã khôi phục AddressService
+            AddressService addressService,
             RequestSupportService requestSupportService,
             AuthContext authContext,
             AppMapper appMapper
@@ -84,7 +84,7 @@ public class CompanyServiceImpl implements CompanyService {
         this.requestAssignmentRepository = requestAssignmentRepository;
         this.accountRepository = accountRepository;
         this.roleRepository = roleRepository;
-        this.addressService = addressService; // Đã gán giá trị
+        this.addressService = addressService;
         this.requestSupportService = requestSupportService;
         this.authContext = authContext;
         this.appMapper = appMapper;
@@ -114,7 +114,7 @@ public class CompanyServiceImpl implements CompanyService {
         RescueCompany company = getCurrentCompany();
         return rescueStaffRepository.findByCompanyIdOrderByIdDesc(company.getId())
                 .stream()
-                .map(appMapper::toStaffResponse) // Rút gọn lại cực kỳ sạch sẽ
+                .map(appMapper::toStaffResponse)
                 .toList();
     }
 
@@ -259,7 +259,12 @@ public class CompanyServiceImpl implements CompanyService {
         RescueCompany company = getCurrentCompany();
         return rescueRequestRepository.findAssignedRequestsByCompanyId(company.getId())
                 .stream()
-                .map(request -> appMapper.toRequestSummaryResponse(request, company,null))
+                .map(request -> {
+                    RequestAssignment currentAssignment = requestAssignmentRepository
+                            .findFirstByRequestIdAndCompanyIdOrderByAssignedAtDesc(request.getId(), company.getId())
+                            .orElse(null);
+                    return appMapper.toRequestSummaryResponse(request, company, currentAssignment);
+                })
                 .toList();
     }
 

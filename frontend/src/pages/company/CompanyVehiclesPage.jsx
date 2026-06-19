@@ -4,6 +4,7 @@ import { getApiError } from '../../api/client';
 import Loader from '../../components/common/Loader';
 import PageHeader from '../../components/common/PageHeader';
 import StatusBadge from '../../components/common/StatusBadge';
+import Modal from '../../components/common/Modal';
 
 const VEHICLE_STATUSES = ['AVAILABLE', 'IN_SERVICE', 'MAINTENANCE'];
 
@@ -60,6 +61,7 @@ export default function CompanyVehiclesPage() {
   const [actionId, setActionId] = useState(null);
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const summary = useMemo(() => ({
     total: vehicles.length,
@@ -120,11 +122,13 @@ export default function CompanyVehiclesPage() {
     setForm(toVehicleForm(vehicle));
     setNotice('');
     setError('');
+    setIsModalOpen(true);
   };
 
   const resetForm = () => {
     setEditingId(null);
     setForm(initialForm);
+    setIsModalOpen(false);
   };
 
   const availableStaffOptions = useMemo(() => {
@@ -207,77 +211,70 @@ export default function CompanyVehiclesPage() {
       {loading ? <Loader label="Loading rescue vehicles..." /> : null}
 
       {!loading ? (
-        <div className="grid-two">
-          <form className="card" onSubmit={handleSubmit}>
-            <div className="actions-row" style={{ justifyContent: 'space-between' }}>
-              <h2>{editingId ? 'Update Vehicle' : 'Create Vehicle'}</h2>
-              {editingId ? <StatusBadge value={form.status} /> : null}
-            </div>
-
-            <div className="info-grid">
-              <div className="info-item">
-                <span>Total Vehicles</span>
-                <strong>{summary.total}</strong>
-              </div>
-              <div className="info-item">
-                <span>Available</span>
-                <strong>{summary.available}</strong>
-              </div>
-              <div className="info-item">
-                <span>In Service</span>
-                <strong>{summary.inService}</strong>
-              </div>
-              <div className="info-item">
-                <span>Maintenance</span>
-                <strong>{summary.maintenance}</strong>
-              </div>
-            </div>
-
-            <div className="form-grid">
-              <div className="field">
-                <label>Vehicle Code</label>
-                <input name="vehicleCode" value={form.vehicleCode} onChange={handleChange} required />
-              </div>
-              <div className="field">
-                <label>Vehicle Type</label>
-                <input name="vehicleType" value={form.vehicleType} onChange={handleChange} required />
-              </div>
-              <div className="field">
-                <label>Plate Number</label>
-                <input name="plateNumber" value={form.plateNumber} onChange={handleChange} required />
-              </div>
-              <div className="field">
-                <label>Status</label>
-                <select name="status" value={form.status} onChange={handleChange}>
-                  {VEHICLE_STATUSES.map((status) => (
-                    <option key={status} value={status}>{status}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="field">
-                <label>Assigned Staff</label>
-                <select name="assignedStaffId" value={form.assignedStaffId} onChange={handleChange}>
-                  <option value="">Unassigned</option>
-                  {availableStaffOptions.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.fullName} {item.jobTitle ? `- ${item.jobTitle}` : ''}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div className="actions-row">
-              <button className="button button-primary" type="submit" disabled={saving}>
-                {saving ? 'Saving...' : (editingId ? 'Save changes' : 'Create vehicle')}
-              </button>
-              {editingId ? (
+        <div>
+          <Modal 
+            isOpen={isModalOpen} 
+            onClose={resetForm} 
+            title={editingId ? 'Update Vehicle' : 'Create Vehicle'}
+            size="large"
+            footer={
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', width: '100%' }}>
                 <button className="button button-secondary" type="button" onClick={resetForm}>
                   Cancel
                 </button>
-              ) : null}
+                <button form="vehicle-form" className="button button-primary" type="submit" disabled={saving}>
+                  {saving ? 'Saving...' : (editingId ? 'Save changes' : 'Create vehicle')}
+                </button>
+              </div>
+            }
+          >
+          <form id="vehicle-form" onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            {editingId && (
+              <div>
+                <StatusBadge value={form.status} />
+              </div>
+            )}
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
+              <div className="field">
+                <label>Vehicle Code</label>
+                <input name="vehicleCode" value={form.vehicleCode} onChange={handleChange} required placeholder="e.g. V-001" />
+              </div>
+              <div className="field">
+                <label>Plate Number</label>
+                <input name="plateNumber" value={form.plateNumber} onChange={handleChange} required placeholder="e.g. 29A-123.45" />
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
+              <div className="field">
+                <label>Vehicle Type</label>
+                <input name="vehicleType" value={form.vehicleType} onChange={handleChange} required placeholder="Tow Truck, Flatbed..." />
+              </div>
+              <div className="field" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div>
+                  <label>Status</label>
+                  <select name="status" value={form.status} onChange={handleChange}>
+                    {VEHICLE_STATUSES.map((status) => (
+                      <option key={status} value={status}>{status}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label>Assigned Staff</label>
+                  <select name="assignedStaffId" value={form.assignedStaffId} onChange={handleChange}>
+                    <option value="">Unassigned</option>
+                    {availableStaffOptions.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.fullName}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
             </div>
           </form>
+          </Modal>
 
           <div className="card">
             <div className="toolbar">
@@ -286,6 +283,9 @@ export default function CompanyVehiclesPage() {
                 <p>{filteredVehicles.length} vehicle(s) matched</p>
               </div>
               <div className="toolbar-filters">
+                <button className="button button-primary" onClick={() => { resetForm(); setIsModalOpen(true); }}>
+                  Create Vehicle
+                </button>
                 <input
                   name="search"
                   value={filters.search}

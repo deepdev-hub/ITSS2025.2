@@ -9,6 +9,7 @@ import { getApiError } from '../../api/client';
 import Loader from '../../components/common/Loader';
 import PageHeader from '../../components/common/PageHeader';
 import StatusBadge from '../../components/common/StatusBadge';
+import Pagination from '../../components/common/Pagination';
 
 // --- CONFIG ICONS BY STATUS ---
 const createIcon = (url) => new L.Icon({
@@ -39,7 +40,9 @@ export default function AdminRequestsPage() {
   const [activeStaff, setActiveStaff] = useState([]);
   const [hoveredStaff, setHoveredStaff] = useState(null);
   const [hoveredRequest, setHoveredRequest] = useState(null);
-  const [filters, setFilters] = useState({ search: '', status: 'ALL' });
+  const [filters, setFilters] = useState({ search: '', status: 'ALL', incidentType: 'ALL' });
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 15;
   const [loading, setLoading] = useState(true);
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
@@ -70,9 +73,28 @@ export default function AdminRequestsPage() {
     const kw = filters.search.trim().toLowerCase();
     return requests.filter(r => 
       (kw === '' || r.requestCode.toLowerCase().includes(kw) || r.customerName.toLowerCase().includes(kw)) &&
-      (filters.status === 'ALL' || r.status === filters.status)
+      (filters.status === 'ALL' || r.status === filters.status) &&
+      (filters.incidentType === 'ALL' || r.incidentTypeName === filters.incidentType)
     );
   }, [filters, requests]);
+
+  const incidentTypes = useMemo(() => {
+    const types = new Set(requests.map(r => r.incidentTypeName).filter(Boolean));
+    return Array.from(types);
+  }, [requests]);
+
+  const handleFilterChange = (e) => {
+    const { name, value } = e.target;
+    setFilters(prev => ({ ...prev, [name]: value }));
+  };
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filters, requests]);
+
+  const totalPages = Math.ceil(filteredRequests.length / pageSize);
+  const startIndex = (currentPage - 1) * pageSize;
+  const paginatedRequests = filteredRequests.slice(startIndex, startIndex + pageSize);
 
   if (loading && requests.length === 0) return <Loader label="Loading Command Center..." />;
 
@@ -162,12 +184,39 @@ export default function AdminRequestsPage() {
         </div>
       </div>
 
-      <section style={{ padding: '20px', background: '#fff' }}>
+      <section style={{ padding: '20px', background: '#f8f9fa' }}>
         <PageHeader title="Dispatcher Command Center" subtitle="Real-time monitoring of requests the system is assigning automatically." />
         {notice && <div className="notice success">{notice}</div>}
         {error && <div className="notice error">{error}</div>}
         
         <div className="card">
+          <div className="filters-row" style={{ marginBottom: '20px' }}>
+            <input
+              type="text"
+              placeholder="Search by code or customer..."
+              name="search"
+              value={filters.search}
+              onChange={handleFilterChange}
+              className="input-field"
+            />
+            <select name="status" value={filters.status} onChange={handleFilterChange} className="select-field">
+              <option value="ALL">All Status</option>
+              <option value="CREATED">Created</option>
+              <option value="SEARCHING">Searching</option>
+              <option value="MATCHED">Matched</option>
+              <option value="ACCEPTED">Accepted</option>
+              <option value="IN_PROGRESS">In Progress</option>
+              <option value="COMPLETED">Completed</option>
+              <option value="CANCELED">Canceled</option>
+            </select>
+            <select name="incidentType" value={filters.incidentType} onChange={handleFilterChange} className="select-field">
+              <option value="ALL">All Incidents</option>
+              {incidentTypes.map(type => (
+                <option key={type} value={type}>{type}</option>
+              ))}
+            </select>
+          </div>
+          
           <div className="table-wrapper">
             <table>
               <thead>
@@ -176,7 +225,7 @@ export default function AdminRequestsPage() {
                 </tr>
               </thead>
               <tbody>
-                {filteredRequests.map((request) => (
+                {paginatedRequests.map((request) => (
                   <tr key={request.id}>
                     <td><strong>{request.requestCode}</strong></td>
                     <td>{request.customerName}</td>
@@ -198,6 +247,11 @@ export default function AdminRequestsPage() {
               </tbody>
             </table>
           </div>
+          <Pagination 
+            currentPage={currentPage} 
+            totalPages={totalPages} 
+            onPageChange={setCurrentPage} 
+          />
         </div>
       </section>
 
