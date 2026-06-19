@@ -312,12 +312,13 @@ export default function RequestDetailPage() {
     : null;
 
   const requestCanceled = detail?.status === 'CANCELED';
-  const requestFinalized = ['CANCELED', 'COMPLETED'].includes(detail?.status) || hasPaidPayment;
+  const requestClosed = ['CANCELED', 'COMPLETED'].includes(detail?.status);
+  const requestFinalized = requestClosed || hasPaidPayment;
   const staffCheckedIn = isStaff && detail?.status === 'IN_PROGRESS';
   const canStaffCheckIn = isStaff
     && detail?.currentAssignment?.status === 'ACCEPTED'
     && !staffCheckedIn
-    && !requestFinalized;
+    && !requestClosed;
   const latestPriceStatus = getPriceStatusLabel(latestQuote, hasPaidPayment, detail?.status);
   const customerDirectionsUrl = getGoogleMapsDirectionsUrl(detail?.location);
   const canManageDealPrice = isStaff
@@ -679,7 +680,7 @@ export default function RequestDetailPage() {
               <button className="button" type="button" onClick={() => setActiveModal('timeline')} style={{ padding: '0.75rem 1.5rem', fontSize: '1.05rem', background: '#f8fafc', color: '#334155', border: '1px solid #e2e8f0', borderRadius: '999px', fontWeight: 600, transition: 'all 0.2s', boxShadow: '0 1px 2px 0 rgba(0,0,0,0.05)' }}>
                 <Clock size={18} style={{ marginRight: '8px', color: '#8b5cf6' }} /> Timeline
               </button>
-              {isOpsRole && !requestFinalized && (
+              {isOpsRole && !requestClosed && (
                 <button className="button button-primary" type="button" onClick={() => setActiveModal('progress')} style={{ padding: '0.75rem 1.5rem', fontSize: '1.05rem', borderRadius: '999px', boxShadow: '0 4px 6px -1px rgba(59, 130, 246, 0.3)' }}>
                   <CheckCircle size={18} style={{ marginRight: '8px' }} /> Update Status
                 </button>
@@ -693,7 +694,7 @@ export default function RequestDetailPage() {
           </div>
 
           {/* Staff Action area integrated neatly at TOP */}
-          {!requestFinalized && (staffCheckedIn || canStaffCheckIn || (isStaff && customerDirectionsUrl)) && (
+          {!requestClosed && (staffCheckedIn || canStaffCheckIn || (isStaff && customerDirectionsUrl)) && (
             <div style={{ marginBottom: '2.5rem', display: 'flex', gap: '1.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
               
               <div style={{ flex: '1 1 auto' }}>
