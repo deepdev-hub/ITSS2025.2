@@ -46,6 +46,7 @@ public class AssignmentTimeoutServiceImpl implements AssignmentTimeoutService {
     public void processTimeoutAssignments() {
         List<RequestAssignment> pendingAssignments = requestAssignmentRepository.findByStatusOrderByAssignedAtAsc(AssignmentStatus.PENDING);
         pendingAssignments.forEach(this::expireIfPendingTimedOut);
+        assignSearchingRequestsWithoutOpenAssignments();
     }
 
     @Override
@@ -65,34 +66,56 @@ public class AssignmentTimeoutServiceImpl implements AssignmentTimeoutService {
         return assignment;
     }
 
-    // Logic giải phóng ca cũ và tự động tìm người tiếp theo
     private void releaseRequestAndAssignNext(RequestAssignment assignment) {
         RescueRequest request = assignment.getRequest();
-        boolean isLatestAssignment = requestAssignmentRepository.findFirstByRequestIdOrderByAssignedAtDesc(request.getId())
-                .map(latest -> latest.getId().equals(assignment.getId()))
-                .orElse(false);
-                
-        if (!isLatestAssignment || request.getStatus() != RescueRequestStatus.MATCHED) {
+        if (request.getStatus() == RescueRequestStatus.IN_PROGRESS
+                || request.getStatus() == RescueRequestStatus.COMPLETED
+                || request.getStatus() == RescueRequestStatus.CANCELED
+                || hasAcceptedAssignment(request)
+                || hasPendingAssignment(request)) {
             return;
         }
 
         RescueRequestStatus oldStatus = request.getStatus();
-        request.setStatus(RescueRequestStatus.SEARCHING); // Tạm thời đưa về SEARCHING
+        request.setStatus(RescueRequestStatus.SEARCHING);
         RescueRequest savedRequest = rescueRequestRepository.save(request);
-        
-        requestStatusHistoryRepository.save(RequestStatusHistory.builder()
-                .request(savedRequest)
-                .oldStatus(oldStatus)
-                .newStatus(RescueRequestStatus.SEARCHING)
-                .changedByUser(assignment.getAssignedByUser())
-                .note("Assignment timed out. Đang tự động tìm kiếm nhân viên tiếp theo...")
-                .build());
 
-        // Scheduler không có HTTP AuthContext, nên dùng lại account đã tạo assignment trước đó.
+        if (oldStatus != RescueRequestStatus.SEARCHING) {
+            requestStatusHistoryRepository.save(RequestStatusHistory.builder()
+                    .request(savedRequest)
+                    .oldStatus(oldStatus)
+                    .newStatus(RescueRequestStatus.SEARCHING)
+                    .changedByUser(assignment.getAssignedByUser())
+                    .note("Assignment timed out. Searching for nearby staff again.")
+                    .build());
+        }
+
         Long assignedByAccountId = assignment.getAssignedByUser() != null
                 ? assignment.getAssignedByUser().getId()
                 : savedRequest.getCustomer().getId();
         adminService.autoAssignNearestStaff(savedRequest.getId(), assignedByAccountId);
+    }
+
+    private void assignSearchingRequestsWithoutOpenAssignments() {
+        rescueRequestRepository.findByStatus(RescueRequestStatus.SEARCHING).forEach(request -> {
+            if (hasDispatchableLocation(request) && !hasPendingAssignment(request) && !hasAcceptedAssignment(request)) {
+                adminService.autoAssignNearestStaff(request.getId(), request.getCustomer().getId());
+            }
+        });
+    }
+
+    private boolean hasDispatchableLocation(RescueRequest request) {
+        return request.getLocation() != null
+                && request.getLocation().getLatitude() != null
+                && request.getLocation().getLongitude() != null;
+    }
+
+    private boolean hasPendingAssignment(RescueRequest request) {
+        return requestAssignmentRepository.existsByRequestIdAndStatus(request.getId(), AssignmentStatus.PENDING);
+    }
+
+    private boolean hasAcceptedAssignment(RescueRequest request) {
+        return requestAssignmentRepository.existsByRequestIdAndStatus(request.getId(), AssignmentStatus.ACCEPTED);
     }
 
     @Override

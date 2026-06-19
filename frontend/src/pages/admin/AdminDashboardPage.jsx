@@ -82,7 +82,6 @@ export default function AdminDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [performanceLoading, setPerformanceLoading] = useState(false);
-  const [assigningId, setAssigningId] = useState(null);
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
 
@@ -127,21 +126,6 @@ export default function AdminDashboardPage() {
     }
   };
 
-  const handleAutoDispatch = async (requestId) => {
-    setAssigningId(requestId);
-    setNotice('');
-    setError('');
-    try {
-      await adminApi.autoAssign(requestId);
-      setNotice('Auto dispatch started successfully.');
-      await loadData();
-    } catch (err) {
-      setError(getApiError(err));
-    } finally {
-      setAssigningId(null);
-    }
-  };
-
   const handleRefreshDashboard = async () => {
     setRefreshing(true);
     setNotice('');
@@ -169,7 +153,7 @@ export default function AdminDashboardPage() {
         icon={<LayoutDashboard size={22} />}
         eyebrow="Admin"
         title="Admin Dashboard"
-        subtitle="Monitor saved daily statistics, refresh the snapshot on demand, and dispatch staff without leaving the dashboard."
+        subtitle="Monitor saved daily statistics, refresh the snapshot on demand, and track requests the system is assigning automatically."
         actions={(
           <div className="actions-row">
             <button
@@ -344,21 +328,14 @@ export default function AdminDashboardPage() {
                         <td>{getRequestLocationLabel(request)}</td>
                         <td><StatusBadge value={request.status} /></td>
                         <td>{formatDateTime(request.createdAt)}</td>
-                        <td>{request.assignedCompany?.companyName || (request.status === 'MATCHED' ? 'Waiting for staff' : 'Not assigned')}</td>
+                        <td>{request.assignedCompany?.companyName || (request.status === 'MATCHED' ? 'Waiting for staff' : 'Searching staff')}</td>
                         <td>
                           <div className="actions-stack">
-                            {['CREATED', 'SEARCHING'].includes(request.status) ? (
-                              <button
-                                className="button button-primary"
-                                type="button"
-                                disabled={assigningId === request.id}
-                                onClick={() => handleAutoDispatch(request.id)}
-                              >
-                                {assigningId === request.id ? 'Dispatching...' : 'Auto dispatch'}
-                              </button>
-                            ) : (
-                              <span className="muted-line">Assignment already handled</span>
-                            )}
+                            <span className="muted-line">
+                              {['CREATED', 'SEARCHING'].includes(request.status)
+                                ? 'System is searching for staff'
+                                : 'Assignment already handled'}
+                            </span>
                             <Link className="button button-secondary" to={`/requests/${request.id}`}>
                               View detail
                             </Link>

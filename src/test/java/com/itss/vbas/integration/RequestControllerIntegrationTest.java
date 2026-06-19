@@ -8,13 +8,18 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 import com.itss.vbas.entity.Account;
 import com.itss.vbas.entity.IncidentType;
+import com.itss.vbas.entity.RequestAssignment;
+import com.itss.vbas.entity.RescueCompany;
 import com.itss.vbas.entity.RescueRequest;
 import com.itss.vbas.entity.ServiceType;
+import com.itss.vbas.enums.AssignmentStatus;
 import com.itss.vbas.enums.RescueRequestStatus;
+import com.itss.vbas.enums.StaffStatus;
 import org.junit.jupiter.api.Test;
 
 class RequestControllerIntegrationTest extends IntegrationTestSupport {
@@ -33,6 +38,32 @@ class RequestControllerIntegrationTest extends IntegrationTestSupport {
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.customer.id").value(customer.getId()))
                 .andExpect(jsonPath("$.data.status").value("SEARCHING"));
+    }
+
+    @Test
+    void creatingRequestDispatchesFiveNearbyStaffButKeepsRequestSearching() throws Exception {
+        Account customer = createCustomer("request-dispatch-customer@test.local");
+        RescueCompany company = createCompany(createCompanyOwner());
+        for (int i = 0; i < 6; i++) {
+            createStaff(company, StaffStatus.ACTIVE, 21.0285 + (i * 0.001), 105.8542 + (i * 0.001));
+        }
+
+        mockMvc.perform(post("/api/requests")
+                        .header("Authorization", bearer(customer))
+                        .contentType(jsonContentType())
+                        .content(json(requestBody(createIncidentType(), createServiceType()))))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.status").value("SEARCHING"));
+
+        RescueRequest savedRequest = rescueRequestRepository.findByCustomerIdOrderByCreatedAtDesc(customer.getId()).get(0);
+        List<RequestAssignment> assignments = requestAssignmentRepository.findByRequestId(savedRequest.getId());
+
+        assertEquals(RescueRequestStatus.SEARCHING, savedRequest.getStatus());
+        assertEquals(5, assignments.size());
+        org.assertj.core.api.Assertions.assertThat(assignments)
+                .allMatch(assignment -> assignment.getStatus() == AssignmentStatus.PENDING)
+                .allMatch(assignment -> assignment.getVehicle() != null);
     }
 
     @Test

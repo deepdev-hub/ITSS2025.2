@@ -41,7 +41,6 @@ export default function AdminRequestsPage() {
   const [hoveredRequest, setHoveredRequest] = useState(null);
   const [filters, setFilters] = useState({ search: '', status: 'ALL' });
   const [loading, setLoading] = useState(true);
-  const [assigningId, setAssigningId] = useState(null);
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
 
@@ -75,19 +74,6 @@ export default function AdminRequestsPage() {
     );
   }, [filters, requests]);
 
-  const handleAutoDispatch = async (requestId) => {
-    setAssigningId(requestId);
-    try {
-      await adminApi.autoAssign(requestId);
-      setNotice(`Chained dispatch mode activated for: ${requestId}`);
-      await loadData();
-    } catch (err) {
-      setError(getApiError(err));
-    } finally {
-      setAssigningId(null);
-    }
-  };
-
   if (loading && requests.length === 0) return <Loader label="Loading Command Center..." />;
 
   return (
@@ -112,11 +98,11 @@ export default function AdminRequestsPage() {
                   <Popup>
                     <strong>{req.requestCode}</strong><br/>
                     <small>Note: {req.description || 'N/A'}</small><br/>
-                    {['CREATED', 'SEARCHING'].includes(req.status) && (
-                      <button className="button button-primary btn-sm" style={{marginTop: '8px'}} onClick={() => handleAutoDispatch(req.id)}>
-                        Auto Dispatch
-                      </button>
-                    )}
+                    {req.status === 'MATCHED' ? (
+                      <div className="muted-line" style={{ marginTop: '8px' }}>
+                        Waiting for staff response
+                      </div>
+                    ) : null}
                   </Popup>
                 </Marker>
               )
@@ -156,7 +142,7 @@ export default function AdminRequestsPage() {
       <div className="map-legend">
         <div className="legend-item">
           <img src="https://cdn-icons-png.flaticon.com/512/179/179386.png" alt="new" />
-          <span>New/Searching</span>
+            <span>System searching staff</span>
         </div>
         <div className="legend-item">
           <img src="https://cdn-icons-png.flaticon.com/512/3582/3582012.png" alt="matched" />
@@ -177,7 +163,7 @@ export default function AdminRequestsPage() {
       </div>
 
       <section style={{ padding: '20px', background: '#fff' }}>
-        <PageHeader title="Dispatcher Command Center" subtitle="Real-time monitoring and chaining dispatch." />
+        <PageHeader title="Dispatcher Command Center" subtitle="Real-time monitoring of requests the system is assigning automatically." />
         {notice && <div className="notice success">{notice}</div>}
         {error && <div className="notice error">{error}</div>}
         
@@ -198,9 +184,13 @@ export default function AdminRequestsPage() {
                     <td className="note-cell">{request.description || 'N/A'}</td>
                     <td><StatusBadge value={request.status} /></td>
                     <td>
-                      {['CREATED', 'SEARCHING'].includes(request.status) ? (
-                        <button className="button button-primary btn-sm" onClick={() => handleAutoDispatch(request.id)}>Auto</button>
-                      ) : <span className="muted-line italic">{request.status === 'MATCHED' ? `Wait(${request.timeoutSeconds}s)` : 'Assigned'}</span>}
+                      <span className="muted-line italic">
+                        {['CREATED', 'SEARCHING'].includes(request.status)
+                          ? 'Searching staff'
+                          : request.status === 'MATCHED'
+                            ? `Wait(${request.timeoutSeconds}s)`
+                            : 'Assigned'}
+                      </span>
                     </td>
                     <td><Link className="button button-secondary" to={`/requests/${request.id}`}>View</Link></td>
                   </tr>

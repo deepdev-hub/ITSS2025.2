@@ -27,12 +27,21 @@ class StaffAndTrackingIntegrationTest extends IntegrationTestSupport {
         Account assignedBy = createAdmin();
         RescueCompany company = createCompany(createCompanyOwner());
         RescueStaff staff = createStaff(company, StaffStatus.ACTIVE, 21.030, 105.856);
+        RescueStaff otherStaff = createStaff(company, StaffStatus.ACTIVE, 21.031, 105.857);
         RescueVehicle vehicle = createVehicle(company);
         RescueRequest request = createRescueRequest(customer, RescueRequestStatus.MATCHED);
         RequestAssignment assignment = createAssignment(
                 request,
                 company,
                 staff,
+                vehicle,
+                assignedBy,
+                AssignmentStatus.PENDING
+        );
+        RequestAssignment otherAssignment = createAssignment(
+                request,
+                company,
+                otherStaff,
                 vehicle,
                 assignedBy,
                 AssignmentStatus.PENDING
@@ -57,19 +66,21 @@ class StaffAndTrackingIntegrationTest extends IntegrationTestSupport {
                         .header("Authorization", bearer(customer)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.requestStatus").value("ACCEPTED"))
+                .andExpect(jsonPath("$.data.requestStatus").value("IN_PROGRESS"))
                 .andExpect(jsonPath("$.data.assigned").value(true))
                 .andExpect(jsonPath("$.data.hasDestination").value(true))
                 .andExpect(jsonPath("$.data.staff.id").value(staff.getId()))
                 .andExpect(jsonPath("$.data.vehicle.plateNumber").value(vehicle.getPlateNumber()))
                 .andExpect(jsonPath("$.data.route.length()").value(2))
-                .andExpect(jsonPath("$.data.movementStatus").value("NEARBY"))
-                .andExpect(jsonPath("$.data.etaMinutes").value(3));
+                .andExpect(jsonPath("$.data.movementStatus").value("ARRIVED"))
+                .andExpect(jsonPath("$.data.etaMinutes").value(0));
 
         RequestAssignment savedAssignment = requestAssignmentRepository.findById(assignment.getId()).orElseThrow();
+        RequestAssignment savedOtherAssignment = requestAssignmentRepository.findById(otherAssignment.getId()).orElseThrow();
         RescueRequest savedRequest = rescueRequestRepository.findById(request.getId()).orElseThrow();
         assertEquals(AssignmentStatus.ACCEPTED, savedAssignment.getStatus());
-        assertEquals(RescueRequestStatus.ACCEPTED, savedRequest.getStatus());
+        assertEquals(AssignmentStatus.REJECTED, savedOtherAssignment.getStatus());
+        assertEquals(RescueRequestStatus.IN_PROGRESS, savedRequest.getStatus());
     }
 
     @Test

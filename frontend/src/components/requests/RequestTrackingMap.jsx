@@ -6,7 +6,7 @@ import { getApiError } from '../../api/client';
 import { requestApi } from '../../api/requestApi';
 
 const DEFAULT_CENTER = [21.0285, 105.8542];
-const TRACKING_POLL_INTERVAL = 20000;
+const TRACKING_POLL_INTERVAL = 5000;
 const TECHNICIAN_WORKING_STATUSES = ['IN_PROGRESS'];
 
 const staffMarkerIcon = L.divIcon({

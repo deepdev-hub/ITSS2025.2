@@ -57,10 +57,7 @@ public class EmailServiceImpl implements EmailService {
     }
 
     private boolean isMailSenderConfigured() {
-        if (mailSender instanceof JavaMailSenderImpl sender) {
-            return hasText(sender.getHost()) && hasText(sender.getUsername()) && hasText(sender.getPassword());
-        }
-        return true;
+        return resolveFromAddress() != null;
     }
 
     private String resolveFromAddress() {

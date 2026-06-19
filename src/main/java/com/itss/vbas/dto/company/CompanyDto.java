@@ -44,6 +44,7 @@ public final class CompanyDto {
 
     public record StaffRequest(
             Long userId,
+            Long vehicleId,
             @Email String email,
             @Size(min = 6, max = 100) String password,
             @Size(max = 255) String fullName,
@@ -67,6 +68,9 @@ public final class CompanyDto {
             Integer yearsExperience,
             String bio,
             String status,
+            Long vehicleId,
+            String vehicleCode,
+            String vehiclePlateNumber,
             BigDecimal currentLatitude,
             BigDecimal currentLongitude
     ) {
@@ -110,7 +114,9 @@ public final class CompanyDto {
             String vehicleCode,
             String vehicleType,
             String plateNumber,
-            String status
+            String status,
+            Long assignedStaffId,
+            String assignedStaffName
     ) {
     }
 

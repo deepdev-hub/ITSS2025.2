@@ -61,14 +61,21 @@ public class RequestSupportServiceImpl implements RequestSupportService {
     @Override
     @Transactional(readOnly = true)
     public RequestAssignment getLatestAssignment(RescueRequest request) {
-        return requestAssignmentRepository.findFirstByRequestIdOrderByAssignedAtDesc(request.getId()).orElse(null);
+        return requestAssignmentRepository.findFirstByRequestIdAndStatusOrderByAssignedAtDesc(request.getId(), AssignmentStatus.ACCEPTED)
+                .or(() -> requestAssignmentRepository.findFirstByRequestIdAndStatusOrderByAssignedAtDesc(request.getId(), AssignmentStatus.PENDING))
+                .or(() -> requestAssignmentRepository.findFirstByRequestIdAndStatusOrderByAssignedAtDesc(request.getId(), AssignmentStatus.COMPLETED))
+                .or(() -> requestAssignmentRepository.findFirstByRequestIdOrderByAssignedAtDesc(request.getId()))
+                .orElse(null);
     }
 
     @Override
     @Transactional(readOnly = true)
     public RescueCompany getAssignedCompany(RescueRequest request) {
-        RequestAssignment assignment = getLatestAssignment(request);
-        return assignment == null || assignment.getStatus() == AssignmentStatus.REJECTED ? null : assignment.getCompany();
+        RequestAssignment assignment = requestAssignmentRepository
+                .findFirstByRequestIdAndStatusOrderByAssignedAtDesc(request.getId(), AssignmentStatus.ACCEPTED)
+                .or(() -> requestAssignmentRepository.findFirstByRequestIdAndStatusOrderByAssignedAtDesc(request.getId(), AssignmentStatus.COMPLETED))
+                .orElse(null);
+        return assignment == null ? null : assignment.getCompany();
     }
 
     @Override
@@ -97,8 +104,10 @@ public class RequestSupportServiceImpl implements RequestSupportService {
     @Override
     @Transactional(readOnly = true)
     public void assertAssignedCompany(RescueCompany company, RescueRequest request) {
-        RescueCompany assignedCompany = getAssignedCompany(request);
-        if (assignedCompany == null || !assignedCompany.getId().equals(company.getId())) {
+        RequestAssignment assignment = requestAssignmentRepository
+                .findFirstByRequestIdAndCompanyIdOrderByAssignedAtDesc(request.getId(), company.getId())
+                .orElse(null);
+        if (assignment == null || assignment.getStatus() == AssignmentStatus.REJECTED) {
             throw new ForbiddenException("This request is not assigned to your company");
         }
     }
@@ -106,8 +115,10 @@ public class RequestSupportServiceImpl implements RequestSupportService {
     @Override
     @Transactional(readOnly = true)
     public void assertAssignedStaff(RescueStaff staff, RescueRequest request) {
-        RequestAssignment assignment = getLatestAssignment(request);
-        if (assignment == null || assignment.getStaff() == null || !assignment.getStaff().getId().equals(staff.getId())) {
+        RequestAssignment assignment = requestAssignmentRepository
+                .findFirstByRequestIdAndStaffIdOrderByAssignedAtDesc(request.getId(), staff.getId())
+                .orElse(null);
+        if (assignment == null || assignment.getStatus() == AssignmentStatus.REJECTED) {
             throw new ForbiddenException("This request is not assigned to you");
         }
     }

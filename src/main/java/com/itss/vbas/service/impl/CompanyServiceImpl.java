@@ -119,6 +119,7 @@ public class CompanyServiceImpl implements CompanyService {
         RescueCompany company = getCurrentCompany();
         RescueStaff staff = RescueStaff.builder()
                 .company(company)
+                .vehicle(resolveAssignedVehicle(company.getId(), request.vehicleId(), null))
                 .jobTitle(request.jobTitle())
                 .yearsExperience(request.yearsExperience())
                 .bio(request.bio())
@@ -155,6 +156,7 @@ public class CompanyServiceImpl implements CompanyService {
         staff.setYearsExperience(request.yearsExperience());
         staff.setBio(request.bio());
         staff.setStatus(parseStaffStatus(request.status()));
+        staff.setVehicle(resolveAssignedVehicle(company.getId(), request.vehicleId(), staff.getId()));
         return appMapper.toStaffResponse(rescueStaffRepository.save(staff));
     }
 
@@ -237,6 +239,9 @@ public class CompanyServiceImpl implements CompanyService {
         RescueCompany company = getCurrentCompany();
         RescueVehicle rescueVehicle = rescueVehicleRepository.findByIdAndCompanyId(id, company.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Vehicle not found with id: " + id));
+        if (rescueStaffRepository.findByVehicleIdAndCompanyId(id, company.getId()).isPresent()) {
+            throw new BadRequestException("Vehicle is assigned to a staff and cannot be deleted");
+        }
         rescueVehicleRepository.delete(rescueVehicle);
     }
 
@@ -252,8 +257,8 @@ public class CompanyServiceImpl implements CompanyService {
 
     @Override
     public RequestDto.AssignmentResponse assignStaffAndVehicle(Long requestId, RequestDto.AssignmentRequest request) {
-        if (request.staffId() == null || request.vehicleId() == null) {
-            throw new BadRequestException("Both staffId and vehicleId are required");
+        if (request.staffId() == null) {
+            throw new BadRequestException("staffId is required");
         }
 
         Account account = authContext.getCurrentAccount();
@@ -264,8 +269,10 @@ public class CompanyServiceImpl implements CompanyService {
 
         RescueStaff staff = rescueStaffRepository.findByIdAndCompanyId(request.staffId(), company.getId())
                 .orElseThrow(() -> new BadRequestException("Selected staff does not belong to your company"));
-        RescueVehicle vehicle = rescueVehicleRepository.findByIdAndCompanyId(request.vehicleId(), company.getId())
-                .orElseThrow(() -> new BadRequestException("Selected rescue vehicle does not belong to your company"));
+        RescueVehicle vehicle = requireAssignedVehicle(staff);
+        if (request.vehicleId() != null && !request.vehicleId().equals(vehicle.getId())) {
+            throw new BadRequestException("Selected vehicle does not match the staff's assigned vehicle");
+        }
 
         RequestAssignment assignment = requestAssignmentRepository.findFirstByRequestIdAndCompanyIdOrderByAssignedAtDesc(requestId, company.getId())
                 .orElseGet(() -> RequestAssignment.builder()
@@ -340,6 +347,34 @@ public class CompanyServiceImpl implements CompanyService {
     private Role getOrCreateRole(RoleName roleName) {
         return roleRepository.findByRoleName(roleName)
                 .orElseGet(() -> roleRepository.save(Role.builder().roleName(roleName).build()));
+    }
+
+    private RescueVehicle resolveAssignedVehicle(Long companyId, Long vehicleId, Long currentStaffId) {
+        if (vehicleId == null) {
+            return null;
+        }
+
+        RescueVehicle vehicle = rescueVehicleRepository.findByIdAndCompanyId(vehicleId, companyId)
+                .orElseThrow(() -> new BadRequestException("Vehicle does not belong to your company"));
+
+        rescueStaffRepository.findByVehicleId(vehicleId)
+                .filter(existing -> currentStaffId == null || !existing.getId().equals(currentStaffId))
+                .ifPresent(existing -> {
+                    throw new BadRequestException("Vehicle is already assigned to another staff");
+                });
+
+        return vehicle;
+    }
+
+    private RescueVehicle requireAssignedVehicle(RescueStaff staff) {
+        RescueVehicle vehicle = staff.getVehicle();
+        if (vehicle == null) {
+            throw new BadRequestException("Staff must be assigned a rescue vehicle before dispatching");
+        }
+        if (vehicle.getStatus() != RescueVehicleStatus.AVAILABLE) {
+            throw new BadRequestException("Staff's assigned vehicle is not available");
+        }
+        return vehicle;
     }
 
     private StaffStatus parseStaffStatus(String value) {
