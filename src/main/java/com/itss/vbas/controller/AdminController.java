@@ -38,7 +38,7 @@ public class AdminController {
         this.dashboardService = dashboardService;
     }
 
-    // Quản lý tài khoản
+    // Account Management
     @GetMapping("/accounts")
     public ResponseEntity<CommonDto.ApiResponse<List<AdminDto.AccountResponse>>> getAccounts() {
         return ResponseEntity.ok(CommonDto.ApiResponse.success("Accounts fetched successfully", adminService.getAccounts()));
@@ -103,7 +103,7 @@ public class AdminController {
         adminService.deleteRole(id);
         return ResponseEntity.ok(CommonDto.ApiResponse.success("Role deleted successfully"));
     }
-    //Quản lý loại sự cố
+    // Incident Type Management
     @GetMapping("/incident-types")
     public ResponseEntity<CommonDto.ApiResponse<List<AdminDto.IncidentTypeResponse>>> getIncidentTypes() {
         return ResponseEntity.ok(CommonDto.ApiResponse.success("Incident types fetched successfully", adminService.getIncidentTypes()));
@@ -128,7 +128,7 @@ public class AdminController {
         adminService.deleteIncidentType(id);
         return ResponseEntity.ok(CommonDto.ApiResponse.success("Incident type deleted successfully"));
     }
-    //Quản lý dịch vụ
+    // Service Management
     @GetMapping("/service-types")
     public ResponseEntity<CommonDto.ApiResponse<List<AdminDto.ServiceTypeResponse>>> getServiceTypes() {
         return ResponseEntity.ok(CommonDto.ApiResponse.success("Service types fetched successfully", adminService.getServiceTypes()));
@@ -153,7 +153,7 @@ public class AdminController {
         adminService.deleteServiceType(id);
         return ResponseEntity.ok(CommonDto.ApiResponse.success("Service type deleted successfully"));
     }
-    //Quản lý công ty cứu hộ
+    // Rescue Company Management
     @GetMapping("/companies")
     public ResponseEntity<CommonDto.ApiResponse<List<CompanyDto.CompanyResponse>>> getCompanies() {
         return ResponseEntity.ok(CommonDto.ApiResponse.success("Companies fetched successfully", adminService.getCompanies()));

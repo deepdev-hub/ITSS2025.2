@@ -139,6 +139,18 @@ public class RequestSupportServiceImpl implements RequestSupportService {
                 .changedByUser(changedBy)
                 .note(note)
                 .build());
+
+        // Update active assignment if request is completed or canceled
+        if (newStatus == RescueRequestStatus.COMPLETED || newStatus == RescueRequestStatus.CANCELED) {
+            requestAssignmentRepository.findFirstByRequestIdOrderByAssignedAtDesc(request.getId())
+                    .ifPresent(assignment -> {
+                        if (assignment.getStatus() == AssignmentStatus.ACCEPTED) {
+                            assignment.setStatus(newStatus == RescueRequestStatus.COMPLETED ? AssignmentStatus.COMPLETED : AssignmentStatus.REJECTED);
+                            requestAssignmentRepository.save(assignment);
+                        }
+                    });
+        }
+
         return savedRequest;
     }
 }

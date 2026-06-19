@@ -4,6 +4,8 @@ import { MapContainer, Marker, Polyline, Popup, TileLayer, useMap } from 'react-
 import L from 'leaflet';
 import { getApiError } from '../../api/client';
 import { requestApi } from '../../api/requestApi';
+import { useAuth } from '../../context/AuthContext';
+import StaffProfileModal from '../staff/StaffProfileModal';
 
 const DEFAULT_CENTER = [21.0285, 105.8542];
 const TRACKING_POLL_INTERVAL = 5000;
@@ -144,9 +146,11 @@ function FitTrackingBounds({ points, boundsKey }) {
 }
 
 export default function RequestTrackingMap({ requestId, requestStatus, staffProfilePath }) {
+  const { user } = useAuth();
   const [tracking, setTracking] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [isProfileModalOpen, setProfileModalOpen] = useState(false);
   const [error, setError] = useState('');
   const inFlightRef = useRef(false);
   const trackingStoppedRef = useRef(false);
@@ -448,19 +452,23 @@ export default function RequestTrackingMap({ requestId, requestStatus, staffProf
           </div>
         </div>
         <div className="tracking-actions">
-          {resolvedStaffProfilePath ? (
-            <Link className="button button-secondary" to={resolvedStaffProfilePath}>
-              View profile
-            </Link>
-          ) : null}
-          <button className="button button-secondary" type="button" disabled>
-            Call
-          </button>
-          <button className="button button-secondary" type="button" disabled>
-            Chat
-          </button>
+          {user?.roleName !== 'RESCUE_STAFF' && (
+            <>
+              {tracking?.staff?.id ? (
+                <button className="button button-secondary" type="button" onClick={() => setProfileModalOpen(true)}>
+                  View profile
+                </button>
+              ) : null}
+            </>
+          )}
         </div>
       </div>
+      
+      <StaffProfileModal 
+        staffId={tracking?.staff?.id} 
+        isOpen={isProfileModalOpen} 
+        onClose={() => setProfileModalOpen(false)} 
+      />
     </section>
   );
 }

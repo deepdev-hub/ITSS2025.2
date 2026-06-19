@@ -7,6 +7,7 @@ import { getApiError } from '../../api/client';
 import Loader from '../../components/common/Loader';
 import PageHeader from '../../components/common/PageHeader';
 import StatusBadge from '../../components/common/StatusBadge';
+import Modal from '../../components/common/Modal';
 
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -131,6 +132,7 @@ export default function CompanyStaffPage() {
   const [actionId, setActionId] = useState(null);
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const summary = useMemo(() => ({
     total: staff.length,
@@ -201,12 +203,14 @@ export default function CompanyStaffPage() {
     setForm(toStaffForm(item));
     setNotice('');
     setError('');
+    setIsModalOpen(true);
   };
 
   const resetForm = () => {
     setEditingId(null);
     setCreationMode('NEW_ACCOUNT');
     setForm(initialForm);
+    setIsModalOpen(false);
   };
 
   const handleSubmit = async (event) => {
@@ -348,31 +352,29 @@ export default function CompanyStaffPage() {
             </div>
           </div>
 
-          <div className="grid-two">
-            <form className="card" onSubmit={handleSubmit}>
-              <div className="actions-row" style={{ justifyContent: 'space-between' }}>
-                <h2>{editingId ? 'Update Staff' : 'Create Staff'}</h2>
-                {editingId ? <StatusBadge value={form.status} /> : null}
+        <div>
+          <Modal 
+            isOpen={isModalOpen} 
+            onClose={resetForm} 
+            title={editingId ? 'Update Staff' : 'Create Staff'}
+            size="large"
+            footer={
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', width: '100%' }}>
+                <button className="button button-secondary" type="button" onClick={resetForm}>
+                  Cancel
+                </button>
+                <button form="staff-form" className="button button-primary" type="submit" disabled={saving}>
+                  {saving ? 'Saving...' : (editingId ? 'Save changes' : 'Create staff')}
+                </button>
               </div>
-
-              <div className="info-grid">
-                <div className="info-item">
-                  <span>Total Staff</span>
-                  <strong>{summary.total}</strong>
+            }
+          >
+            <form id="staff-form" onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              {editingId && (
+                <div>
+                  <StatusBadge value={form.status} />
                 </div>
-                <div className="info-item">
-                  <span>Active</span>
-                  <strong>{summary.active}</strong>
-                </div>
-                <div className="info-item">
-                  <span>Offline</span>
-                  <strong>{summary.offline}</strong>
-                </div>
-                <div className="info-item">
-                  <span>Busy</span>
-                  <strong>{summary.busy}</strong>
-                </div>
-              </div>
+              )}
 
               {!editingId ? (
                 <div className="field">
@@ -396,7 +398,7 @@ export default function CompanyStaffPage() {
                   />
                 </div>
               ) : (
-                <div className="form-grid">
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
                   <div className="field">
                     <label>Email</label>
                     <input name="email" type="email" value={form.email} onChange={handleChange} required={!editingId} />
@@ -408,7 +410,7 @@ export default function CompanyStaffPage() {
                       type="password"
                       value={form.password}
                       onChange={handleChange}
-                      placeholder={editingId ? 'Leave blank to keep current password' : 'Required for a new account'}
+                      placeholder={editingId ? 'Leave blank to keep current password' : 'Required'}
                       required={!editingId}
                     />
                   </div>
@@ -423,41 +425,33 @@ export default function CompanyStaffPage() {
                 </div>
               )}
 
-              <div className="form-grid">
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
                 <div className="field">
                   <label>Job Title</label>
-                  <input name="jobTitle" value={form.jobTitle} onChange={handleChange} placeholder="Tow operator, dispatcher, mechanic..." />
+                  <input name="jobTitle" value={form.jobTitle} onChange={handleChange} placeholder="Tow operator, dispatcher..." />
                 </div>
-                <div className="field">
-                  <label>Status</label>
-                  <select name="status" value={form.status} onChange={handleChange}>
-                    {STAFF_STATUSES.map((status) => (
-                      <option key={status} value={status}>{status}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="field">
-                  <label>Years Experience</label>
-                  <input name="yearsExperience" type="number" min="0" value={form.yearsExperience} onChange={handleChange} />
+                <div className="field" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  <div>
+                    <label>Status</label>
+                    <select name="status" value={form.status} onChange={handleChange}>
+                      {STAFF_STATUSES.map((status) => (
+                        <option key={status} value={status}>{status}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label>Experience (Years)</label>
+                    <input name="yearsExperience" type="number" min="0" value={form.yearsExperience} onChange={handleChange} />
+                  </div>
                 </div>
               </div>
 
               <div className="field">
                 <label>Bio</label>
-                <textarea name="bio" value={form.bio} onChange={handleChange} placeholder="Short rescue experience, specialties, or service notes" />
-              </div>
-
-              <div className="actions-row">
-                <button className="button button-primary" type="submit" disabled={saving}>
-                  {saving ? 'Saving...' : (editingId ? 'Save changes' : 'Create staff')}
-                </button>
-                {editingId ? (
-                  <button className="button button-secondary" type="button" onClick={resetForm}>
-                    Cancel
-                  </button>
-                ) : null}
+                <textarea name="bio" value={form.bio} onChange={handleChange} placeholder="Short rescue experience, specialties, or service notes" rows="3" />
               </div>
             </form>
+          </Modal>
 
             <div className="card">
               <div className="toolbar">
@@ -466,6 +460,9 @@ export default function CompanyStaffPage() {
                   <p>{filteredStaff.length} staff member(s) matched</p>
                 </div>
                 <div className="toolbar-filters">
+                  <button className="button button-primary" onClick={() => { resetForm(); setIsModalOpen(true); }}>
+                    Create Staff
+                  </button>
                   <input
                     name="search"
                     value={filters.search}

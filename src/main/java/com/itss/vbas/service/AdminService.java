@@ -8,7 +8,7 @@ import com.itss.vbas.dto.company.CompanyDto;
 import com.itss.vbas.dto.request.RequestDto;
 
 public interface AdminService {
-    //Quản lý tài khoản
+    // Account Management
     List<AdminDto.AccountResponse> getAccounts();
     AdminDto.AccountResponse getAccount(Long id);
     AdminDto.AccountResponse createAccount(AdminDto.AccountRequest request);
@@ -24,7 +24,7 @@ public interface AdminService {
     CommonDto.RoleResponse updateRole(Long id, AdminDto.RoleRequest request);
     void deleteRole(Long id);
 
-    // Quản lý Loại sự cố và Dịch vụ
+    // Incident Type and Service Management
     List<AdminDto.IncidentTypeResponse> getIncidentTypes();
     AdminDto.IncidentTypeResponse createIncidentType(AdminDto.IncidentTypeRequest request);
     AdminDto.IncidentTypeResponse updateIncidentType(Long id, AdminDto.IncidentTypeRequest request);
@@ -36,7 +36,7 @@ public interface AdminService {
     AdminDto.ServiceTypeResponse updateServiceType(Long id, AdminDto.ServiceTypeRequest request);
     void deleteServiceType(Long id);
 
-    //Quản lý công ty
+    // Company Management
     List<CompanyDto.CompanyResponse> getCompanies();
     CompanyDto.CompanyResponse getCompany(Long id);
     CompanyDto.CompanyResponse createCompany(CompanyDto.CompanyRequest request);
