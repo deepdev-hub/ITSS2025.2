@@ -43,6 +43,7 @@ import com.itss.vbas.service.AssignmentTimeoutService;
 import com.itss.vbas.service.FeeService;
 import com.itss.vbas.service.NotificationService;
 import com.itss.vbas.service.RequestSupportService;
+import com.itss.vbas.service.RouteService;
 import com.itss.vbas.service.RescueRequestService;
 import com.itss.vbas.service.AdminService;
 import org.springframework.context.annotation.Lazy;
@@ -75,6 +76,7 @@ public class RescueRequestServiceImpl implements RescueRequestService {
     private final NotificationService notificationService;
     private final RescueStaffRepository rescueStaffRepository;
     private final AssignmentTimeoutService assignmentTimeoutService;
+    private final RouteService routeService;
 
     public RescueRequestServiceImpl(
             RescueRequestRepository rescueRequestRepository,
@@ -95,7 +97,8 @@ public class RescueRequestServiceImpl implements RescueRequestService {
             @Lazy AdminService adminService,
             NotificationService notificationService,
             RescueStaffRepository rescueStaffRepository,
-            AssignmentTimeoutService assignmentTimeoutService
+            AssignmentTimeoutService assignmentTimeoutService,
+            RouteService routeService
     ) {
         this.rescueRequestRepository = rescueRequestRepository;
         this.customerVehicleRepository = customerVehicleRepository;
@@ -116,6 +119,7 @@ public class RescueRequestServiceImpl implements RescueRequestService {
         this.notificationService = notificationService;
         this.rescueStaffRepository = rescueStaffRepository;
         this.assignmentTimeoutService = assignmentTimeoutService;
+        this.routeService = routeService;
     }
 
     @Override
@@ -242,12 +246,27 @@ public class RescueRequestServiceImpl implements RescueRequestService {
         RescueVehicle vehicle = assignment.getVehicle();
         boolean hasCurrentStaffLocation = hasCoordinates(staff.getUser().getDefaultAddress());
         RequestDto.TrackingPointResponse staffLocation = resolveStaffLocation(staff, destination, rescueRequest.getStatus());
-        Double distanceKm = calculateDistanceKm(staffLocation, destination);
+        RouteService.RouteResult routeResult = null;
+        if (staffLocation != null && destination != null) {
+            routeResult = routeService.getDrivingRoute(
+                    staffLocation.latitude(),
+                    staffLocation.longitude(),
+                    destination.latitude(),
+                    destination.longitude()
+            );
+        }
+        Double distanceKm = routeResult != null && routeResult.distanceKm() != null
+                ? routeResult.distanceKm()
+                : calculateDistanceKm(staffLocation, destination);
         String movementStatus = resolveMovementStatus(rescueRequest.getStatus(), distanceKm, hasCurrentStaffLocation);
-        Integer etaMinutes = estimateEtaMinutes(movementStatus, distanceKm);
-        List<RequestDto.TrackingPointResponse> route = staffLocation != null && destination != null
-                ? List.of(staffLocation, destination)
-                : List.of();
+        Integer etaMinutes = routeResult != null && routeResult.durationMinutes() != null
+                ? routeResult.durationMinutes()
+                : estimateEtaMinutes(movementStatus, distanceKm);
+        List<RequestDto.TrackingPointResponse> route = routeResult != null && routeResult.points() != null && routeResult.points().size() >= 2
+                ? routeResult.points().stream()
+                    .map(point -> new RequestDto.TrackingPointResponse(point.latitude(), point.longitude(), null))
+                    .toList()
+                : (staffLocation != null && destination != null ? List.of(staffLocation, destination) : List.of());
 
         return new RequestDto.TrackingResponse(
                 rescueRequest.getId(),

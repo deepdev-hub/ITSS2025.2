@@ -236,15 +236,12 @@ export default function RequestTrackingMap({ requestId, requestStatus, staffProf
   const boundsKey = mapPoints.map((point) => point.join(',')).join('|');
   const effectiveRequestStatus = tracking?.requestStatus || requestStatus;
   const technicianStartedTask = isTechnicianWorkingStatus(effectiveRequestStatus);
-  const isNearbyStaffUpdate = tracking?.movementStatus === 'NEARBY' && !technicianStartedTask;
-  const movementLabel = isNearbyStaffUpdate ? 'Almost there' : getMovementLabel(tracking, staffPosition, destinationPosition);
-  const etaLabel = isNearbyStaffUpdate ? 'About 3 minutes' : getEtaLabel(tracking);
-  const vehicleLabel = isNearbyStaffUpdate
-    ? 'Vehicle information is updating'
-    : tracking?.vehicle
+  const movementLabel = getMovementLabel(tracking, staffPosition, destinationPosition);
+  const etaLabel = getEtaLabel(tracking);
+  const vehicleLabel = tracking?.vehicle
     ? [tracking.vehicle.vehicleType, tracking.vehicle.vehicleCode].filter(Boolean).join(' - ')
     : 'Vehicle information is updating';
-  const plateLabel = isNearbyStaffUpdate ? 'No plate number yet' : (tracking?.vehicle?.plateNumber || 'No plate number yet');
+  const plateLabel = tracking?.vehicle?.plateNumber || 'No plate number yet';
   const ratingLabel = Number.isFinite(Number(tracking?.staff?.rating))
     ? `${Number(tracking.staff.rating).toFixed(1)}/5`
     : 'No rating yet';
