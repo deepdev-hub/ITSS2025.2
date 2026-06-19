@@ -45,8 +45,26 @@ public final class RequestDto {
             LocalDateTime createdAt,
             LocalDateTime updatedAt,
             CommonDto.BasicCompanyResponse assignedCompany,
+            String assignmentStatus,
             Integer timeoutSeconds,
             LocalDateTime expiresAt
+    ) {
+    }
+
+    public record NearbyRequestSummaryResponse(
+            Long id,
+            String requestCode,
+            String status,
+            String priorityLevel,
+            String description,
+            String incidentTypeName,
+            String serviceTypeName,
+            String locationLabel,
+            CommonDto.AddressResponse location,
+            String vehicleLabel,
+            String customerName,
+            LocalDateTime createdAt,
+            Double distanceKm
     ) {
     }
 
@@ -207,6 +225,19 @@ public final class RequestDto {
     ) {
     }
 
+    public record TrackingPendingStaffResponse(
+            Long assignmentId,
+            Long staffId,
+            String name,
+            String phone,
+            String jobTitle,
+            String vehicleCode,
+            String vehiclePlateNumber,
+            LocalDateTime assignedAt,
+            LocalDateTime expiresAt
+    ) {
+    }
+
     public record TrackingResponse(
             Long requestId,
             String requestStatus,
@@ -215,6 +246,7 @@ public final class RequestDto {
             TrackingPointResponse destination,
             TrackingStaffResponse staff,
             TrackingVehicleResponse vehicle,
+            List<TrackingPendingStaffResponse> pendingStaff,
             List<TrackingPointResponse> route,
             String movementStatus,
             Integer etaMinutes,

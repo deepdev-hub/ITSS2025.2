@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import {
   ClipboardList,
   MapPin,
+  Radio,
   User,
   MessageCircle,
   Settings,
@@ -68,6 +69,17 @@ export default function StaffDashboardPage() {
               <div className="action-card-content">
                 <h3>My Assignments</h3>
                 <p className="muted-line">View and manage your rescue tasks</p>
+              </div>
+              <ArrowRight className="action-card-arrow" size={20} />
+            </Link>
+
+            <Link className="action-card" to="/staff/nearby-requests">
+              <div className="action-card-icon">
+                <Radio size={32} />
+              </div>
+              <div className="action-card-content">
+                <h3>Nearby Requests</h3>
+                <p className="muted-line">Go online and accept nearby rescue requests</p>
               </div>
               <ArrowRight className="action-card-arrow" size={20} />
             </Link>

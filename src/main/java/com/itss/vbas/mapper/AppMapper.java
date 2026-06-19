@@ -188,6 +188,7 @@ public class AppMapper {
     public CompanyDto.StaffResponse toStaffResponse(RescueStaff staff) {
         Account user = staff.getUser();
         Address defaultAddress = user == null ? null : user.getDefaultAddress();
+        RescueVehicle vehicle = staff.getVehicle();
         return new CompanyDto.StaffResponse(
                 staff.getId(),
                 user == null ? null : user.getId(),
@@ -200,19 +201,25 @@ public class AppMapper {
                 staff.getYearsExperience(),
                 staff.getBio(),
                 staff.getStatus() == null ? null : staff.getStatus().name(),
+                vehicle == null ? null : vehicle.getId(),
+                vehicle == null ? null : vehicle.getVehicleCode(),
+                vehicle == null ? null : vehicle.getPlateNumber(),
                 defaultAddress == null ? null : defaultAddress.getLatitude(),
                 defaultAddress == null ? null : defaultAddress.getLongitude()
         );
     }
 
     public CompanyDto.VehicleResponse toRescueVehicleResponse(RescueVehicle rescueVehicle) {
+        RescueStaff assignedStaff = rescueVehicle.getAssignedStaff();
         return new CompanyDto.VehicleResponse(
                 rescueVehicle.getId(),
                 rescueVehicle.getCompany().getId(),
                 rescueVehicle.getVehicleCode(),
                 rescueVehicle.getVehicleType(),
                 rescueVehicle.getPlateNumber(),
-                rescueVehicle.getStatus().name()
+                rescueVehicle.getStatus().name(),
+                assignedStaff == null ? null : assignedStaff.getId(),
+                assignedStaff == null || assignedStaff.getUser() == null ? null : assignedStaff.getUser().getFullName()
         );
     }
 
@@ -343,8 +350,30 @@ public class AppMapper {
                 request.getCreatedAt(),
                 request.getUpdatedAt(),
                 toBasicCompanyResponse(assignedCompany),
+                currentAssignment == null ? null : currentAssignment.getStatus().name(),
                 currentAssignment == null ? null : assignmentTimeoutService.getTimeoutSeconds(currentAssignment),
                 currentAssignment == null ? null : assignmentTimeoutService.getExpiresAt(currentAssignment)
+        );
+    }
+
+    public RequestDto.NearbyRequestSummaryResponse toNearbyRequestSummaryResponse(
+            RescueRequest request,
+            double distanceKm
+    ) {
+        return new RequestDto.NearbyRequestSummaryResponse(
+                request.getId(),
+                request.getRequestCode(),
+                request.getStatus().name(),
+                request.getPriorityLevel().name(),
+                request.getDescription(),
+                request.getIncidentType().getIncidentName(),
+                request.getServiceType() == null ? null : request.getServiceType().getServiceName(),
+                request.getLocation() == null ? null : buildFullAddress(request.getLocation()),
+                toAddressResponse(request.getLocation()),
+                request.getVehicle() == null ? null : request.getVehicle().getBrand() + " " + request.getVehicle().getModel() + " - " + request.getVehicle().getPlateNumber(),
+                request.getCustomer().getFullName(),
+                request.getCreatedAt(),
+                distanceKm
         );
     }
 

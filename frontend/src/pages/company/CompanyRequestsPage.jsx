@@ -27,12 +27,8 @@ const initialQuote = {
   note: '',
 };
 
-function hasAssignedStaff(assignment) {
-  return Boolean(assignment?.staffId || assignment?.staffName);
-}
-
 function isPendingAssignment(assignment) {
-  return assignment?.status === 'PENDING' && !hasAssignedStaff(assignment);
+  return assignment?.status === 'PENDING';
 }
 
 function isAssignmentExpired(assignment, now = Date.now()) {
@@ -406,7 +402,7 @@ export default function CompanyRequestsPage() {
               {/*
                 Acceptance window countdown.
                 Only shown while the current assignment is PENDING (not yet confirmed).
-                Once accepted (status changes to ACCEPTED) this banner disappears because
+                Once accepted (request status -> IN_PROGRESS) this banner disappears because
                 isAssignmentExpired() returns false for non-PENDING assignments.
               */}
               {detail.currentAssignment?.expiresAt &&

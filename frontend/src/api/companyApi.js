@@ -22,6 +22,10 @@ export const companyApi = {
   getStaffDashboard: () => unwrap(apiClient.get('/api/companies/staff/me/dashboard')),
   getMyAssignments: () => unwrap(apiClient.get('/api/companies/staff/me/assignments')),
   updateMyLocation: (payload) => unwrap(apiClient.put('/api/companies/staff/me/location', payload)),
+  getMyStaffStatus: () => unwrap(apiClient.get('/api/companies/staff/me/status')),
+  updateMyStaffStatus: (payload) => unwrap(apiClient.put('/api/companies/staff/me/status', payload)),
+  getNearbySearchingRequests: () => unwrap(apiClient.get('/api/companies/staff/me/nearby-searching-requests')),
+  acceptNearbySearchingRequest: (requestId) => unwrap(apiClient.post(`/api/companies/staff/me/nearby-searching-requests/${requestId}/accept`)),
 
   //Accept or Reject Request
   acceptAssignment: (assignmentId) => unwrap(apiClient.put(`/api/requests/assignments/${assignmentId}/accept`)),

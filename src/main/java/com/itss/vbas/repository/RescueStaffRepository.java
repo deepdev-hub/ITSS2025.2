@@ -16,6 +16,10 @@ public interface RescueStaffRepository extends JpaRepository<RescueStaff, Long> 
 
     Optional<RescueStaff> findByIdAndCompanyId(Long id, Long companyId);
 
+    Optional<RescueStaff> findByVehicleId(Long vehicleId);
+
+    Optional<RescueStaff> findByVehicleIdAndCompanyId(Long vehicleId, Long companyId);
+
     long countByCompanyId(Long companyId);
 
 //Tim ktv dang ACTIVE va nam trong ban kinh

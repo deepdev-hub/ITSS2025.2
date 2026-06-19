@@ -34,10 +34,12 @@ import com.itss.vbas.repository.QuoteRepository;
 import com.itss.vbas.repository.RequestAssignmentRepository;
 import com.itss.vbas.repository.RequestStatusHistoryRepository;
 import com.itss.vbas.repository.RescueRequestRepository;
+import com.itss.vbas.repository.RescueStaffRepository;
 import com.itss.vbas.repository.ReviewRepository;
 import com.itss.vbas.repository.ServiceTypeRepository;
 import com.itss.vbas.security.AuthContext;
 import com.itss.vbas.service.AddressService;
+import com.itss.vbas.service.AssignmentTimeoutService;
 import com.itss.vbas.service.FeeService;
 import com.itss.vbas.service.NotificationService;
 import com.itss.vbas.service.RequestSupportService;
@@ -71,6 +73,8 @@ public class RescueRequestServiceImpl implements RescueRequestService {
     private final FeeService feeService;
     private final AdminService adminService;
     private final NotificationService notificationService;
+    private final RescueStaffRepository rescueStaffRepository;
+    private final AssignmentTimeoutService assignmentTimeoutService;
 
     public RescueRequestServiceImpl(
             RescueRequestRepository rescueRequestRepository,
@@ -89,7 +93,9 @@ public class RescueRequestServiceImpl implements RescueRequestService {
             FileStorageService fileStorageService,
             FeeService feeService,
             @Lazy AdminService adminService,
-            NotificationService notificationService
+            NotificationService notificationService,
+            RescueStaffRepository rescueStaffRepository,
+            AssignmentTimeoutService assignmentTimeoutService
     ) {
         this.rescueRequestRepository = rescueRequestRepository;
         this.customerVehicleRepository = customerVehicleRepository;
@@ -108,6 +114,8 @@ public class RescueRequestServiceImpl implements RescueRequestService {
         this.feeService = feeService;
         this.adminService = adminService;
         this.notificationService = notificationService;
+        this.rescueStaffRepository = rescueStaffRepository;
+        this.assignmentTimeoutService = assignmentTimeoutService;
     }
 
     @Override
@@ -142,16 +150,16 @@ public class RescueRequestServiceImpl implements RescueRequestService {
                 .location(requestLocation)
                 .description(request.description())
                 .priorityLevel(parsePriority(request.priorityLevel()))
-                .status(RescueRequestStatus.CREATED)
+                .status(RescueRequestStatus.SEARCHING)
                 .build();
 
         RescueRequest savedRequest = rescueRequestRepository.save(rescueRequest);
         requestStatusHistoryRepository.save(RequestStatusHistory.builder()
                 .request(savedRequest)
                 .oldStatus(null)
-                .newStatus(RescueRequestStatus.CREATED)
+                .newStatus(RescueRequestStatus.SEARCHING)
                 .changedByUser(customer)
-                .note("Request created")
+                .note("Request created. Searching for nearby staff.")
                 .changedAt(LocalDateTime.now())
                 .build());
 
@@ -192,8 +200,25 @@ public class RescueRequestServiceImpl implements RescueRequestService {
 
         RequestDto.TrackingPointResponse destination = toTrackingPoint(rescueRequest.getLocation(), "Customer destination");
         RequestAssignment assignment = requestSupportService.getLatestAssignment(rescueRequest);
+        List<RequestDto.TrackingPendingStaffResponse> pendingStaff = requestAssignmentRepository
+                .findByRequestIdAndStatus(rescueRequest.getId(), AssignmentStatus.PENDING)
+                .stream()
+                .filter(item -> item.getStaff() != null && item.getStaff().getUser() != null)
+                .limit(5)
+                .map(item -> new RequestDto.TrackingPendingStaffResponse(
+                        item.getId(),
+                        item.getStaff().getId(),
+                        item.getStaff().getUser().getFullName(),
+                        item.getStaff().getUser().getPhone(),
+                        item.getStaff().getJobTitle(),
+                        item.getVehicle() == null ? null : item.getVehicle().getVehicleCode(),
+                        item.getVehicle() == null ? null : item.getVehicle().getPlateNumber(),
+                        item.getAssignedAt(),
+                        assignmentTimeoutService.getExpiresAt(item)
+                ))
+                .toList();
         boolean assigned = assignment != null
-                && assignment.getStatus() != AssignmentStatus.REJECTED
+                && (assignment.getStatus() == AssignmentStatus.ACCEPTED || assignment.getStatus() == AssignmentStatus.COMPLETED)
                 && assignment.getStaff() != null;
 
         if (!assigned) {
@@ -205,6 +230,7 @@ public class RescueRequestServiceImpl implements RescueRequestService {
                     destination,
                     null,
                     null,
+                    pendingStaff,
                     List.of(),
                     null,
                     null,
@@ -243,6 +269,7 @@ public class RescueRequestServiceImpl implements RescueRequestService {
                         vehicle.getVehicleType(),
                         vehicle.getPlateNumber()
                 ),
+                pendingStaff,
                 route,
                 movementStatus,
                 etaMinutes,
@@ -269,6 +296,7 @@ public class RescueRequestServiceImpl implements RescueRequestService {
             latestAssignment.setStatus(AssignmentStatus.REJECTED);
             latestAssignment.setRejectedAt(LocalDateTime.now());
             requestAssignmentRepository.save(latestAssignment);
+            updateStaffAvailabilityIfIdle(latestAssignment.getStaff());
         }
     }
 
@@ -294,6 +322,12 @@ public class RescueRequestServiceImpl implements RescueRequestService {
         if (roleName == RoleName.RESCUE_STAFF) {
             RescueStaff staff = requestSupportService.getCurrentStaff(account);
             requestSupportService.assertAssignedStaff(staff, rescueRequest);
+            RequestAssignment staffAssignment = requestAssignmentRepository
+                    .findFirstByRequestIdAndStaffIdOrderByAssignedAtDesc(rescueRequest.getId(), staff.getId())
+                    .orElse(null);
+            if (staffAssignment == null || staffAssignment.getStatus() != AssignmentStatus.ACCEPTED) {
+                throw new BadRequestException("Staff must accept the assignment before updating request progress");
+            }
             if (!(newStatus == RescueRequestStatus.IN_PROGRESS || newStatus == RescueRequestStatus.COMPLETED
                     || newStatus == RescueRequestStatus.CANCELED)) {
                 throw new BadRequestException("Staff can only set IN_PROGRESS, COMPLETED, or CANCELED");
@@ -306,12 +340,31 @@ public class RescueRequestServiceImpl implements RescueRequestService {
             if (latestAssignment != null) {
                 latestAssignment.setStatus(AssignmentStatus.COMPLETED);
                 requestAssignmentRepository.save(latestAssignment);
+                updateStaffAvailabilityIfIdle(latestAssignment.getStaff());
             }
+        }
+        if (newStatus == RescueRequestStatus.CANCELED) {
+            RequestAssignment latestAssignment = requestSupportService.getLatestAssignment(rescueRequest);
+            updateStaffAvailabilityIfIdle(latestAssignment == null ? null : latestAssignment.getStaff());
         }
         if (oldStatus != RescueRequestStatus.COMPLETED && newStatus == RescueRequestStatus.COMPLETED) {
             notificationService.notifyRequestCompleted(updatedRequest);
         }
         return buildDetail(rescueRequestRepository.findById(requestId).orElseThrow());
+    }
+
+    private void updateStaffAvailabilityIfIdle(RescueStaff staff) {
+        if (staff == null) {
+            return;
+        }
+        boolean stillBusy = requestAssignmentRepository.existsByStaffIdAndStatusIn(
+                staff.getId(),
+                List.of(AssignmentStatus.PENDING, AssignmentStatus.ACCEPTED)
+        );
+        if (!stillBusy && staff.getStatus() == com.itss.vbas.enums.StaffStatus.BUSY) {
+            staff.setStatus(com.itss.vbas.enums.StaffStatus.ACTIVE);
+            rescueStaffRepository.save(staff);
+        }
     }
 
     @Override

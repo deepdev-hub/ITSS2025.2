@@ -8,8 +8,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.time.LocalDateTime;
-import java.util.Optional;
-
 import com.itss.vbas.config.AssignmentTimeoutConfig;
 import com.itss.vbas.entity.Account;
 import com.itss.vbas.entity.RequestAssignment;
@@ -71,12 +69,10 @@ class AssignmentTimeoutServiceImplTest {
                 .request(request)
                 .assignedByUser(actor)
                 .status(AssignmentStatus.PENDING)
-                .assignedAt(LocalDateTime.now().minusMinutes(6))
+                .assignedAt(LocalDateTime.now().minusSeconds(61))
                 .build();
 
         when(requestAssignmentRepository.save(assignment)).thenReturn(assignment);
-        when(requestAssignmentRepository.findFirstByRequestIdOrderByAssignedAtDesc(124L))
-                .thenReturn(Optional.of(assignment));
         when(rescueRequestRepository.save(request)).thenReturn(request);
 
         timeoutService.expireIfPendingTimedOut(assignment);

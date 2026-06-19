@@ -7,15 +7,18 @@ import java.util.List;
 import com.itss.vbas.dto.common.CommonDto;
 import com.itss.vbas.dto.request.FeeDto;
 import com.itss.vbas.dto.request.RequestDto;
+import com.itss.vbas.entity.Account;
 import com.itss.vbas.entity.RequestAssignment;
 import com.itss.vbas.entity.RescueRequest;
 import com.itss.vbas.enums.AssignmentStatus;
 import com.itss.vbas.enums.RescueRequestStatus;
 import com.itss.vbas.enums.RoleName;
+import com.itss.vbas.enums.StaffStatus;
 import com.itss.vbas.exception.BadRequestException;
 import com.itss.vbas.exception.ResourceNotFoundException;
 import com.itss.vbas.repository.RequestAssignmentRepository;
-import com.itss.vbas.repository.RescueRequestRepository;
+import com.itss.vbas.repository.RescueStaffRepository;
+import com.itss.vbas.security.AuthContext;
 import com.itss.vbas.security.RequireAuth;
 import com.itss.vbas.security.RequiredRoles;
 import com.itss.vbas.service.AdminService;
@@ -24,6 +27,7 @@ import com.itss.vbas.service.MessageService;
 import com.itss.vbas.service.NotificationService;
 import com.itss.vbas.service.PaymentService;
 import com.itss.vbas.service.QuoteService;
+import com.itss.vbas.service.RequestSupportService;
 import com.itss.vbas.service.RescueRequestService;
 import com.itss.vbas.service.ReviewService;
 import jakarta.validation.Valid;
@@ -50,10 +54,12 @@ public class RequestController {
     private final PaymentService paymentService;
     private final ReviewService reviewService;
     private final RequestAssignmentRepository requestAssignmentRepository;
-    private final RescueRequestRepository rescueRequestRepository;
     private final AdminService adminService;
     private final FeeService feeService;
     private final NotificationService notificationService;
+    private final AuthContext authContext;
+    private final RequestSupportService requestSupportService;
+    private final RescueStaffRepository rescueStaffRepository;
 
     public RequestController(
             RescueRequestService rescueRequestService,
@@ -62,10 +68,12 @@ public class RequestController {
             PaymentService paymentService,
             ReviewService reviewService,
             RequestAssignmentRepository requestAssignmentRepository,
-            RescueRequestRepository rescueRequestRepository,
             AdminService adminService,
             FeeService feeService,
-            NotificationService notificationService
+            NotificationService notificationService,
+            AuthContext authContext,
+            RequestSupportService requestSupportService,
+            RescueStaffRepository rescueStaffRepository
     ) {
         this.rescueRequestService = rescueRequestService;
         this.messageService = messageService;
@@ -73,10 +81,12 @@ public class RequestController {
         this.paymentService = paymentService;
         this.reviewService = reviewService;
         this.requestAssignmentRepository = requestAssignmentRepository;
-        this.rescueRequestRepository = rescueRequestRepository;
         this.adminService = adminService;
         this.feeService = feeService;
         this.notificationService = notificationService;
+        this.authContext = authContext;
+        this.requestSupportService = requestSupportService;
+        this.rescueStaffRepository = rescueStaffRepository;
     }
 
     @RequireAuth
@@ -274,6 +284,11 @@ public class RequestController {
     public ResponseEntity<CommonDto.ApiResponse<Void>> acceptAssignment(@PathVariable Long assignmentId) {
         RequestAssignment assignment = requestAssignmentRepository.findById(assignmentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Assignment not found"));
+        assertCurrentStaffOwnsAssignment(assignment);
+
+        if (assignment.getStatus() != AssignmentStatus.PENDING) {
+            throw new BadRequestException("Only pending assignments can be accepted");
+        }
 
         AssignmentStatus oldAssignmentStatus = assignment.getStatus();
         assignment.setStatus(AssignmentStatus.ACCEPTED);
@@ -281,8 +296,17 @@ public class RequestController {
         RequestAssignment savedAssignment = requestAssignmentRepository.save(assignment);
 
         RescueRequest request = assignment.getRequest();
-        request.setStatus(RescueRequestStatus.ACCEPTED);
-        rescueRequestRepository.save(request);
+        rejectOtherPendingAssignments(request, savedAssignment.getId());
+        if (savedAssignment.getStaff() != null) {
+            savedAssignment.getStaff().setStatus(StaffStatus.BUSY);
+            rescueStaffRepository.save(savedAssignment.getStaff());
+        }
+        requestSupportService.changeRequestStatus(
+                request,
+                RescueRequestStatus.IN_PROGRESS,
+                authContext.getCurrentAccount(),
+                "Assignment accepted by staff"
+        );
         if (oldAssignmentStatus != AssignmentStatus.ACCEPTED) {
             notificationService.notifyAssignmentAccepted(savedAssignment);
         }
@@ -295,18 +319,64 @@ public class RequestController {
     public ResponseEntity<CommonDto.ApiResponse<Void>> rejectAssignment(@PathVariable Long assignmentId) {
         RequestAssignment assignment = requestAssignmentRepository.findById(assignmentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Assignment not found"));
+        assertCurrentStaffOwnsAssignment(assignment);
+
+        if (assignment.getStatus() != AssignmentStatus.PENDING) {
+            throw new BadRequestException("Only pending assignments can be rejected");
+        }
 
         assignment.setStatus(AssignmentStatus.REJECTED);
         assignment.setRejectedAt(LocalDateTime.now());
         requestAssignmentRepository.save(assignment);
 
         RescueRequest request = assignment.getRequest();
-        request.setStatus(RescueRequestStatus.SEARCHING);
-        rescueRequestRepository.save(request);
-
-        adminService.autoAssignNearestStaff(request.getId());
+        if (!hasOpenPendingAssignment(request) && !hasAcceptedAssignment(request)) {
+            if (request.getStatus() != RescueRequestStatus.SEARCHING
+                    && request.getStatus() != RescueRequestStatus.CANCELED
+                    && request.getStatus() != RescueRequestStatus.COMPLETED) {
+                requestSupportService.changeRequestStatus(
+                        request,
+                        RescueRequestStatus.SEARCHING,
+                        authContext.getCurrentAccount(),
+                        "Assignment rejected by staff"
+                );
+            }
+            Long assignedByAccountId = assignment.getAssignedByUser() == null
+                    ? request.getCustomer().getId()
+                    : assignment.getAssignedByUser().getId();
+            adminService.autoAssignNearestStaff(request.getId(), assignedByAccountId);
+        }
 
         return ResponseEntity.ok(CommonDto.ApiResponse.success("Assignment rejected successfully"));
+    }
+
+    private void assertCurrentStaffOwnsAssignment(RequestAssignment assignment) {
+        Account currentAccount = authContext.getCurrentAccount();
+        if (assignment.getStaff() == null
+                || assignment.getStaff().getUser() == null
+                || !assignment.getStaff().getUser().getId().equals(currentAccount.getId())) {
+            throw new BadRequestException("This assignment is not assigned to you");
+        }
+    }
+
+    private void rejectOtherPendingAssignments(RescueRequest request, Long acceptedAssignmentId) {
+        LocalDateTime rejectedAt = LocalDateTime.now();
+        requestAssignmentRepository.findByRequestIdAndStatus(request.getId(), AssignmentStatus.PENDING)
+                .stream()
+                .filter(other -> !other.getId().equals(acceptedAssignmentId))
+                .forEach(other -> {
+                    other.setStatus(AssignmentStatus.REJECTED);
+                    other.setRejectedAt(rejectedAt);
+                    requestAssignmentRepository.save(other);
+                });
+    }
+
+    private boolean hasOpenPendingAssignment(RescueRequest request) {
+        return requestAssignmentRepository.existsByRequestIdAndStatus(request.getId(), AssignmentStatus.PENDING);
+    }
+
+    private boolean hasAcceptedAssignment(RescueRequest request) {
+        return requestAssignmentRepository.existsByRequestIdAndStatus(request.getId(), AssignmentStatus.ACCEPTED);
     }
 
     private String resolveCustomerNote(RequestDto.PriceDecisionRequest request) {

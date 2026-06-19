@@ -101,7 +101,7 @@ class AdminControllerIntegrationTest extends IntegrationTestSupport {
                 .andExpect(jsonPath("$.data.status").value("PENDING"));
 
         RescueRequest savedRequest = rescueRequestRepository.findById(request.getId()).orElseThrow();
-        assertEquals(RescueRequestStatus.MATCHED, savedRequest.getStatus());
+        assertEquals(RescueRequestStatus.SEARCHING, savedRequest.getStatus());
 
         RequestAssignment savedAssignment = requestAssignmentRepository
                 .findFirstByRequestIdOrderByAssignedAtDesc(request.getId())
@@ -109,6 +109,7 @@ class AdminControllerIntegrationTest extends IntegrationTestSupport {
         assertEquals(AssignmentStatus.PENDING, savedAssignment.getStatus());
         assertEquals(admin.getId(), savedAssignment.getAssignedByUser().getId());
         assertNotNull(savedAssignment.getCompany());
+        assertNotNull(savedAssignment.getVehicle());
     }
 
     @Test

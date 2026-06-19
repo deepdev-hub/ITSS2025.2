@@ -1,7 +1,10 @@
 import { Link, NavLink, Outlet } from 'react-router-dom';
-import { LifeBuoy, Menu, PhoneCall, X } from 'lucide-react';
+import { Activity, LifeBuoy, Menu, PhoneCall, Power, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { StaffAvailabilityProvider, useStaffAvailability } from '../../context/StaffAvailabilityContext';
+import { companyApi } from '../../api/companyApi';
+import { getApiError } from '../../api/client';
 import { getMenuItems } from '../../utils/roles';
 import { getMenuIcon } from '../../utils/menuIcons';
 import { addAvatarCacheKey, getAvatarUrl, resolveAvatarUrl } from '../../utils/avatar';
@@ -66,7 +69,79 @@ function UserAvatar({ user, size = 46 }) {
   );
 }
 
-export default function AppShell() {
+function StaffStatusControl() {
+  const { status, setStatus, loading, setLoading, initialized, setInitialized, error, setError } = useStaffAvailability();
+
+  useEffect(() => {
+    let mounted = true;
+    async function loadStatus() {
+      if (initialized) return;
+      setLoading(true);
+      try {
+        const response = await companyApi.getMyStaffStatus();
+        if (!mounted) return;
+        setStatus(response);
+        setError('');
+      } catch (err) {
+        if (!mounted) return;
+        setError(getApiError(err));
+      } finally {
+        if (mounted) {
+          setLoading(false);
+          setInitialized(true);
+        }
+      }
+    }
+    loadStatus();
+    return () => {
+      mounted = false;
+    };
+  }, [initialized, setError, setInitialized, setLoading, setStatus]);
+
+  const currentStatus = status?.status || 'OFFLINE';
+  const isBusy = currentStatus === 'BUSY';
+  const nextStatus = currentStatus === 'ACTIVE' ? 'OFFLINE' : 'ACTIVE';
+  const badgeClass = currentStatus === 'ACTIVE'
+    ? 'status-active'
+    : currentStatus === 'BUSY'
+      ? 'status-matched'
+      : 'status-canceled';
+
+  const handleToggle = async () => {
+    setLoading(true);
+    try {
+      const updated = await companyApi.updateMyStaffStatus({ status: nextStatus });
+      setStatus(updated);
+      setError('');
+    } catch (err) {
+      setError(getApiError(err));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="staff-status-control">
+      <span className={`status-badge ${badgeClass}`}>
+        <Activity size={14} />
+        {currentStatus}
+      </span>
+      <button
+        className="button button-secondary"
+        type="button"
+        onClick={handleToggle}
+        disabled={loading || isBusy}
+        title={isBusy ? 'You are handling an active request.' : 'Toggle online/offline'}
+      >
+        <Power size={16} />
+        {loading ? 'Updating...' : (currentStatus === 'ACTIVE' ? 'Go Offline' : 'Go Online')}
+      </button>
+      {error ? <span className="topbar-inline-error">{error}</span> : null}
+    </div>
+  );
+}
+
+function AppShellLayout() {
   const { user, logout } = useAuth();
   const menuItems = getMenuItems(user?.roleName);
   const notificationsEnabled = ['CUSTOMER', 'RESCUE_STAFF'].includes(user?.roleName);
@@ -143,6 +218,7 @@ export default function AppShell() {
             </Link>
           </div>
           <div className="topbar-actions">
+            {user?.roleName === 'RESCUE_STAFF' ? <StaffStatusControl /> : null}
             <NotificationBell enabled={notificationsEnabled} />
             <button className="button button-secondary" type="button" onClick={logout}>
               Logout
@@ -156,4 +232,16 @@ export default function AppShell() {
       </div>
     </div>
   );
+}
+
+export default function AppShell() {
+  const { user } = useAuth();
+  if (user?.roleName === 'RESCUE_STAFF') {
+    return (
+      <StaffAvailabilityProvider>
+        <AppShellLayout />
+      </StaffAvailabilityProvider>
+    );
+  }
+  return <AppShellLayout />;
 }

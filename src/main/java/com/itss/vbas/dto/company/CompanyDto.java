@@ -44,6 +44,7 @@ public final class CompanyDto {
 
     public record StaffRequest(
             Long userId,
+            Long vehicleId,
             @Email String email,
             @Size(min = 6, max = 100) String password,
             @Size(max = 255) String fullName,
@@ -67,6 +68,9 @@ public final class CompanyDto {
             Integer yearsExperience,
             String bio,
             String status,
+            Long vehicleId,
+            String vehicleCode,
+            String vehiclePlateNumber,
             BigDecimal currentLatitude,
             BigDecimal currentLongitude
     ) {
@@ -75,6 +79,19 @@ public final class CompanyDto {
     public record LocationUpdateRequest(
             @NotNull BigDecimal latitude,
             @NotNull BigDecimal longitude
+    ) {
+    }
+
+    public record StaffStatusResponse(
+            String status,
+            BigDecimal currentLatitude,
+            BigDecimal currentLongitude,
+            boolean canReceiveAssignments
+    ) {
+    }
+
+    public record StaffStatusUpdateRequest(
+            @NotBlank String status
     ) {
     }
 
@@ -100,7 +117,8 @@ public final class CompanyDto {
             @NotBlank @Size(max = 100) String vehicleCode,
             @NotBlank @Size(max = 100) String vehicleType,
             @NotBlank @Size(max = 50) String plateNumber,
-            @NotBlank String status
+            @NotBlank String status,
+            Long assignedStaffId
     ) {
     }
 
@@ -110,7 +128,9 @@ public final class CompanyDto {
             String vehicleCode,
             String vehicleType,
             String plateNumber,
-            String status
+            String status,
+            Long assignedStaffId,
+            String assignedStaffName
     ) {
     }
 

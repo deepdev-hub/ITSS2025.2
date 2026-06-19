@@ -17,6 +17,8 @@ import com.itss.vbas.entity.RequestStatusHistory;
 import com.itss.vbas.entity.RescueCompany;
 import com.itss.vbas.entity.RescueRequest;
 import com.itss.vbas.entity.RescueStaff;
+import com.itss.vbas.entity.RescueVehicle;
+import com.itss.vbas.enums.RescueVehicleStatus;
 import com.itss.vbas.enums.RescueRequestStatus;
 import com.itss.vbas.enums.StaffStatus;
 import com.itss.vbas.mapper.AppMapper;
@@ -27,11 +29,13 @@ import com.itss.vbas.repository.RequestStatusHistoryRepository;
 import com.itss.vbas.repository.RescueCompanyRepository;
 import com.itss.vbas.repository.RescueRequestRepository;
 import com.itss.vbas.repository.RescueStaffRepository;
+import com.itss.vbas.repository.RescueVehicleRepository;
 import com.itss.vbas.repository.RoleRepository;
 import com.itss.vbas.repository.ServiceTypeRepository;
 import com.itss.vbas.security.AuthContext;
 import com.itss.vbas.service.AddressService;
 import com.itss.vbas.service.AssignmentTimeoutService;
+import com.itss.vbas.service.NotificationService;
 import com.itss.vbas.service.RequestSupportService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -56,6 +60,8 @@ class AdminServiceImplTest {
     @Mock
     private RescueStaffRepository rescueStaffRepository;
     @Mock
+    private RescueVehicleRepository rescueVehicleRepository;
+    @Mock
     private RescueRequestRepository rescueRequestRepository;
     @Mock
     private RequestAssignmentRepository requestAssignmentRepository;
@@ -67,6 +73,8 @@ class AdminServiceImplTest {
     private RequestSupportService requestSupportService;
     @Mock
     private AssignmentTimeoutService assignmentTimeoutService;
+    @Mock
+    private NotificationService notificationService;
     @Mock
     private AuthContext authContext;
     @Mock
@@ -83,12 +91,14 @@ class AdminServiceImplTest {
                 serviceTypeRepository,
                 rescueCompanyRepository,
                 rescueStaffRepository,
+                rescueVehicleRepository,
                 rescueRequestRepository,
                 requestAssignmentRepository,
                 requestStatusHistoryRepository,
                 addressService,
                 requestSupportService,
                 assignmentTimeoutService,
+                notificationService,
                 authContext,
                 appMapper
         );
@@ -120,6 +130,11 @@ class AdminServiceImplTest {
                 .id(34L)
                 .user(staffAccount)
                 .company(company)
+                .vehicle(RescueVehicle.builder()
+                        .id(88L)
+                        .company(company)
+                        .status(RescueVehicleStatus.AVAILABLE)
+                        .build())
                 .status(StaffStatus.ACTIVE)
                 .build();
 
@@ -135,6 +150,7 @@ class AdminServiceImplTest {
         ArgumentCaptor<RequestAssignment> assignmentCaptor = ArgumentCaptor.forClass(RequestAssignment.class);
         verify(requestAssignmentRepository).save(assignmentCaptor.capture());
         assertSame(actor, assignmentCaptor.getValue().getAssignedByUser());
+        verify(notificationService).notifyAssignmentPending(any(RequestAssignment.class));
 
         ArgumentCaptor<RequestStatusHistory> historyCaptor = ArgumentCaptor.forClass(RequestStatusHistory.class);
         verify(requestStatusHistoryRepository).save(historyCaptor.capture());

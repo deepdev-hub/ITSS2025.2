@@ -306,7 +306,8 @@ export default function RequestDetailPage() {
     () => detail?.payments?.some((item) => item.paymentStatus === 'PAID') ?? false,
     [detail],
   );
-  const assignedStaffPath = detail?.currentAssignment?.staffId
+  const currentAssignmentAccepted = ['ACCEPTED', 'COMPLETED'].includes(detail?.currentAssignment?.status);
+  const assignedStaffPath = currentAssignmentAccepted && detail?.currentAssignment?.staffId
     ? `/staff/${detail.currentAssignment.staffId}/profile`
     : null;
 
@@ -320,6 +321,7 @@ export default function RequestDetailPage() {
   const latestPriceStatus = getPriceStatusLabel(latestQuote, hasPaidPayment, detail?.status);
   const customerDirectionsUrl = getGoogleMapsDirectionsUrl(detail?.location);
   const canManageDealPrice = isStaff
+    && currentAssignmentAccepted
     && !requestFinalized
     && !acceptedQuote
     && !hasPaidPayment;
@@ -979,15 +981,24 @@ export default function RequestDetailPage() {
           <div>
             <div className="card card-muted" style={{ marginBottom: '1rem', marginTop: 0 }}>
               <h3>Company</h3>
-              <p>{detail.assignedCompany?.companyName || 'Not assigned yet'}</p>
-              <p className="muted-line">{detail.assignedCompany?.phone || detail.assignedCompany?.email || 'Waiting for dispatch'}</p>
+              <p>{currentAssignmentAccepted ? (detail.assignedCompany?.companyName || 'Not assigned yet') : 'Dang thong bao cho staff gan nhat'}</p>
+              <p className="muted-line">
+                {currentAssignmentAccepted
+                  ? (detail.assignedCompany?.phone || detail.assignedCompany?.email || 'Waiting for dispatch')
+                  : 'He thong dang gui yeu cau den cac staff phu hop va cho xac nhan.'}
+              </p>
             </div>
             <div className="card card-muted" style={{ margin: 0 }}>
               <h3>Rescue Vehicle</h3>
-              <p>{detail.currentAssignment?.vehicleCode || 'Not assigned yet'}</p>
-              <p className="muted-line">{detail.currentAssignment?.vehiclePlateNumber || 'No plate information'}</p>
+              <p>{currentAssignmentAccepted ? (detail.currentAssignment?.vehicleCode || 'Not assigned yet') : 'Dang cho staff nhan yeu cau'}</p>
+              <p className="muted-line">
+                {currentAssignmentAccepted
+                  ? (detail.currentAssignment?.vehiclePlateNumber || 'No plate information')
+                  : 'Thong tin xe se hien sau khi mot staff chap nhan yeu cau.'}
+              </p>
             </div>
           </div>
+
         </div>
       </Modal>
 

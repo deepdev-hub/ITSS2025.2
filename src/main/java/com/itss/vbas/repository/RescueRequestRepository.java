@@ -11,6 +11,8 @@ import org.springframework.data.repository.query.Param;
 public interface RescueRequestRepository extends JpaRepository<RescueRequest, Long> {
     List<RescueRequest> findByCustomerIdOrderByCreatedAtDesc(Long customerId);
 
+    List<RescueRequest> findByStatus(RescueRequestStatus status);
+
     long countByStatus(RescueRequestStatus status);
 
     @Query("""

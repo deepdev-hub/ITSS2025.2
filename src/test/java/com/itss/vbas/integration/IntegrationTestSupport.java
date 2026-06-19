@@ -28,6 +28,7 @@ import com.itss.vbas.enums.StaffStatus;
 import com.itss.vbas.repository.AccountRepository;
 import com.itss.vbas.repository.AddressRepository;
 import com.itss.vbas.repository.IncidentTypeRepository;
+import com.itss.vbas.repository.NotificationRepository;
 import com.itss.vbas.repository.RequestAssignmentRepository;
 import com.itss.vbas.repository.RescueCompanyRepository;
 import com.itss.vbas.repository.RescueRequestRepository;
@@ -49,7 +50,13 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
-@SpringBootTest
+@SpringBootTest(properties = {
+        "spring.datasource.url=jdbc:h2:mem:vbas_test;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1;NON_KEYWORDS=ACCOUNT,USER",
+        "spring.datasource.driver-class-name=org.h2.Driver",
+        "spring.datasource.username=sa",
+        "spring.datasource.password=",
+        "spring.jpa.hibernate.ddl-auto=create-drop"
+})
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 abstract class IntegrationTestSupport {
@@ -97,6 +104,9 @@ abstract class IntegrationTestSupport {
 
     @Autowired
     protected RequestAssignmentRepository requestAssignmentRepository;
+
+    @Autowired
+    protected NotificationRepository notificationRepository;
 
     @MockBean
     protected AssignmentTimeoutService assignmentTimeoutService;
@@ -197,9 +207,11 @@ abstract class IntegrationTestSupport {
 
     protected RescueStaff createStaff(RescueCompany company, StaffStatus status, double latitude, double longitude) {
         Account staffAccount = createStaffAccount(createAddress(latitude, longitude));
+        RescueVehicle vehicle = createVehicle(company);
         return rescueStaffRepository.save(RescueStaff.builder()
                 .user(staffAccount)
                 .company(company)
+                .vehicle(vehicle)
                 .jobTitle("Technician")
                 .yearsExperience(3)
                 .bio("Integration test staff")
