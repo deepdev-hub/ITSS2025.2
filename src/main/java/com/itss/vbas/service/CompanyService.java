@@ -35,4 +35,12 @@ public interface CompanyService {
     List<RequestDto.AssignmentResponse> getMyStaffAssignments();
 
     void updateStaffLocation(CompanyDto.LocationUpdateRequest request);
+
+    CompanyDto.StaffStatusResponse getMyStaffStatus();
+
+    CompanyDto.StaffStatusResponse updateMyStaffStatus(CompanyDto.StaffStatusUpdateRequest request);
+
+    List<RequestDto.NearbyRequestSummaryResponse> getNearbySearchingRequests();
+
+    RequestDto.AssignmentResponse acceptNearbySearchingRequest(Long requestId);
 }

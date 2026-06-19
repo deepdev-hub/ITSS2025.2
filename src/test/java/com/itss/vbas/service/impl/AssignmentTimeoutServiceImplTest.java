@@ -69,7 +69,7 @@ class AssignmentTimeoutServiceImplTest {
                 .request(request)
                 .assignedByUser(actor)
                 .status(AssignmentStatus.PENDING)
-                .assignedAt(LocalDateTime.now().minusSeconds(16))
+                .assignedAt(LocalDateTime.now().minusSeconds(61))
                 .build();
 
         when(requestAssignmentRepository.save(assignment)).thenReturn(assignment);

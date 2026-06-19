@@ -12,6 +12,7 @@ const initialForm = {
   vehicleType: '',
   plateNumber: '',
   status: 'AVAILABLE',
+  assignedStaffId: '',
 };
 
 function toVehicleForm(vehicle) {
@@ -23,6 +24,7 @@ function toVehicleForm(vehicle) {
     vehicleType: vehicle.vehicleType || '',
     plateNumber: vehicle.plateNumber || '',
     status: vehicle.status || 'AVAILABLE',
+    assignedStaffId: vehicle.assignedStaffId ? String(vehicle.assignedStaffId) : '',
   };
 }
 
@@ -32,6 +34,7 @@ function buildVehiclePayload(form) {
     vehicleType: form.vehicleType.trim(),
     plateNumber: form.plateNumber.trim(),
     status: form.status,
+    assignedStaffId: form.assignedStaffId ? Number(form.assignedStaffId) : null,
   };
 }
 
@@ -41,11 +44,13 @@ function buildQuickVehicleStatusPayload(vehicle, nextStatus) {
     vehicleType: vehicle.vehicleType,
     plateNumber: vehicle.plateNumber,
     status: nextStatus,
+    assignedStaffId: vehicle.assignedStaffId || null,
   };
 }
 
 export default function CompanyVehiclesPage() {
   const [vehicles, setVehicles] = useState([]);
+  const [staff, setStaff] = useState([]);
   const [filters, setFilters] = useState({ search: '', status: 'ALL' });
   const [form, setForm] = useState(initialForm);
   const [editingId, setEditingId] = useState(null);
@@ -82,8 +87,12 @@ export default function CompanyVehiclesPage() {
     setLoading(true);
     setError('');
     try {
-      const vehicleList = await companyApi.getVehicles();
+      const [vehicleList, staffList] = await Promise.all([
+        companyApi.getVehicles(),
+        companyApi.getStaff(),
+      ]);
       setVehicles(vehicleList);
+      setStaff(staffList);
       setStatusDrafts(Object.fromEntries(vehicleList.map((item) => [item.id, item.status])));
     } catch (err) {
       setError(getApiError(err));
@@ -117,6 +126,14 @@ export default function CompanyVehiclesPage() {
     setEditingId(null);
     setForm(initialForm);
   };
+
+  const availableStaffOptions = useMemo(() => {
+    return staff.filter((item) => {
+      if (!item) return false;
+      if (!item.vehicleId) return true;
+      return editingId && String(item.id) === String(form.assignedStaffId);
+    });
+  }, [editingId, form.assignedStaffId, staff]);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -237,6 +254,17 @@ export default function CompanyVehiclesPage() {
                   ))}
                 </select>
               </div>
+              <div className="field">
+                <label>Assigned Staff</label>
+                <select name="assignedStaffId" value={form.assignedStaffId} onChange={handleChange}>
+                  <option value="">Unassigned</option>
+                  {availableStaffOptions.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.fullName} {item.jobTitle ? `- ${item.jobTitle}` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             <div className="actions-row">
@@ -280,6 +308,7 @@ export default function CompanyVehiclesPage() {
                     <th>Vehicle</th>
                     <th>Plate</th>
                     <th>Type</th>
+                    <th>Assigned Staff</th>
                     <th>Status</th>
                     <th>Quick Status</th>
                     <th />
@@ -288,7 +317,7 @@ export default function CompanyVehiclesPage() {
                 <tbody>
                   {filteredVehicles.length === 0 ? (
                     <tr>
-                      <td colSpan="6">No vehicles matched the current filters.</td>
+                      <td colSpan="7">No vehicles matched the current filters.</td>
                     </tr>
                   ) : (
                     filteredVehicles.map((vehicle) => (
@@ -299,6 +328,7 @@ export default function CompanyVehiclesPage() {
                         </td>
                         <td>{vehicle.plateNumber}</td>
                         <td>{vehicle.vehicleType}</td>
+                        <td>{vehicle.assignedStaffName || 'Unassigned'}</td>
                         <td><StatusBadge value={vehicle.status} /></td>
                         <td>
                           <div className="actions-stack">

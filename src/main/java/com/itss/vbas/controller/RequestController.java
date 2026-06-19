@@ -13,9 +13,11 @@ import com.itss.vbas.entity.RescueRequest;
 import com.itss.vbas.enums.AssignmentStatus;
 import com.itss.vbas.enums.RescueRequestStatus;
 import com.itss.vbas.enums.RoleName;
+import com.itss.vbas.enums.StaffStatus;
 import com.itss.vbas.exception.BadRequestException;
 import com.itss.vbas.exception.ResourceNotFoundException;
 import com.itss.vbas.repository.RequestAssignmentRepository;
+import com.itss.vbas.repository.RescueStaffRepository;
 import com.itss.vbas.security.AuthContext;
 import com.itss.vbas.security.RequireAuth;
 import com.itss.vbas.security.RequiredRoles;
@@ -57,6 +59,7 @@ public class RequestController {
     private final NotificationService notificationService;
     private final AuthContext authContext;
     private final RequestSupportService requestSupportService;
+    private final RescueStaffRepository rescueStaffRepository;
 
     public RequestController(
             RescueRequestService rescueRequestService,
@@ -69,7 +72,8 @@ public class RequestController {
             FeeService feeService,
             NotificationService notificationService,
             AuthContext authContext,
-            RequestSupportService requestSupportService
+            RequestSupportService requestSupportService,
+            RescueStaffRepository rescueStaffRepository
     ) {
         this.rescueRequestService = rescueRequestService;
         this.messageService = messageService;
@@ -82,6 +86,7 @@ public class RequestController {
         this.notificationService = notificationService;
         this.authContext = authContext;
         this.requestSupportService = requestSupportService;
+        this.rescueStaffRepository = rescueStaffRepository;
     }
 
     @RequireAuth
@@ -292,6 +297,10 @@ public class RequestController {
 
         RescueRequest request = assignment.getRequest();
         rejectOtherPendingAssignments(request, savedAssignment.getId());
+        if (savedAssignment.getStaff() != null) {
+            savedAssignment.getStaff().setStatus(StaffStatus.BUSY);
+            rescueStaffRepository.save(savedAssignment.getStaff());
+        }
         requestSupportService.changeRequestStatus(
                 request,
                 RescueRequestStatus.IN_PROGRESS,

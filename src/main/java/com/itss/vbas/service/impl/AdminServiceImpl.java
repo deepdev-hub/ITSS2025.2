@@ -46,6 +46,7 @@ import com.itss.vbas.security.AuthContext;
 import com.itss.vbas.service.AddressService;
 import com.itss.vbas.service.AdminService;
 import com.itss.vbas.service.AssignmentTimeoutService;
+import com.itss.vbas.service.NotificationService;
 import com.itss.vbas.service.RequestSupportService;
 import com.itss.vbas.util.PasswordUtil;
 import org.springframework.stereotype.Service;
@@ -73,6 +74,7 @@ public class AdminServiceImpl implements AdminService {
     private final AddressService addressService;
     private final RequestSupportService requestSupportService;
     private final AssignmentTimeoutService assignmentTimeoutService;
+    private final NotificationService notificationService;
     private final AuthContext authContext;
     private final AppMapper appMapper;
     private final RescueStaffRepository rescueStaffRepository;
@@ -93,6 +95,7 @@ public class AdminServiceImpl implements AdminService {
             AddressService addressService,
             RequestSupportService requestSupportService,
             AssignmentTimeoutService assignmentTimeoutService,
+            NotificationService notificationService,
             AuthContext authContext,
             AppMapper appMapper
     ) {
@@ -109,6 +112,7 @@ public class AdminServiceImpl implements AdminService {
         this.addressService = addressService;
         this.requestSupportService = requestSupportService;
         this.assignmentTimeoutService = assignmentTimeoutService;
+        this.notificationService = notificationService;
         this.authContext = authContext;
         this.appMapper = appMapper;
     }
@@ -487,6 +491,7 @@ public class AdminServiceImpl implements AdminService {
                 .build();
 
         RequestAssignment savedAssignment = requestAssignmentRepository.save(assignment);
+        notificationService.notifyAssignmentPending(savedAssignment);
 
         RescueRequestStatus oldStatus = rescueRequest.getStatus();
         rescueRequest.setStatus(RescueRequestStatus.SEARCHING);
@@ -595,6 +600,8 @@ public class AdminServiceImpl implements AdminService {
                         .build())
                 .map(requestAssignmentRepository::save)
                 .toList();
+
+        savedAssignments.forEach(notificationService::notifyAssignmentPending);
 
         RescueRequestStatus oldStatus = rescueRequest.getStatus();
         rescueRequest.setStatus(RescueRequestStatus.SEARCHING);

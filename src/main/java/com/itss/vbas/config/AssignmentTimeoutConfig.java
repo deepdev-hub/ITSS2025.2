@@ -8,7 +8,9 @@ import org.springframework.stereotype.Component;
 @Component
 public class AssignmentTimeoutConfig {
 
+    private static final Duration DEFAULT_TIMEOUT = Duration.ofSeconds(60);
+
     public Duration getTimeout(RequestPriority priority) {
-        return Duration.ofSeconds(15);
+        return DEFAULT_TIMEOUT;
     }
 }

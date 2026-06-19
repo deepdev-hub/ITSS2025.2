@@ -26,6 +26,17 @@ function BellIcon() {
   );
 }
 
+function resolveNotificationTarget(notification) {
+  if (!notification) return null;
+  if (notification.type === 'ASSIGNMENT_PENDING') {
+    return '/staff/assignments';
+  }
+  if (notification.requestId) {
+    return `/requests/${notification.requestId}`;
+  }
+  return null;
+}
+
 export default function NotificationBell({ enabled }) {
   const navigate = useNavigate();
   const panelRef = useRef(null);
@@ -101,8 +112,9 @@ export default function NotificationBell({ enabled }) {
         await loadUnreadCount();
       }
       setOpen(false);
-      if (notification.requestId) {
-        navigate(`/requests/${notification.requestId}`);
+      const target = resolveNotificationTarget(notification);
+      if (target) {
+        navigate(target);
       }
     } catch (err) {
       setError(getApiError(err));

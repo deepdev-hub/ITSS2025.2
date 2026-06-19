@@ -23,6 +23,8 @@ public interface RequestAssignmentRepository extends JpaRepository<RequestAssign
 
     Optional<RequestAssignment> findFirstByRequestIdAndStaffIdOrderByAssignedAtDesc(Long requestId, Long staffId);
 
+    List<RequestAssignment> findByRequestIdAndStaffIdOrderByAssignedAtDesc(Long requestId, Long staffId);
+
     Optional<RequestAssignment> findFirstByRequestIdAndStatusOrderByAssignedAtDesc(Long requestId, AssignmentStatus status);
 
     List<RequestAssignment> findByRequestIdAndStatus(Long requestId, AssignmentStatus status);
@@ -32,6 +34,8 @@ public interface RequestAssignmentRepository extends JpaRepository<RequestAssign
     List<RequestAssignment> findByStaffIdOrderByAssignedAtDesc(Long staffId);
 
     boolean existsByRequestIdAndStatus(Long requestId, AssignmentStatus status);
+
+    boolean existsByRequestIdAndStaffIdAndStatus(Long requestId, Long staffId, AssignmentStatus status);
 
     boolean existsByStaffIdAndStatusIn(Long staffId, Collection<AssignmentStatus> statuses);
 

@@ -28,6 +28,7 @@ const ICONS = {
   Vehicles: Truck,
   'My Profile': UserCircle2,
   'My Assignments': ClipboardList,
+  'Nearby Requests': MapPin,
   'My Requests': ClipboardList,
   'Create Request': FilePlus2,
   'My Vehicles': Car,
