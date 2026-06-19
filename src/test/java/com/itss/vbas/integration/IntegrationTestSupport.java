@@ -28,6 +28,7 @@ import com.itss.vbas.enums.StaffStatus;
 import com.itss.vbas.repository.AccountRepository;
 import com.itss.vbas.repository.AddressRepository;
 import com.itss.vbas.repository.IncidentTypeRepository;
+import com.itss.vbas.repository.NotificationRepository;
 import com.itss.vbas.repository.RequestAssignmentRepository;
 import com.itss.vbas.repository.RescueCompanyRepository;
 import com.itss.vbas.repository.RescueRequestRepository;
@@ -103,6 +104,9 @@ abstract class IntegrationTestSupport {
 
     @Autowired
     protected RequestAssignmentRepository requestAssignmentRepository;
+
+    @Autowired
+    protected NotificationRepository notificationRepository;
 
     @MockBean
     protected AssignmentTimeoutService assignmentTimeoutService;

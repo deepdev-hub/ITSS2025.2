@@ -13,11 +13,14 @@ import java.util.Map;
 
 import com.itss.vbas.entity.Account;
 import com.itss.vbas.entity.IncidentType;
+import com.itss.vbas.entity.Notification;
 import com.itss.vbas.entity.RequestAssignment;
 import com.itss.vbas.entity.RescueCompany;
 import com.itss.vbas.entity.RescueRequest;
+import com.itss.vbas.entity.RescueStaff;
 import com.itss.vbas.entity.ServiceType;
 import com.itss.vbas.enums.AssignmentStatus;
+import com.itss.vbas.enums.NotificationType;
 import com.itss.vbas.enums.RescueRequestStatus;
 import com.itss.vbas.enums.StaffStatus;
 import org.junit.jupiter.api.Test;
@@ -64,6 +67,35 @@ class RequestControllerIntegrationTest extends IntegrationTestSupport {
         org.assertj.core.api.Assertions.assertThat(assignments)
                 .allMatch(assignment -> assignment.getStatus() == AssignmentStatus.PENDING)
                 .allMatch(assignment -> assignment.getVehicle() != null);
+    }
+
+    @Test
+    void creatingRequestCreatesPendingNotificationForAssignedStaff() throws Exception {
+        Account customer = createCustomer("request-notification-customer@test.local");
+        RescueCompany company = createCompany(createCompanyOwner());
+        RescueStaff assignedStaff = createStaff(company, StaffStatus.ACTIVE, 21.0285, 105.8542);
+
+        mockMvc.perform(post("/api/requests")
+                        .header("Authorization", bearer(customer))
+                        .contentType(jsonContentType())
+                        .content(json(requestBody(createIncidentType(), createServiceType()))))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.success").value(true));
+
+        RescueRequest savedRequest = rescueRequestRepository.findByCustomerIdOrderByCreatedAtDesc(customer.getId()).get(0);
+        RequestAssignment assignment = requestAssignmentRepository.findByRequestId(savedRequest.getId()).get(0);
+
+        List<Notification> staffNotifications = notificationRepository
+                .findTop20ByRecipientIdOrderByCreatedAtDesc(assignedStaff.getUser().getId());
+
+        org.assertj.core.api.Assertions.assertThat(staffNotifications)
+                .anySatisfy(notification -> {
+                    org.assertj.core.api.Assertions.assertThat(notification.getType()).isEqualTo(NotificationType.ASSIGNMENT_PENDING);
+                    org.assertj.core.api.Assertions.assertThat(notification.getRequest()).isNotNull();
+                    org.assertj.core.api.Assertions.assertThat(notification.getRequest().getId()).isEqualTo(savedRequest.getId());
+                    org.assertj.core.api.Assertions.assertThat(notification.isRead()).isFalse();
+                });
+        assertEquals(AssignmentStatus.PENDING, assignment.getStatus());
     }
 
     @Test

@@ -76,6 +76,25 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     @Override
+    public void notifyAssignmentPending(RequestAssignment assignment) {
+        if (assignment == null
+                || assignment.getRequest() == null
+                || assignment.getStaff() == null
+                || assignment.getStaff().getUser() == null) {
+            return;
+        }
+
+        RescueRequest request = assignment.getRequest();
+        createNotification(
+                assignment.getStaff().getUser(),
+                NotificationType.ASSIGNMENT_PENDING,
+                "Yeu cau moi can xac nhan",
+                "Ban vua duoc giao yeu cau " + request.getRequestCode() + ". Hay chap nhan trong vong 60 giay.",
+                request
+        );
+    }
+
+    @Override
     public void notifyAssignmentAccepted(RequestAssignment assignment) {
         if (assignment == null || assignment.getRequest() == null || assignment.getRequest().getCustomer() == null) {
             return;

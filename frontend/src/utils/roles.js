@@ -52,6 +52,7 @@ export function getMenuItems(roleName) {
     case ROLES.RESCUE_STAFF:
       return [
         { to: '/staff/dashboard', label: 'Dashboard' },
+        { to: '/staff/nearby-requests', label: 'Nearby Requests' },
         { to: '/staff/location', label: 'Location Setting' },
         { to: '/staff/assignments', label: 'My Assignments' },
         { to: '/profile', label: 'My Profile' },

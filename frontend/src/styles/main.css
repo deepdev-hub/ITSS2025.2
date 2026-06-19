@@ -315,6 +315,25 @@ textarea {
   flex-shrink: 0;
 }
 
+.staff-status-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.staff-status-control .status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.topbar-inline-error {
+  color: var(--danger);
+  font-size: 0.85rem;
+  max-width: 280px;
+}
+
 .notification-bell {
   position: relative;
 }
@@ -1363,6 +1382,28 @@ th {
   background: var(--primary);
 }
 
+.tracking-marker-searching {
+  background: #f59e0b;
+  box-shadow: 0 10px 22px rgba(245, 158, 11, 0.32);
+}
+
+.tracking-marker-searching::before,
+.tracking-marker-searching::after {
+  position: absolute;
+  inset: -10px;
+  content: "";
+  border: 2px solid rgba(245, 158, 11, 0.3);
+  border-radius: 999px;
+}
+
+.tracking-marker-searching::before {
+  animation: tracking-search-wave 1.8s ease-out infinite;
+}
+
+.tracking-marker-searching::after {
+  animation: tracking-search-wave 1.8s ease-out infinite 0.9s;
+}
+
 .tracking-map-status,
 .tracking-map-warning {
   position: absolute;
@@ -1391,12 +1432,21 @@ th {
   color: var(--warning);
 }
 
+.tracking-map-status-searching {
+  background: rgba(255, 250, 240, 0.95);
+}
+
 .tracking-live-dot {
   width: 0.65rem;
   height: 0.65rem;
   border-radius: 999px;
   background: #168f57;
   box-shadow: 0 0 0 6px rgba(22, 143, 87, 0.14);
+}
+
+.tracking-live-dot-searching {
+  background: #f59e0b;
+  box-shadow: 0 0 0 6px rgba(245, 158, 11, 0.18);
 }
 
 .tracking-staff-card,
@@ -1499,6 +1549,30 @@ th {
   padding: 1.4rem;
 }
 
+.tracking-searching-card {
+  background: linear-gradient(135deg, rgba(255, 248, 236, 0.98), rgba(255, 255, 255, 0.98));
+}
+
+.tracking-pending-staff-list {
+  display: grid;
+  gap: 0.65rem;
+  margin: 0.85rem 0;
+}
+
+.tracking-pending-staff-item {
+  display: grid;
+  gap: 0.18rem;
+  padding: 0.8rem 0.9rem;
+  border: 1px solid rgba(245, 158, 11, 0.18);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.86);
+}
+
+.tracking-pending-staff-item span {
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
 .tracking-state-card .loader-spinner {
   margin: 0 0 1rem;
 }
@@ -1547,6 +1621,18 @@ th {
   to {
     opacity: 0;
     transform: scale(1.35);
+  }
+}
+
+@keyframes tracking-search-wave {
+  from {
+    opacity: 0.72;
+    transform: scale(0.9);
+  }
+
+  to {
+    opacity: 0;
+    transform: scale(2.9);
   }
 }
 

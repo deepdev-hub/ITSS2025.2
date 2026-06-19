@@ -16,6 +16,8 @@ public interface NotificationService {
 
     void markAllAsRead();
 
+    void notifyAssignmentPending(RequestAssignment assignment);
+
     void notifyAssignmentAccepted(RequestAssignment assignment);
 
     void notifyRequestCompleted(RescueRequest request);

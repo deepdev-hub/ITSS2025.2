@@ -35,6 +35,7 @@ import com.itss.vbas.repository.ServiceTypeRepository;
 import com.itss.vbas.security.AuthContext;
 import com.itss.vbas.service.AddressService;
 import com.itss.vbas.service.AssignmentTimeoutService;
+import com.itss.vbas.service.NotificationService;
 import com.itss.vbas.service.RequestSupportService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -73,6 +74,8 @@ class AdminServiceImplTest {
     @Mock
     private AssignmentTimeoutService assignmentTimeoutService;
     @Mock
+    private NotificationService notificationService;
+    @Mock
     private AuthContext authContext;
     @Mock
     private AppMapper appMapper;
@@ -95,6 +98,7 @@ class AdminServiceImplTest {
                 addressService,
                 requestSupportService,
                 assignmentTimeoutService,
+                notificationService,
                 authContext,
                 appMapper
         );
@@ -146,6 +150,7 @@ class AdminServiceImplTest {
         ArgumentCaptor<RequestAssignment> assignmentCaptor = ArgumentCaptor.forClass(RequestAssignment.class);
         verify(requestAssignmentRepository).save(assignmentCaptor.capture());
         assertSame(actor, assignmentCaptor.getValue().getAssignedByUser());
+        verify(notificationService).notifyAssignmentPending(any(RequestAssignment.class));
 
         ArgumentCaptor<RequestStatusHistory> historyCaptor = ArgumentCaptor.forClass(RequestStatusHistory.class);
         verify(requestStatusHistoryRepository).save(historyCaptor.capture());

@@ -196,4 +196,36 @@ public class CompanyController {
         companyService.updateStaffLocation(request);
         return ResponseEntity.ok(CommonDto.ApiResponse.success("Location updated successfully"));
     }
+
+    @RequiredRoles(RoleName.RESCUE_STAFF)
+    @GetMapping("/staff/me/status")
+    public ResponseEntity<CommonDto.ApiResponse<CompanyDto.StaffStatusResponse>> getMyStaffStatus() {
+        return ResponseEntity.ok(CommonDto.ApiResponse.success("Staff status fetched successfully", companyService.getMyStaffStatus()));
+    }
+
+    @RequiredRoles(RoleName.RESCUE_STAFF)
+    @PutMapping("/staff/me/status")
+    public ResponseEntity<CommonDto.ApiResponse<CompanyDto.StaffStatusResponse>> updateMyStaffStatus(
+            @Valid @RequestBody CompanyDto.StaffStatusUpdateRequest request
+    ) {
+        return ResponseEntity.ok(CommonDto.ApiResponse.success("Staff status updated successfully", companyService.updateMyStaffStatus(request)));
+    }
+
+    @RequiredRoles(RoleName.RESCUE_STAFF)
+    @GetMapping("/staff/me/nearby-searching-requests")
+    public ResponseEntity<CommonDto.ApiResponse<List<RequestDto.NearbyRequestSummaryResponse>>> getNearbySearchingRequests() {
+        return ResponseEntity.ok(CommonDto.ApiResponse.success(
+                "Nearby searching requests fetched successfully",
+                companyService.getNearbySearchingRequests()
+        ));
+    }
+
+    @RequiredRoles(RoleName.RESCUE_STAFF)
+    @PostMapping("/staff/me/nearby-searching-requests/{requestId}/accept")
+    public ResponseEntity<CommonDto.ApiResponse<RequestDto.AssignmentResponse>> acceptNearbySearchingRequest(@PathVariable Long requestId) {
+        return ResponseEntity.ok(CommonDto.ApiResponse.success(
+                "Nearby searching request accepted successfully",
+                companyService.acceptNearbySearchingRequest(requestId)
+        ));
+    }
 }

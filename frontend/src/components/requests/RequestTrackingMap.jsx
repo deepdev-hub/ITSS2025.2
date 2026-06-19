@@ -23,6 +23,13 @@ const destinationMarkerIcon = L.divIcon({
   iconAnchor: [15, 15],
 });
 
+const searchingMarkerIcon = L.divIcon({
+  className: 'tracking-div-icon',
+  html: '<span class="tracking-marker tracking-marker-searching"></span>',
+  iconSize: [30, 30],
+  iconAnchor: [15, 15],
+});
+
 function toLatLng(point) {
   if (!point || point.latitude === null || point.longitude === null) {
     return null;
@@ -94,6 +101,18 @@ function getEtaLabel(tracking) {
   }
 
   return 'Updating ETA';
+}
+
+function getSearchingStatusText(tracking) {
+  const pendingStaffCount = Array.isArray(tracking?.pendingStaff) ? tracking.pendingStaff.length : 0;
+  if (tracking?.requestStatus === 'MATCHED') {
+    return pendingStaffCount > 0
+      ? `Dang cho ${pendingStaffCount} staff xac nhan yeu cau trong 60 giay`
+      : 'Dang cho staff xac nhan yeu cau trong 60 giay';
+  }
+  return pendingStaffCount > 0
+    ? `Dang thong bao dong thoi cho ${pendingStaffCount} staff gan nhat`
+    : 'Dang thong bao cho cac staff phu hop gan nhat';
 }
 
 function isTechnicianWorkingStatus(status) {
@@ -231,6 +250,7 @@ export default function RequestTrackingMap({ requestId, requestStatus, staffProf
     : 'No rating yet';
 
   const resolvedStaffProfilePath = staffProfilePath || (tracking?.staff?.id ? `/staff/${tracking.staff.id}/profile` : null);
+  const pendingStaff = Array.isArray(tracking?.pendingStaff) ? tracking.pendingStaff : [];
 
   if (technicianStartedTask) {
     return (
@@ -289,15 +309,74 @@ export default function RequestTrackingMap({ requestId, requestStatus, staffProf
 
   if (!tracking.assigned) {
     return (
-      <div className="card tracking-state-card">
-        <div className="tracking-search-icon">RS</div>
-        <div>
-          <div className="loader-spinner" />
-          <h2>Searching for a suitable rescue staff member...</h2>
-          <p>The system will update automatically when a staff member accepts the job.</p>
-          {error ? <p className="tracking-inline-warning">Unable to update the latest location. Retrying...</p> : null}
+      <section className="tracking-panel" aria-label="Request tracking map">
+        <div className="tracking-map-frame tracking-map-frame-searching">
+          <MapContainer
+            center={destinationPosition || DEFAULT_CENTER}
+            zoom={15}
+            scrollWheelZoom
+            className="tracking-map"
+          >
+            <TileLayer
+              attribution="&copy; OpenStreetMap contributors"
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            />
+            <FitTrackingBounds points={destinationPosition ? [destinationPosition] : [DEFAULT_CENTER]} boundsKey={boundsKey || 'searching'} />
+
+            {destinationPosition ? (
+              <Marker position={destinationPosition} icon={searchingMarkerIcon}>
+                <Popup>
+                  <strong>Customer location</strong>
+                  <br />
+                  {tracking.destination?.label || 'Rescue point'}
+                </Popup>
+              </Marker>
+            ) : null}
+          </MapContainer>
+
+          <div className="tracking-map-status tracking-map-status-searching">
+            <span className="tracking-live-dot tracking-live-dot-searching" />
+            {refreshing ? 'Dang cap nhat...' : getSearchingStatusText(tracking)}
+          </div>
+
+          {error ? (
+            <div className="tracking-map-warning">
+              Unable to update the latest location. Retrying...
+            </div>
+          ) : null}
         </div>
-      </div>
+
+        <div className="card tracking-state-card tracking-searching-card">
+          <div className="tracking-search-icon">RS</div>
+          <div>
+            <h2>He thong dang tim kiem doi cuu ho</h2>
+            {pendingStaff.length > 0 ? (
+              <>
+                <p>Request dang duoc thong bao dong thoi va cho xac nhan tu {pendingStaff.length} staff cu the ben duoi.</p>
+                <div className="tracking-pending-staff-list">
+                  {pendingStaff.map((item) => (
+                    <div key={item.assignmentId || item.staffId} className="tracking-pending-staff-item">
+                      <strong>{item.name}</strong>
+                      <span>
+                        {[item.jobTitle, item.vehicleCode, item.vehiclePlateNumber].filter(Boolean).join(' • ') || 'Rescue staff'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <p className="muted-line">He thong dang cho 5 staff nay xac nhan; ai chap nhan truoc se duoc giao request.</p>
+              </>
+            ) : (
+              <>
+                <p>Request dang duoc gui den nhung staff gan nhat va he thong dang cho xac nhan.</p>
+                <p className="muted-line">Ban do hien vi tri cua khach hang va vong song mo ta qua trinh thong bao den staff.</p>
+              </>
+            )}
+            {tracking?.requestStatus === 'MATCHED' ? (
+              <p className="tracking-inline-warning">Da co staff nhan thong bao. He thong dang cho xac nhan trong 60 giay.</p>
+            ) : null}
+          </div>
+        </div>
+      </section>
     );
   }
 

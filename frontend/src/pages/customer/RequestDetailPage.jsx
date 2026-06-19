@@ -760,20 +760,20 @@ export default function RequestDetailPage() {
           <div className="grid-three" style={{ marginTop: '1rem' }}>
             <div className="card card-muted">
               <h3>Company</h3>
-              <p>{currentAssignmentAccepted ? (detail.assignedCompany?.companyName || 'Not assigned yet') : 'Searching for staff'}</p>
+              <p>{currentAssignmentAccepted ? (detail.assignedCompany?.companyName || 'Not assigned yet') : 'Dang thong bao cho staff gan nhat'}</p>
               <p className="muted-line">
                 {currentAssignmentAccepted
                   ? (detail.assignedCompany?.phone || detail.assignedCompany?.email || 'Waiting for dispatch')
-                  : 'No staff has accepted this request yet.'}
+                  : 'He thong dang gui yeu cau den cac staff phu hop va cho xac nhan.'}
               </p>
             </div>
             <div className="card card-muted">
               <h3>Rescue Vehicle</h3>
-              <p>{currentAssignmentAccepted ? (detail.currentAssignment?.vehicleCode || 'Not assigned yet') : 'Pending acceptance'}</p>
+              <p>{currentAssignmentAccepted ? (detail.currentAssignment?.vehicleCode || 'Not assigned yet') : 'Dang cho staff nhan yeu cau'}</p>
               <p className="muted-line">
                 {currentAssignmentAccepted
                   ? (detail.currentAssignment?.vehiclePlateNumber || 'No plate information')
-                  : 'Vehicle details will appear after staff accepts.'}
+                  : 'Thong tin xe se hien sau khi mot staff chap nhan yeu cau.'}
               </p>
             </div>
           </div>

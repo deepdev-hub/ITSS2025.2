@@ -82,6 +82,19 @@ public final class CompanyDto {
     ) {
     }
 
+    public record StaffStatusResponse(
+            String status,
+            BigDecimal currentLatitude,
+            BigDecimal currentLongitude,
+            boolean canReceiveAssignments
+    ) {
+    }
+
+    public record StaffStatusUpdateRequest(
+            @NotBlank String status
+    ) {
+    }
+
     public record StaffProfileResponse(
             Long id,
             Long userId,
@@ -104,7 +117,8 @@ public final class CompanyDto {
             @NotBlank @Size(max = 100) String vehicleCode,
             @NotBlank @Size(max = 100) String vehicleType,
             @NotBlank @Size(max = 50) String plateNumber,
-            @NotBlank String status
+            @NotBlank String status,
+            Long assignedStaffId
     ) {
     }
 
