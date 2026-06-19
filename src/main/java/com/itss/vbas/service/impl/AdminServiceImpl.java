@@ -1,5 +1,6 @@
 package com.itss.vbas.service.impl;
 
+import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -315,6 +316,7 @@ public class AdminServiceImpl implements AdminService {
                 .serviceCode(request.serviceCode())
                 .serviceName(request.serviceName())
                 .description(request.description())
+                .basePrice(request.basePrice() == null ? BigDecimal.ZERO : request.basePrice())
                 .build();
         return appMapper.toServiceTypeResponse(serviceTypeRepository.save(serviceType));
     }
@@ -326,6 +328,7 @@ public class AdminServiceImpl implements AdminService {
         serviceType.setServiceCode(request.serviceCode());
         serviceType.setServiceName(request.serviceName());
         serviceType.setDescription(request.description());
+        serviceType.setBasePrice(request.basePrice() == null ? BigDecimal.ZERO : request.basePrice());
         return appMapper.toServiceTypeResponse(serviceTypeRepository.save(serviceType));
     }
 
