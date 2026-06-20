@@ -373,37 +373,13 @@ public class RescueRequestServiceImpl implements RescueRequestService {
         }
 
         RescueRequest updatedRequest = requestSupportService.changeRequestStatus(rescueRequest, newStatus, account, request.note());
-        if (newStatus == RescueRequestStatus.COMPLETED) {
-            RequestAssignment latestAssignment = requestSupportService.getLatestAssignment(rescueRequest);
-            if (latestAssignment != null) {
-                latestAssignment.setStatus(AssignmentStatus.COMPLETED);
-                requestAssignmentRepository.save(latestAssignment);
-                updateStaffAvailabilityIfIdle(latestAssignment.getStaff());
-            }
-        }
-        if (newStatus == RescueRequestStatus.CANCELED) {
-            RequestAssignment latestAssignment = requestSupportService.getLatestAssignment(rescueRequest);
-            updateStaffAvailabilityIfIdle(latestAssignment == null ? null : latestAssignment.getStaff());
-        }
         if (oldStatus != RescueRequestStatus.COMPLETED && newStatus == RescueRequestStatus.COMPLETED) {
             notificationService.notifyRequestCompleted(updatedRequest);
         }
         return buildDetail(rescueRequestRepository.findById(requestId).orElseThrow());
     }
 
-    private void updateStaffAvailabilityIfIdle(RescueStaff staff) {
-        if (staff == null) {
-            return;
-        }
-        boolean stillBusy = requestAssignmentRepository.existsByStaffIdAndStatusIn(
-                staff.getId(),
-                List.of(AssignmentStatus.PENDING, AssignmentStatus.ACCEPTED)
-        );
-        if (!stillBusy && staff.getStatus() == com.itss.vbas.enums.StaffStatus.BUSY) {
-            staff.setStatus(com.itss.vbas.enums.StaffStatus.ACTIVE);
-            rescueStaffRepository.save(staff);
-        }
-    }
+
 
     @Override
     @Transactional(readOnly = true)

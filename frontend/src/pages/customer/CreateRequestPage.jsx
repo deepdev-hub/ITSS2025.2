@@ -503,10 +503,7 @@ export default function CreateRequestPage() {
                   <label>Province/City</label>
                   <input name="location.province" value={form.location.province} onChange={handleChange} required disabled={geocoding} />
                 </div>
-                <div className="field">
-                  <label>District</label>
-                  <input name="location.district" value={form.location.district} onChange={handleChange} disabled={geocoding} />
-                </div>
+
                 <div className="field">
                   <label>Ward</label>
                   <input name="location.ward" value={form.location.ward} onChange={handleChange} disabled={geocoding} />

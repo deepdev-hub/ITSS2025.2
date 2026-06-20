@@ -144,9 +144,22 @@ public class RequestSupportServiceImpl implements RequestSupportService {
         if (newStatus == RescueRequestStatus.COMPLETED || newStatus == RescueRequestStatus.CANCELED) {
             requestAssignmentRepository.findFirstByRequestIdOrderByAssignedAtDesc(request.getId())
                     .ifPresent(assignment -> {
-                        if (assignment.getStatus() == AssignmentStatus.ACCEPTED) {
+                        if (assignment.getStatus() != AssignmentStatus.COMPLETED && assignment.getStatus() != AssignmentStatus.REJECTED) {
                             assignment.setStatus(newStatus == RescueRequestStatus.COMPLETED ? AssignmentStatus.COMPLETED : AssignmentStatus.REJECTED);
-                            requestAssignmentRepository.save(assignment);
+                            if (newStatus == RescueRequestStatus.CANCELED) {
+                                assignment.setRejectedAt(java.time.LocalDateTime.now());
+                            }
+                            requestAssignmentRepository.saveAndFlush(assignment);
+                        }
+                        if (assignment.getStaff() != null) {
+                            boolean stillBusy = requestAssignmentRepository.existsByStaffIdAndStatusIn(
+                                    assignment.getStaff().getId(),
+                                    java.util.List.of(AssignmentStatus.PENDING, AssignmentStatus.ACCEPTED)
+                            );
+                            if (!stillBusy && assignment.getStaff().getStatus() == com.itss.vbas.enums.StaffStatus.BUSY) {
+                                assignment.getStaff().setStatus(com.itss.vbas.enums.StaffStatus.ACTIVE);
+                                rescueStaffRepository.save(assignment.getStaff());
+                            }
                         }
                     });
         }

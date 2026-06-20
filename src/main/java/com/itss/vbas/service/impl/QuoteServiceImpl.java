@@ -130,14 +130,12 @@ public class QuoteServiceImpl implements QuoteService {
             throw new BadRequestException("Assigned staff must belong to a rescue company");
         }
 
-        Quote quote = latestQuote != null && latestQuote.getCompany() != null && latestQuote.getCompany().getId().equals(company.getId())
-                ? latestQuote
-                : Quote.builder()
-                        .request(rescueRequest)
-                        .company(company)
-                        .quoteCode(CodeGenerator.quoteCode())
-                        .status(QuoteStatus.DRAFT)
-                        .build();
+        Quote quote = Quote.builder()
+                .request(rescueRequest)
+                .company(company)
+                .quoteCode(CodeGenerator.quoteCode())
+                .status(QuoteStatus.DRAFT)
+                .build();
 
         BigDecimal dealPrice = request.dealPrice();
         quote.setStaff(staff);

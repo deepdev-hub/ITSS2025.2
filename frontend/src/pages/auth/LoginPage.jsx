@@ -44,179 +44,227 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="hero">      <form className="auth-card card modern-auth-card" style={{ maxWidth: '480px', width: '100%' }} onSubmit={handleSubmit}>
-        <div className="auth-card-header">
-          <div className="auth-card-icon">
-            <LifeBuoy size={40} />
+    <div className="hero">
+      <div className="auth-card card sync-auth-card">
+        <div className="sync-auth-header">
+          <div className="sync-auth-icon">
+            <LifeBuoy size={32} />
           </div>
-          <h1>VBAS Rescue</h1>
-          <p className="auth-card-subtitle">Sign in to continue</p>
+          <h2>Welcome back</h2>
+          <p>Please enter your details to sign in.</p>
         </div>
 
-        {notice ? <Alert variant="success">{notice}</Alert> : null}
-        {error ? <Alert variant="error" title="Login failed">{error}</Alert> : null}
+        <form onSubmit={handleSubmit} className="sync-auth-form">
+          {notice ? <Alert variant="success">{notice}</Alert> : null}
+          {error ? <Alert variant="error" title="Login failed">{error}</Alert> : null}
 
-        <div className="field modern-field">
-          <label htmlFor="email">
-            <Mail size={16} style={{ marginRight: '8px', verticalAlign: 'middle' }} />
-            Email
-          </label>
-          <input
-            id="email"
-            name="email"
-            type="email"
-            value={form.email}
-            onChange={handleChange}
-            required
-            placeholder="Enter your email"
-          />
-        </div>
-
-        <div className="field modern-field">
-          <label htmlFor="password">
-            <Lock size={16} style={{ marginRight: '8px', verticalAlign: 'middle' }} />
-            Password
-          </label>
-          <div className="password-input-wrapper">
-            <input
-              id="password"
-              name="password"
-              type={showPassword ? 'text' : 'password'}
-              value={form.password}
-              onChange={handleChange}
-              required
-              placeholder="Enter your password"
-            />
-            <button
-              type="button"
-              className="password-toggle"
-              onClick={() => setShowPassword(!showPassword)}
-              title={showPassword ? 'Hide password' : 'Show password'}
-            >
-              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-            </button>
+          <div className="sync-field">
+            <label htmlFor="email">Email</label>
+            <div className="sync-input-wrapper">
+              <Mail size={18} className="sync-input-icon" />
+              <input
+                id="email"
+                name="email"
+                type="email"
+                value={form.email}
+                onChange={handleChange}
+                required
+                placeholder="Enter your email"
+              />
+            </div>
           </div>
-        </div>
 
-        <div className="actions-row">
+          <div className="sync-field">
+            <label htmlFor="password">Password</label>
+            <div className="sync-input-wrapper">
+              <Lock size={18} className="sync-input-icon" />
+              <input
+                id="password"
+                name="password"
+                type={showPassword ? 'text' : 'password'}
+                value={form.password}
+                onChange={handleChange}
+                required
+                placeholder="Enter your password"
+              />
+              <button
+                type="button"
+                className="sync-password-toggle"
+                onClick={() => setShowPassword(!showPassword)}
+                title={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
+          </div>
+
+          <div className="sync-auth-actions">
+            <Link className="sync-forgot-link" to="/forgot-password">Forgot password?</Link>
+          </div>
+
           <button
-            className={`button button-primary button-large ${submitting ? 'button-loading' : ''}`}
+            className={`button button-primary sync-submit-btn ${submitting ? 'button-loading' : ''}`}
             type="submit"
             disabled={submitting}
           >
-            <LogIn size={20} style={{ marginRight: '8px', verticalAlign: 'middle' }} />
+            <LogIn size={20} style={{ marginRight: '8px' }} />
             {submitting ? 'Signing in...' : 'Sign in'}
           </button>
-        </div>
 
-        <div className="auth-card-footer">
-          <Link className="auth-link" to="/register">Create a new account</Link>
-          <span className="auth-divider">|</span>
-          <Link className="auth-link" to="/forgot-password">Forgot password?</Link>
-        </div>
-      </form>
+          <div className="sync-auth-footer">
+            Don't have an account? <Link to="/register">Sign up</Link>
+          </div>
+        </form>
+      </div>
 
       <style>{`
-        .modern-auth-card {
-          padding: 2.5rem;
-          border-radius: 16px;
-          box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+        .sync-auth-card {
+          max-width: 440px;
+          width: 100%;
+          padding: 3rem 2.5rem;
+          border-radius: 20px;
+          background: #ffffff;
+          box-shadow: 0 15px 35px rgba(0, 0, 0, 0.05), 0 5px 15px rgba(0, 0, 0, 0.03);
+          border: 1px solid rgba(0, 0, 0, 0.05);
         }
-        .auth-card-header {
+
+        .sync-auth-header {
           text-align: center;
-          margin-bottom: 2rem;
+          margin-bottom: 2.5rem;
         }
-        .auth-card-icon {
-          width: 80px;
-          height: 80px;
-          margin: 0 auto 1rem;
-          border-radius: 50%;
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+
+        .sync-auth-icon {
+          width: 64px;
+          height: 64px;
+          margin: 0 auto 1.25rem;
+          background: rgba(13, 110, 253, 0.1);
+          color: #0d6efd;
+          border-radius: 18px;
           display: flex;
           align-items: center;
           justify-content: center;
-          color: white;
         }
-        .auth-card-header h1 {
-          margin: 0 0 0.5rem 0;
-          font-size: 1.8rem;
-          color: #333;
+
+        .sync-auth-header h2 {
+          font-size: 1.75rem;
+          font-weight: 700;
+          color: #1e293b;
+          margin: 0 0 0.5rem;
         }
-        .auth-card-subtitle {
+
+        .sync-auth-header p {
+          color: #64748b;
           margin: 0;
-          color: #666;
-          font-size: 1rem;
+          font-size: 0.95rem;
         }
-        .modern-field label {
+
+        .sync-auth-form {
+          display: flex;
+          flex-direction: column;
+          gap: 1.25rem;
+        }
+
+        .sync-field label {
+          display: block;
+          font-weight: 600;
+          color: #334155;
+          margin-bottom: 0.5rem;
+          font-size: 0.9rem;
+        }
+
+        .sync-input-wrapper {
+          position: relative;
           display: flex;
           align-items: center;
-          font-weight: 600;
-          margin-bottom: 0.5rem;
-          color: #333;
         }
-        .modern-field input {
-          padding: 0.875rem 1rem;
-          border: 2px solid #e0e0e0;
-          border-radius: 8px;
-          font-size: 1rem;
-          transition: border-color 0.3s ease;
-        }
-        .modern-field input:focus {
-          border-color: #667eea;
-          outline: none;
-        }
-        .password-input-wrapper {
-          position: relative;
-        }
-        .password-input-wrapper input {
-          width: 100%;
-          padding-right: 3rem;
-        }
-        .password-toggle {
+
+        .sync-input-icon {
           position: absolute;
-          right: 0.75rem;
-          top: 50%;
-          transform: translateY(-50%);
+          left: 1rem;
+          color: #94a3b8;
+          pointer-events: none;
+        }
+
+        .sync-input-wrapper input {
+          width: 100%;
+          padding: 0.875rem 1rem 0.875rem 2.75rem;
+          border: 1.5px solid #e2e8f0;
+          border-radius: 12px;
+          font-size: 1rem;
+          color: #1e293b;
+          background: #f8fafc;
+          transition: all 0.2s ease;
+        }
+
+        .sync-input-wrapper input:focus {
+          border-color: #0d6efd;
+          background: #ffffff;
+          outline: none;
+          box-shadow: 0 0 0 4px rgba(13, 110, 253, 0.1);
+        }
+
+        .sync-input-wrapper input::placeholder {
+          color: #cbd5e1;
+        }
+
+        .sync-password-toggle {
+          position: absolute;
+          right: 0.5rem;
           background: none;
           border: none;
+          color: #94a3b8;
+          padding: 0.5rem;
           cursor: pointer;
-          color: #666;
           display: flex;
           align-items: center;
-          justify-content: center;
-          padding: 0.25rem;
+          transition: color 0.2s;
         }
-        .password-toggle:hover {
-          color: #667eea;
+
+        .sync-password-toggle:hover {
+          color: #0d6efd;
         }
-        .button-large {
-          padding: 1rem 2rem;
-          font-size: 1.1rem;
+
+        .sync-auth-actions {
+          display: flex;
+          justify-content: flex-end;
+          margin-top: -0.25rem;
+        }
+
+        .sync-forgot-link {
+          color: #0d6efd;
+          font-size: 0.85rem;
           font-weight: 600;
-          border-radius: 8px;
-        }
-        .auth-card-footer {
-          margin-top: 1.5rem;
-          padding-top: 1.5rem;
-          border-top: 1px solid #e0e0e0;
-          text-align: center;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 0.75rem;
-        }
-        .auth-link {
-          color: #667eea;
           text-decoration: none;
-          font-weight: 500;
-          transition: color 0.3s ease;
         }
-        .auth-link:hover {
-          color: #764ba2;
+
+        .sync-forgot-link:hover {
           text-decoration: underline;
         }
-        .auth-divider {
-          color: #ccc;
+
+        .sync-submit-btn {
+          width: 100%;
+          padding: 0.875rem;
+          border-radius: 12px;
+          font-size: 1.05rem;
+          margin-top: 0.5rem;
+        }
+
+        .sync-auth-footer {
+          margin-top: 1rem;
+          text-align: center;
+          font-size: 0.9rem;
+          color: #64748b;
+        }
+
+        .sync-auth-footer a {
+          color: #0d6efd;
+          font-weight: 600;
+          text-decoration: none;
+          margin-left: 0.25rem;
+        }
+
+        .sync-auth-footer a:hover {
+          text-decoration: underline;
         }
       `}</style>
     </div>

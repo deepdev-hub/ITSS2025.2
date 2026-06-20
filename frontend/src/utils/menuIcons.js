@@ -32,6 +32,7 @@ const ICONS = {
   'Create Request': FilePlus2,
   'My Vehicles': Car,
   Location: MapPin,
+  'Location Setting': MapPin,
 };
 
 export function getMenuIcon(label) {

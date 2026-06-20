@@ -12,6 +12,8 @@ import org.springframework.data.repository.query.Param;
 public interface RescueStaffRepository extends JpaRepository<RescueStaff, Long> {
     Optional<RescueStaff> findByUserId(Long userId);
 
+    List<RescueStaff> findByStatus(com.itss.vbas.enums.StaffStatus status);
+
     List<RescueStaff> findByCompanyIdOrderByIdDesc(Long companyId);
 
     Optional<RescueStaff> findByIdAndCompanyId(Long id, Long companyId);
