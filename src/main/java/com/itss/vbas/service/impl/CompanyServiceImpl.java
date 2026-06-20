@@ -302,6 +302,8 @@ public class CompanyServiceImpl implements CompanyService {
         assignment.setRejectedAt(null);
         assignment.setStatus(AssignmentStatus.ACCEPTED);
         RequestAssignment savedAssignment = requestAssignmentRepository.save(assignment);
+        staff.setStatus(StaffStatus.BUSY);
+        rescueStaffRepository.save(staff);
 
         if (rescueRequest.getStatus() == RescueRequestStatus.CREATED || rescueRequest.getStatus() == RescueRequestStatus.SEARCHING) {
             requestSupportService.changeRequestStatus(rescueRequest, RescueRequestStatus.MATCHED, account, request.note());
@@ -492,8 +494,14 @@ public class CompanyServiceImpl implements CompanyService {
         if (nextStatus == StaffStatus.BUSY) {
             throw new BadRequestException("Staff cannot manually switch to BUSY");
         }
-        if (staff.getStatus() == StaffStatus.BUSY && nextStatus == StaffStatus.OFFLINE) {
-            throw new BadRequestException("Cannot switch to OFFLINE while handling a request");
+        if (staff.getStatus() == StaffStatus.BUSY) {
+            boolean trulyBusy = requestAssignmentRepository.existsByStaffIdAndStatusIn(
+                    staff.getId(),
+                    java.util.List.of(AssignmentStatus.PENDING, AssignmentStatus.ACCEPTED)
+            );
+            if (trulyBusy) {
+                throw new BadRequestException("Cannot change status while handling a request");
+            }
         }
         staff.setStatus(nextStatus);
         return toStaffStatusResponse(rescueStaffRepository.save(staff));

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Bell, CreditCard, Info, CheckCircle, AlertTriangle } from 'lucide-react';
 import { getApiError } from '../../api/client';
 import { notificationApi } from '../../api/notificationApi';
 
@@ -24,6 +25,19 @@ function BellIcon() {
       <path d="M19 17.5 17.6 15V9.8A5.7 5.7 0 0 0 13 4.2V3a1 1 0 0 0-2 0v1.2a5.7 5.7 0 0 0-4.6 5.6V15L5 17.5a1 1 0 0 0 .9 1.5h12.2a1 1 0 0 0 .9-1.5ZM8.4 17l.8-1.4a1 1 0 0 0 .2-.5V9.8a3.6 3.6 0 1 1 7.2 0v5.3a1 1 0 0 0 .2.5l.8 1.4H8.4Z" />
     </svg>
   );
+}
+
+function getNotificationIcon(type) {
+  switch (type) {
+    case 'PAYMENT_COMPLETED':
+      return <div className="notif-icon-circle payment"><CreditCard size={18} /></div>;
+    case 'ASSIGNMENT_PENDING':
+      return <div className="notif-icon-circle assignment"><AlertTriangle size={18} /></div>;
+    case 'REQUEST_COMPLETED':
+      return <div className="notif-icon-circle success"><CheckCircle size={18} /></div>;
+    default:
+      return <div className="notif-icon-circle default"><Bell size={18} /></div>;
+  }
 }
 
 function resolveNotificationTarget(notification) {
@@ -164,10 +178,13 @@ export default function NotificationBell({ enabled }) {
             </button>
           </div>
 
-          {loading ? <p className="notification-state">Loading...</p> : null}
-          {error ? <p className="notification-state notification-error">{error}</p> : null}
+          {loading ? <div className="notification-state"><div className="loading-spinner-small" /> Loading...</div> : null}
+          {error ? <div className="notification-state notification-error">{error}</div> : null}
           {!loading && !error && notifications.length === 0 ? (
-            <p className="notification-state">No notifications yet.</p>
+            <div className="notification-state empty">
+              <Bell size={32} style={{ color: '#cbd5e1', marginBottom: '0.5rem' }} />
+              <p>You have no new notifications.</p>
+            </div>
           ) : null}
 
           {!loading && !error && notifications.length > 0 ? (
@@ -179,9 +196,15 @@ export default function NotificationBell({ enabled }) {
                   type="button"
                   onClick={() => handleNotificationClick(notification)}
                 >
-                  <span className="notification-item-title">{notification.title}</span>
-                  <span className="notification-item-message">{notification.message}</span>
-                  <span className="notification-item-time">{formatNotificationTime(notification.createdAt)}</span>
+                  <div className="notification-item-icon">
+                    {getNotificationIcon(notification.type)}
+                  </div>
+                  <div className="notification-item-content">
+                    <span className="notification-item-title">{notification.title}</span>
+                    <span className="notification-item-message">{notification.message}</span>
+                    <span className="notification-item-time">{formatNotificationTime(notification.createdAt)}</span>
+                  </div>
+                  {!notification.read && <div className="notification-item-dot" />}
                 </button>
               ))}
             </div>

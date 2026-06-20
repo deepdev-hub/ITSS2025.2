@@ -99,253 +99,318 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="hero">      <form className="auth-card card modern-auth-card" style={{ maxWidth: '800px', width: '100%' }} onSubmit={handleSubmit}>
-        <div className="auth-card-header">
-          <div className="auth-card-icon">
-            <LifeBuoy size={40} />
+    <div className="hero">
+      <div className="auth-card card sync-auth-card sync-auth-card-wide">
+        <div className="sync-auth-header">
+          <div className="sync-auth-icon">
+            <LifeBuoy size={32} />
           </div>
-          <h1>VBAS Rescue</h1>
-          <p className="auth-card-subtitle">Create a customer account</p>
+          <h2>Create Account</h2>
+          <p>Join VBAS Rescue today.</p>
         </div>
 
-        {error ? <Alert variant="error" title="Registration failed">{error}</Alert> : null}
+        <form className="sync-auth-form" onSubmit={handleSubmit}>
+          {error ? <Alert variant="error" title="Registration failed">{error}</Alert> : null}
 
-        <h2 className="section-title">Personal Information</h2>
-        <div className="form-grid">
-          <div className="field modern-field">
-            <label htmlFor="fullName">
-              <User size={16} style={{ marginRight: '8px', verticalAlign: 'middle' }} />
-              Full Name
-            </label>
-            <input id="fullName" name="fullName" value={form.fullName} onChange={handleChange} required placeholder="Enter your full name" />
-          </div>
+          <h3 className="sync-section-title">Personal Information</h3>
+          
+          <div className="sync-form-grid">
+            <div className="sync-field">
+              <label htmlFor="fullName">Full Name</label>
+              <div className="sync-input-wrapper">
+                <User size={18} className="sync-input-icon" />
+                <input id="fullName" name="fullName" value={form.fullName} onChange={handleChange} required placeholder="Enter your full name" />
+              </div>
+            </div>
 
-          <div className="field modern-field">
-            <label htmlFor="phone">
-              <Phone size={16} style={{ marginRight: '8px', verticalAlign: 'middle' }} />
-              Phone
-            </label>
-            <input id="phone" name="phone" value={form.phone} onChange={handleChange} placeholder="Enter your phone number" />
-          </div>
+            <div className="sync-field">
+              <label htmlFor="phone">Phone</label>
+              <div className="sync-input-wrapper">
+                <Phone size={18} className="sync-input-icon" />
+                <input id="phone" name="phone" value={form.phone} onChange={handleChange} placeholder="Enter your phone number" />
+              </div>
+            </div>
 
-          <div className="field modern-field">
-            <label htmlFor="email">
-              <Mail size={16} style={{ marginRight: '8px', verticalAlign: 'middle' }} />
-              Email
-            </label>
-            <input id="email" name="email" type="email" value={form.email} onChange={handleChange} required placeholder="Enter your email" />
-          </div>
+            <div className="sync-field">
+              <label htmlFor="email">Email</label>
+              <div className="sync-input-wrapper">
+                <Mail size={18} className="sync-input-icon" />
+                <input id="email" name="email" type="email" value={form.email} onChange={handleChange} required placeholder="Enter your email" />
+              </div>
+            </div>
 
-          <div className="field modern-field">
-            <label htmlFor="dateOfBirth">
-              <Calendar size={16} style={{ marginRight: '8px', verticalAlign: 'middle' }} />
-              Date of Birth
-            </label>
-            <input
-              id="dateOfBirth"
-              name="dateOfBirth"
-              type="date"
-              value={form.dateOfBirth}
-              onChange={handleChange}
-              required
-              max={maxBirthDate}
-            />
-          </div>
+            <div className="sync-field">
+              <label htmlFor="dateOfBirth">Date of Birth</label>
+              <div className="sync-input-wrapper">
+                <Calendar size={18} className="sync-input-icon" />
+                <input
+                  id="dateOfBirth"
+                  name="dateOfBirth"
+                  type="date"
+                  value={form.dateOfBirth}
+                  onChange={handleChange}
+                  required
+                  max={maxBirthDate}
+                />
+              </div>
+            </div>
 
-          <div className="field modern-field">
-            <label htmlFor="gender">Gender</label>
-            <select id="gender" name="gender" value={form.gender} onChange={handleChange}>
-              <option value="">Select gender</option>
-              <option value="male">Male</option>
-              <option value="female">Female</option>
-              <option value="others">Others</option>
-            </select>
-          </div>
+            <div className="sync-field">
+              <label htmlFor="gender">Gender</label>
+              <div className="sync-input-wrapper">
+                <select id="gender" name="gender" value={form.gender} onChange={handleChange}>
+                  <option value="">Select gender</option>
+                  <option value="male">Male</option>
+                  <option value="female">Female</option>
+                  <option value="others">Others</option>
+                </select>
+              </div>
+            </div>
 
-          <div className="field modern-field">
-            <label htmlFor="cccd">
-              <CreditCard size={16} style={{ marginRight: '8px', verticalAlign: 'middle' }} />
-              CCCD
-            </label>
-            <input id="cccd" name="cccd" value={form.cccd} onChange={handleChange} required placeholder="Enter your CCCD" />
-          </div>
-        </div>
-
-        <h2 className="section-title">Password</h2>
-        <div className="form-grid">
-          <div className="field modern-field">
-            <label htmlFor="password">
-              <Lock size={16} style={{ marginRight: '8px', verticalAlign: 'middle' }} />
-              Password
-            </label>
-            <div className="password-input-wrapper">
-              <input
-                id="password"
-                name="password"
-                type={showPassword ? 'text' : 'password'}
-                value={form.password}
-                onChange={handleChange}
-                required
-                minLength={6}
-                placeholder="Enter a password (at least 6 characters)"
-              />
-              <button
-                type="button"
-                className="password-toggle"
-                onClick={() => setShowPassword(!showPassword)}
-                title={showPassword ? 'Hide password' : 'Show password'}
-              >
-                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-              </button>
+            <div className="sync-field">
+              <label htmlFor="cccd">CCCD</label>
+              <div className="sync-input-wrapper">
+                <CreditCard size={18} className="sync-input-icon" />
+                <input id="cccd" name="cccd" value={form.cccd} onChange={handleChange} required placeholder="Enter your CCCD" />
+              </div>
             </div>
           </div>
 
-          <div className="field modern-field">
-            <label htmlFor="confirmPassword">
-              <Lock size={16} style={{ marginRight: '8px', verticalAlign: 'middle' }} />
-              Confirm Password
-            </label>
-            <div className="password-input-wrapper">
-              <input
-                id="confirmPassword"
-                name="confirmPassword"
-                type={showConfirmPassword ? 'text' : 'password'}
-                value={form.confirmPassword}
-                onChange={handleChange}
-                required
-                minLength={6}
-                placeholder="Confirm your password"
-              />
-              <button
-                type="button"
-                className="password-toggle"
-                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                title={showConfirmPassword ? 'Hide password' : 'Show password'}
-              >
-                {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-              </button>
+          <h3 className="sync-section-title">Password</h3>
+          
+          <div className="sync-form-grid">
+            <div className="sync-field">
+              <label htmlFor="password">Password</label>
+              <div className="sync-input-wrapper">
+                <Lock size={18} className="sync-input-icon" />
+                <input
+                  id="password"
+                  name="password"
+                  type={showPassword ? 'text' : 'password'}
+                  value={form.password}
+                  onChange={handleChange}
+                  required
+                  minLength={6}
+                  placeholder="At least 6 characters"
+                />
+                <button
+                  type="button"
+                  className="sync-password-toggle"
+                  onClick={() => setShowPassword(!showPassword)}
+                  title={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+            </div>
+
+            <div className="sync-field">
+              <label htmlFor="confirmPassword">Confirm Password</label>
+              <div className="sync-input-wrapper">
+                <Lock size={18} className="sync-input-icon" />
+                <input
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  value={form.confirmPassword}
+                  onChange={handleChange}
+                  required
+                  minLength={6}
+                  placeholder="Confirm your password"
+                />
+                <button
+                  type="button"
+                  className="sync-password-toggle"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  title={showConfirmPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="actions-row">
           <button
-            className={`button button-primary button-large ${submitting ? 'button-loading' : ''}`}
+            className={`button button-primary sync-submit-btn ${submitting ? 'button-loading' : ''}`}
             type="submit"
             disabled={submitting}
+            style={{ marginTop: '1.5rem' }}
           >
-            <UserPlus size={20} style={{ marginRight: '8px', verticalAlign: 'middle' }} />
+            <UserPlus size={20} style={{ marginRight: '8px' }} />
             {submitting ? 'Creating account...' : 'Register'}
           </button>
-        </div>
 
-        <div className="auth-card-footer">
-          <Link className="auth-link" to="/login">Back to login</Link>
-        </div>
-      </form>
+          <div className="sync-auth-footer">
+            Already have an account? <Link to="/login">Sign in</Link>
+          </div>
+        </form>
+      </div>
 
       <style>{`
-        .modern-auth-card {
-          padding: 2.5rem;
-          border-radius: 16px;
-          box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
-        }
-        .auth-card-header {
-          text-align: center;
-          margin-bottom: 2rem;
-        }
-        .auth-card-icon {
-          width: 80px;
-          height: 80px;
-          margin: 0 auto 1rem;
-          border-radius: 50%;
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: white;
-        }
-        .auth-card-header h1 {
-          margin: 0 0 0.5rem 0;
-          font-size: 1.8rem;
-          color: #333;
-        }
-        .auth-card-subtitle {
-          margin: 0;
-          color: #666;
-          font-size: 1rem;
-        }
-        .section-title {
-          margin: 2rem 0 1rem 0;
-          font-size: 1.3rem;
-          color: #333;
-          padding-bottom: 0.5rem;
-          border-bottom: 2px solid #e0e0e0;
-        }
-        .modern-field label {
-          display: flex;
-          align-items: center;
-          font-weight: 600;
-          margin-bottom: 0.5rem;
-          color: #333;
-        }
-        .modern-field input,
-        .modern-field textarea {
-          padding: 0.875rem 1rem;
-          border: 2px solid #e0e0e0;
-          border-radius: 8px;
-          font-size: 1rem;
-          transition: border-color 0.3s ease;
-        }
-        .modern-field input:focus,
-        .modern-field textarea:focus {
-          border-color: #667eea;
-          outline: none;
-        }
-        .password-input-wrapper {
-          position: relative;
-        }
-        .password-input-wrapper input {
+        .sync-auth-card {
+          max-width: 440px;
           width: 100%;
-          padding-right: 3rem;
+          padding: 3rem 2.5rem;
+          border-radius: 20px;
+          background: #ffffff;
+          box-shadow: 0 15px 35px rgba(0, 0, 0, 0.05), 0 5px 15px rgba(0, 0, 0, 0.03);
+          border: 1px solid rgba(0, 0, 0, 0.05);
+          margin: auto;
         }
-        .password-toggle {
-          position: absolute;
-          right: 0.75rem;
-          top: 50%;
-          transform: translateY(-50%);
-          background: none;
-          border: none;
-          cursor: pointer;
-          color: #666;
+
+        .sync-auth-card-wide {
+          max-width: 700px;
+        }
+
+        .sync-auth-header {
+          text-align: center;
+          margin-bottom: 2.5rem;
+        }
+
+        .sync-auth-icon {
+          width: 64px;
+          height: 64px;
+          margin: 0 auto 1.25rem;
+          background: rgba(13, 110, 253, 0.1);
+          color: #0d6efd;
+          border-radius: 18px;
           display: flex;
           align-items: center;
           justify-content: center;
-          padding: 0.25rem;
         }
-        .password-toggle:hover {
-          color: #667eea;
+
+        .sync-auth-header h2 {
+          font-size: 1.75rem;
+          font-weight: 700;
+          color: #1e293b;
+          margin: 0 0 0.5rem;
         }
-        .button-large {
-          padding: 1rem 2rem;
+
+        .sync-auth-header p {
+          color: #64748b;
+          margin: 0;
+          font-size: 0.95rem;
+        }
+
+        .sync-auth-form {
+          display: flex;
+          flex-direction: column;
+        }
+
+        .sync-section-title {
           font-size: 1.1rem;
           font-weight: 600;
-          border-radius: 8px;
+          color: #1e293b;
+          margin: 1.5rem 0 1rem;
+          border-bottom: 2px solid #f1f5f9;
+          padding-bottom: 0.5rem;
         }
-        .auth-card-footer {
-          margin-top: 1.5rem;
-          padding-top: 1.5rem;
-          border-top: 1px solid #e0e0e0;
+
+        .sync-form-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 1.25rem;
+        }
+
+        @media (max-width: 650px) {
+          .sync-form-grid {
+            grid-template-columns: 1fr;
+          }
+        }
+
+        .sync-field label {
+          display: block;
+          font-weight: 600;
+          color: #334155;
+          margin-bottom: 0.5rem;
+          font-size: 0.9rem;
+        }
+
+        .sync-input-wrapper {
+          position: relative;
+          display: flex;
+          align-items: center;
+        }
+
+        .sync-input-icon {
+          position: absolute;
+          left: 1rem;
+          color: #94a3b8;
+          pointer-events: none;
+        }
+
+        .sync-input-wrapper input,
+        .sync-input-wrapper select {
+          width: 100%;
+          padding: 0.875rem 1rem 0.875rem 2.75rem;
+          border: 1.5px solid #e2e8f0;
+          border-radius: 12px;
+          font-size: 1rem;
+          color: #1e293b;
+          background: #f8fafc;
+          transition: all 0.2s ease;
+        }
+
+        .sync-input-wrapper select {
+          appearance: none;
+          padding-left: 1rem;
+        }
+
+        .sync-input-wrapper input:focus,
+        .sync-input-wrapper select:focus {
+          border-color: #0d6efd;
+          background: #ffffff;
+          outline: none;
+          box-shadow: 0 0 0 4px rgba(13, 110, 253, 0.1);
+        }
+
+        .sync-input-wrapper input::placeholder {
+          color: #cbd5e1;
+        }
+
+        .sync-password-toggle {
+          position: absolute;
+          right: 0.5rem;
+          background: none;
+          border: none;
+          color: #94a3b8;
+          padding: 0.5rem;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          transition: color 0.2s;
+        }
+
+        .sync-password-toggle:hover {
+          color: #0d6efd;
+        }
+
+        .sync-submit-btn {
+          width: 100%;
+          padding: 0.875rem;
+          border-radius: 12px;
+          font-size: 1.05rem;
+          margin-top: 0.5rem;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+        }
+
+        .sync-auth-footer {
+          margin-top: 1rem;
           text-align: center;
+          font-size: 0.9rem;
+          color: #64748b;
         }
-        .auth-link {
-          color: #667eea;
+
+        .sync-auth-footer a {
+          color: #0d6efd;
+          font-weight: 600;
           text-decoration: none;
-          font-weight: 500;
-          transition: color 0.3s ease;
+          margin-left: 0.25rem;
         }
-        .auth-link:hover {
-          color: #764ba2;
+
+        .sync-auth-footer a:hover {
           text-decoration: underline;
         }
       `}</style>

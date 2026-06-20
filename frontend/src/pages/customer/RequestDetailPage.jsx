@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { MessageCircle, Image as ImageIcon, CreditCard, Clock, FileText, CheckCircle, ArrowRight, ChevronRight, MapPin, Tag } from 'lucide-react';
+import { MessageCircle, Image as ImageIcon, CreditCard, Clock, FileText, CheckCircle, ArrowRight, ChevronRight, MapPin, Tag, Star } from 'lucide-react';
 import { requestApi } from '../../api/requestApi';
 import { companyApi } from '../../api/companyApi';
 import { getApiError } from '../../api/client';
@@ -421,11 +421,31 @@ export default function RequestDetailPage() {
 
   useEffect(() => {
     if (isStaff) {
-      companyApi.getMyStaffStatus().then(status => {
-        if (status.latitude && status.longitude) {
-           setStaffLocation({ latitude: status.latitude, longitude: status.longitude });
-        }
-      }).catch(console.error);
+      const fetchDbLocation = () => {
+        companyApi.getMyStaffStatus().then(status => {
+          if (status.latitude && status.longitude) {
+             setStaffLocation({ latitude: status.latitude, longitude: status.longitude });
+          }
+        }).catch(console.error);
+      };
+
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            setStaffLocation({
+              latitude: position.coords.latitude,
+              longitude: position.coords.longitude,
+            });
+          },
+          (error) => {
+            console.warn('Geolocation failed, falling back to DB location', error);
+            fetchDbLocation();
+          },
+          { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+        );
+      } else {
+        fetchDbLocation();
+      }
     }
   }, [isStaff]);
 
@@ -515,8 +535,10 @@ export default function RequestDetailPage() {
       await action();
       setNotice(successMessage);
       await refreshData({ silent: true, force: true });
+      return true;
     } catch (err) {
       setError(getApiError(err));
+      return false;
     } finally {
       setBusyAction('');
     }
@@ -610,16 +632,19 @@ export default function RequestDetailPage() {
     if (!pendingPayment) {
       return;
     }
-    await runAction(
+    const success = await runAction(
       'pay',
       () => requestApi.pay(pendingPayment.id, { paymentStatus: paymentForm.paymentStatus }),
       'Payment updated successfully.',
     );
+    if (success && paymentForm.paymentStatus === 'PAID') {
+      setActiveModal('review');
+    }
   };
 
   const createReview = async (event) => {
     event.preventDefault();
-    await runAction(
+    const success = await runAction(
       'review',
       async () => {
         await requestApi.createReview(id, {
@@ -630,6 +655,9 @@ export default function RequestDetailPage() {
       },
       'Review submitted successfully.',
     );
+    if (success) {
+      setActiveModal(null);
+    }
   };
 
   if (loading) {
@@ -814,40 +842,49 @@ export default function RequestDetailPage() {
               </div>
 
               {/* Payments Panel */}
-              <div>
-                <h3 style={{ fontSize: '1.1rem', color: '#0f172a', fontWeight: 700, marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <CreditCard size={20} color="#10b981" /> Payments
-                </h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              <div style={{ background: '#fff', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)', overflow: 'hidden' }}>
+                <div style={{ padding: '1.5rem', background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                  <h3 style={{ fontSize: '1.25rem', color: '#0f172a', fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <CreditCard size={24} color="#10b981" /> Payment Details
+                  </h3>
+                </div>
+                
+                <div style={{ padding: '2rem', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
                   {(detail.payments || []).length === 0 ? (
-                    <div style={{ background: '#fff', padding: '3rem 2rem', borderRadius: '16px', border: '1px dashed #cbd5e1', textAlign: 'center', color: '#94a3b8' }}>
-                      <CreditCard size={48} style={{ margin: '0 auto 1rem auto', opacity: 0.5 }} />
-                      <p style={{ margin: 0, fontSize: '1.05rem' }}>No payment record has been created yet.</p>
+                    <div style={{ background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)', padding: '3rem 2rem', borderRadius: '12px', border: '1px dashed #cbd5e1', textAlign: 'center', color: '#64748b' }}>
+                      <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem auto' }}>
+                        <CreditCard size={32} color="#94a3b8" />
+                      </div>
+                      <p style={{ margin: 0, fontSize: '1.1rem', fontWeight: 500, color: '#475569' }}>No payment records yet</p>
+                      <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.95rem' }}>Payment details will appear here once created.</p>
                     </div>
                   ) : (
                     detail.payments.map((payment) => (
-                      <div key={payment.id} style={{ background: '#fff', padding: '1.5rem', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)', position: 'relative', overflow: 'hidden' }}>
-                        <div style={{ position: 'absolute', top: '1.5rem', right: '1.5rem' }}>
+                      <div key={payment.id} style={{ background: '#fff', padding: '1.5rem', borderRadius: '12px', border: '1px solid #e2e8f0', position: 'relative', overflow: 'hidden' }}>
+                        <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: '4px', background: payment.paymentStatus === 'PAID' ? '#10b981' : '#f59e0b' }}></div>
+                        
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem', paddingLeft: '1rem' }}>
+                          <div>
+                            <div style={{ color: '#64748b', fontSize: '0.85rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.25rem' }}>Total Amount</div>
+                            <div style={{ color: '#0f172a', fontWeight: 800, fontSize: '2rem', letterSpacing: '-0.025em' }}>{formatCurrency(payment.amount)}</div>
+                          </div>
                           <StatusBadge value={payment.paymentStatus} />
                         </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                          <div style={{ paddingRight: '100px' }}>
-                            <div style={{ color: '#64748b', fontSize: '0.85rem', fontWeight: 600, textTransform: 'uppercase', marginBottom: '0.25rem' }}>Total Amount</div>
-                            <div style={{ color: '#0f172a', fontWeight: 800, fontSize: '1.75rem', letterSpacing: '-0.025em' }}>{formatCurrency(payment.amount)}</div>
+                        
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '1.5rem', background: '#f8fafc', padding: '1.25rem', borderRadius: '8px', marginLeft: '1rem' }}>
+                          <div>
+                            <div style={{ color: '#64748b', fontSize: '0.85rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.25rem' }}>Method</div>
+                            <div style={{ color: '#1e293b', fontWeight: 600, fontSize: '1.05rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                              <CreditCard size={16} color="#64748b" /> {payment.paymentMethod}
+                            </div>
                           </div>
-                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '1rem', background: '#f8fafc', padding: '1.25rem', borderRadius: '12px', border: '1px solid #f1f5f9' }}>
-                            <div>
-                              <div style={{ color: '#64748b', fontSize: '0.85rem', fontWeight: 600, textTransform: 'uppercase', marginBottom: '0.25rem' }}>Method</div>
-                              <div style={{ color: '#334155', fontWeight: 600, fontSize: '1.05rem' }}>{payment.paymentMethod}</div>
-                            </div>
-                            <div>
-                              <div style={{ color: '#64748b', fontSize: '0.85rem', fontWeight: 600, textTransform: 'uppercase', marginBottom: '0.25rem' }}>Created</div>
-                              <div style={{ color: '#334155', fontSize: '0.95rem' }}>{formatDateTime(payment.createdAt)}</div>
-                            </div>
-                            <div>
-                              <div style={{ color: '#64748b', fontSize: '0.85rem', fontWeight: 600, textTransform: 'uppercase', marginBottom: '0.25rem' }}>Paid At</div>
-                              <div style={{ color: '#334155', fontSize: '0.95rem' }}>{formatDateTime(payment.paidAt) || '-'}</div>
-                            </div>
+                          <div>
+                            <div style={{ color: '#64748b', fontSize: '0.85rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.25rem' }}>Created At</div>
+                            <div style={{ color: '#334155', fontSize: '0.95rem' }}>{formatDateTime(payment.createdAt)}</div>
+                          </div>
+                          <div>
+                            <div style={{ color: '#64748b', fontSize: '0.85rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.25rem' }}>Paid At</div>
+                            <div style={{ color: '#334155', fontSize: '0.95rem' }}>{formatDateTime(payment.paidAt) || '-'}</div>
                           </div>
                         </div>
                       </div>
@@ -856,37 +893,37 @@ export default function RequestDetailPage() {
 
                   {/* Payment Actions */}
                   {isCustomer && canCustomerCreatePayment ? (
-                    <div style={{ background: '#fff', padding: '1.5rem', borderRadius: '16px', border: '1px dashed #cbd5e1', boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.05)' }}>
-                      <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '1rem', color: '#0f172a' }}>Payment Actions</h4>
-                      <p style={{ margin: '0 0 1.25rem 0', color: '#64748b', fontSize: '0.95rem' }}>
-                        Accepted quote amount: <strong style={{ color: '#0f172a' }}>{acceptedQuote ? formatCurrency(getQuoteAmount(acceptedQuote)) : 'No accepted quote yet'}</strong>
+                    <div style={{ marginTop: '1rem', paddingTop: '2rem', borderTop: '1px solid #e2e8f0' }}>
+                      <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '1.1rem', color: '#0f172a', fontWeight: 600 }}>Create New Payment</h4>
+                      <p style={{ margin: '0 0 1.5rem 0', color: '#64748b', fontSize: '0.95rem' }}>
+                        Agreed amount to pay: <strong style={{ color: '#0369a1', fontSize: '1.05rem', background: '#f0f9ff', padding: '0.2rem 0.5rem', borderRadius: '4px' }}>{acceptedQuote ? formatCurrency(getQuoteAmount(acceptedQuote)) : 'No accepted quote'}</strong>
                       </p>
                       
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem', marginBottom: '1.25rem' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.25rem', marginBottom: '1.5rem' }}>
                         <div className="field">
-                          <label style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 600 }}>Amount</label>
-                          <input value={formatCurrency(getQuoteAmount(acceptedQuote))} disabled style={{ border: '1px solid #cbd5e1', borderRadius: '8px', padding: '0.75rem', background: '#f1f5f9', color: '#64748b' }} />
+                          <label style={{ fontSize: '0.85rem', color: '#475569', fontWeight: 600 }}>Amount</label>
+                          <input value={formatCurrency(getQuoteAmount(acceptedQuote))} disabled style={{ border: '1px solid #cbd5e1', borderRadius: '8px', padding: '0.75rem', background: '#f8fafc', color: '#94a3b8', cursor: 'not-allowed', width: '100%' }} />
                         </div>
                         <div className="field">
-                          <label style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 600 }}>Method</label>
+                          <label style={{ fontSize: '0.85rem', color: '#475569', fontWeight: 600 }}>Payment Method</label>
                           <select
                             value={paymentForm.paymentMethod}
                             onChange={(event) => setPaymentForm((previous) => ({ ...previous, paymentMethod: event.target.value }))}
-                            style={{ border: '1px solid #cbd5e1', borderRadius: '8px', padding: '0.75rem', background: '#fff' }}
+                            style={{ border: '1px solid #94a3b8', borderRadius: '8px', padding: '0.75rem', background: '#fff', color: '#0f172a', cursor: 'pointer', width: '100%' }}
                           >
-                            <option value="CASH">CASH</option>
-                            <option value="BANK_TRANSFER">BANK_TRANSFER</option>
-                            <option value="MOMO">MOMO</option>
-                            <option value="VNPAY">VNPAY</option>
-                            <option value="ZALOPAY">ZALOPAY</option>
+                            <option value="CASH">Cash</option>
+                            <option value="BANK_TRANSFER">Bank Transfer</option>
+                            <option value="MOMO">MoMo</option>
+                            <option value="VNPAY">VNPay</option>
+                            <option value="ZALOPAY">ZaloPay</option>
                           </select>
                         </div>
                         <div className="field">
-                          <label style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 600 }}>Mock Result</label>
+                          <label style={{ fontSize: '0.85rem', color: '#475569', fontWeight: 600 }}>Simulate Result</label>
                           <select
                             value={paymentForm.paymentStatus}
                             onChange={(event) => setPaymentForm((previous) => ({ ...previous, paymentStatus: event.target.value }))}
-                            style={{ border: '1px solid #cbd5e1', borderRadius: '8px', padding: '0.75rem', background: '#fff' }}
+                            style={{ border: '1px solid #94a3b8', borderRadius: '8px', padding: '0.75rem', background: '#fff', color: '#0f172a', cursor: 'pointer', width: '100%' }}
                           >
                             <option value="PAID">PAID</option>
                             <option value="FAILED">FAILED</option>
@@ -894,15 +931,15 @@ export default function RequestDetailPage() {
                         </div>
                       </div>
 
-                      <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                      <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
                         <button
                           className="button button-secondary"
                           type="button"
                           disabled={busyAction === 'create-payment' || Boolean(pendingPayment)}
                           onClick={createPayment}
-                          style={{ padding: '0.75rem 1.25rem', borderRadius: '999px', fontWeight: 600 }}
+                          style={{ padding: '0.75rem 1.5rem', borderRadius: '8px', fontWeight: 600, flex: 1, minWidth: '200px' }}
                         >
-                          {busyAction === 'create-payment' ? 'Creating...' : 'Create record'}
+                          {busyAction === 'create-payment' ? 'Creating...' : 'Create Payment Record'}
                         </button>
                         {pendingPayment ? (
                           <button
@@ -910,9 +947,9 @@ export default function RequestDetailPage() {
                             type="button"
                             disabled={busyAction === 'pay'}
                             onClick={payNow}
-                            style={{ padding: '0.75rem 1.25rem', borderRadius: '999px', fontWeight: 600 }}
+                            style={{ padding: '0.75rem 1.5rem', borderRadius: '8px', fontWeight: 600, flex: 1, minWidth: '200px' }}
                           >
-                            {busyAction === 'pay' ? 'Processing...' : 'Pay pending record'}
+                            {busyAction === 'pay' ? 'Processing...' : 'Pay Pending Record'}
                           </button>
                         ) : null}
                       </div>
@@ -1002,6 +1039,58 @@ export default function RequestDetailPage() {
                 </div>
               </div>
 
+              {/* Review Section */}
+              {(detail.review || canLeaveReview) && (
+                <div>
+                  <h3 style={{ fontSize: '1.1rem', color: '#0f172a', fontWeight: 700, marginBottom: '1rem' }}>Review</h3>
+                  <div style={{ background: '#fff', padding: '1.5rem', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.05)' }}>
+                    {detail.review ? (
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+                          <div style={{ display: 'flex', gap: '0.25rem' }}>
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <Star
+                                key={star}
+                                size={24}
+                                fill={star <= detail.review.ratingScore ? '#f59e0b' : 'none'}
+                                color={star <= detail.review.ratingScore ? '#f59e0b' : '#cbd5e1'}
+                                strokeWidth={1.5}
+                              />
+                            ))}
+                          </div>
+                          <span style={{ fontSize: '1rem', fontWeight: 600, color: '#f59e0b' }}>
+                            {detail.review.ratingScore}/5 
+                            <span style={{ marginLeft: '0.5rem', fontSize: '0.9rem', color: '#64748b', fontWeight: 500 }}>
+                               ({ { 1: 'Terrible', 2: 'Poor', 3: 'Average', 4: 'Good', 5: 'Excellent!' }[detail.review.ratingScore] })
+                            </span>
+                          </span>
+                        </div>
+                        {detail.review.comment && (
+                          <div style={{ padding: '1rem', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0', color: '#334155', fontSize: '1.05rem', lineHeight: '1.6', marginBottom: '1rem' }}>
+                            "{detail.review.comment}"
+                          </div>
+                        )}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#94a3b8', fontSize: '0.85rem' }}>
+                          <Clock size={14} />
+                          <span>Submitted on {formatDateTime(detail.review.createdAt)}</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div style={{ textAlign: 'center' }}>
+                        <p style={{ color: '#64748b', marginBottom: '1rem' }}>You haven't reviewed this service yet.</p>
+                        <button 
+                          onClick={() => setActiveModal('review')}
+                          className="button button-primary"
+                          style={{ padding: '0.5rem 1.5rem', borderRadius: '8px', fontWeight: 600 }}
+                        >
+                          Leave a Review
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
             </div>
           </div>
 
@@ -1055,194 +1144,165 @@ export default function RequestDetailPage() {
       </Modal>
 
       {/* Finances Modal */}
-      <Modal isOpen={activeModal === 'finances'} onClose={() => setActiveModal(null)} title="Deal Price Negotiation" size="large">
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+      <Modal isOpen={activeModal === 'finances'} onClose={() => setActiveModal(null)} title="Deal Price Negotiation" size="xl">
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2rem', alignItems: 'flex-start' }}>
           
-          {/* Quotes Section */}
-          <div className="card card-muted" style={{ margin: 0 }}>
-            <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Tag size={18} /> Current Deal</h3>
-            <div className="info-grid">
-              <div className="info-item">
-                <span>Initial Estimated Price</span>
-                <strong>{formatCurrency(latestQuote?.estimatedAmount)}</strong>
-              </div>
-              <div className="info-item">
-                <span>Deal Price</span>
-                <strong>{formatCurrency(getQuoteAmount(latestQuote))}</strong>
-              </div>
-              <div className="info-item">
-                <span>Status</span>
-                <strong>{latestPriceStatus}</strong>
-              </div>
-            </div>
-            <div className="field">
-              <label>Staff Note</label>
-              <textarea value={latestQuote?.note || 'No deal price note yet.'} disabled />
-            </div>
-            {latestQuote?.customerNote ? (
-              <div className="field">
-                <label>Customer Rejection Reason</label>
-                <textarea value={latestQuote.customerNote} disabled style={{ background: '#fef2f2', borderColor: '#fecaca', color: '#991b1b' }} />
-              </div>
-            ) : null}
-            {canCustomerActOnPrice ? (
-              <div style={{ marginTop: '1rem', padding: '1rem', background: '#fff', borderRadius: '8px', border: '1px dashed #cbd5e1' }}>
-                <div className="field">
-                  <label>Reason if not accepted</label>
-                  <input
-                    value={rejectForm.reason}
-                    onChange={(event) => setRejectForm({ reason: event.target.value })}
-                    placeholder="Example: Price is too high, want to negotiate again"
-                  />
+          {/* Main Left Column */}
+          <div style={{ flex: '1 1 400px', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            
+            {/* Quotes Section */}
+            <div style={{ 
+              background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)', 
+              borderRadius: '12px', 
+              padding: '1.5rem', 
+              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
+              border: '1px solid #bae6fd' 
+            }}>
+              <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#0369a1', margin: '0 0 1rem 0' }}>
+                <Tag size={20} /> Current Deal
+              </h3>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+                <div style={{ background: '#fff', padding: '1rem', borderRadius: '8px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
+                  <span style={{ fontSize: '0.85rem', color: '#64748b', display: 'block', marginBottom: '0.25rem' }}>Initial Estimate</span>
+                  <strong style={{ fontSize: '1.1rem', color: '#334155' }}>{formatCurrency(detail?.estimatedQuotation?.estimatedAmount ?? detail?.quotes?.[0]?.estimatedAmount)}</strong>
                 </div>
-                <div className="actions-row" style={{ marginTop: '1rem' }}>
+                <div style={{ background: '#fff', padding: '1rem', borderRadius: '8px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)', border: '1px solid #38bdf8' }}>
+                  <span style={{ fontSize: '0.85rem', color: '#0284c7', display: 'block', marginBottom: '0.25rem', fontWeight: 600 }}>Deal Price</span>
+                  <strong style={{ fontSize: '1.3rem', color: '#0369a1' }}>{formatCurrency(getQuoteAmount(latestQuote))}</strong>
+                </div>
+                <div style={{ background: '#fff', padding: '1rem', borderRadius: '8px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
+                  <span style={{ fontSize: '0.85rem', color: '#64748b', display: 'block', marginBottom: '0.25rem' }}>Status</span>
+                  <strong style={{ fontSize: '0.95rem', color: '#334155' }}>{latestPriceStatus}</strong>
+                </div>
+              </div>
+              
+              {latestQuote?.note && (
+                <div style={{ background: 'rgba(255,255,255,0.6)', padding: '1rem', borderRadius: '8px', marginBottom: '1rem' }}>
+                  <strong style={{ fontSize: '0.85rem', color: '#475569', display: 'block', marginBottom: '0.25rem' }}>Staff Note</strong>
+                  <p style={{ margin: 0, color: '#1e293b', fontSize: '0.95rem' }}>{latestQuote.note}</p>
+                </div>
+              )}
+              {latestQuote?.customerNote && (
+                <div style={{ background: '#fef2f2', padding: '1rem', borderRadius: '8px', border: '1px solid #fecaca', marginBottom: '1rem' }}>
+                  <strong style={{ fontSize: '0.85rem', color: '#991b1b', display: 'block', marginBottom: '0.25rem' }}>Customer Rejection Reason</strong>
+                  <p style={{ margin: 0, color: '#7f1d1d', fontSize: '0.95rem' }}>{latestQuote.customerNote}</p>
+                </div>
+              )}
+              {canCustomerActOnPrice ? (
+                <div style={{ marginTop: '1rem', padding: '1rem', background: '#fff', borderRadius: '8px', border: '1px dashed #cbd5e1' }}>
+                  <div className="field">
+                    <label style={{ fontSize: '0.9rem', color: '#475569' }}>Reason if not accepted</label>
+                    <input
+                      value={rejectForm.reason}
+                      onChange={(event) => setRejectForm({ reason: event.target.value })}
+                      placeholder="Example: Price is too high..."
+                      style={{ padding: '0.6rem', borderRadius: '6px', border: '1px solid #cbd5e1', width: '100%' }}
+                    />
+                  </div>
+                  <div className="actions-row" style={{ marginTop: '1rem' }}>
+                    <button
+                      className="button button-primary"
+                      type="button"
+                      disabled={busyAction === 'price-accept'}
+                      onClick={acceptPrice}
+                      style={{ flex: 1, padding: '0.6rem', fontWeight: 600 }}
+                    >
+                      {busyAction === 'price-accept' ? 'Accepting...' : 'Accept price'}
+                    </button>
+                    <button
+                      className="button button-secondary"
+                      type="button"
+                      disabled={busyAction === 'price-reject'}
+                      onClick={rejectPrice}
+                      style={{ flex: 1, padding: '0.6rem', fontWeight: 600, borderColor: '#ef4444', color: '#ef4444', background: '#fef2f2' }}
+                    >
+                      {busyAction === 'price-reject' ? 'Rejecting...' : 'Reject & New Deal'}
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+
+            {/* Update Deal Price Form */}
+            {canManageDealPrice ? (
+              <form onSubmit={updateDealPrice} style={{ background: '#fff', borderRadius: '12px', padding: '1.5rem', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)', border: '1px solid #e2e8f0' }}>
+                <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: '0 0 1.5rem 0', color: '#1e293b' }}><Tag size={18} /> Update Deal Price</h3>
+                <div className="form-grid">
+                  <div className="field">
+                    <label style={{ fontWeight: 600, color: '#475569', fontSize: '0.9rem' }}>Deal Price (VND)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="1000"
+                      value={dealPriceForm.dealPrice}
+                      onChange={(event) => setDealPriceForm((previous) => ({ ...previous, dealPrice: event.target.value }))}
+                      placeholder="300000"
+                      style={{ padding: '0.75rem', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '1rem', width: '100%' }}
+                    />
+                  </div>
+                  <div className="field">
+                    <label style={{ fontWeight: 600, color: '#475569', fontSize: '0.9rem' }}>Deal Note</label>
+                    <input
+                      value={dealPriceForm.note}
+                      onChange={(event) => setDealPriceForm((previous) => ({ ...previous, note: event.target.value }))}
+                      placeholder="Price includes towing fee..."
+                      style={{ padding: '0.75rem', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '1rem', width: '100%' }}
+                    />
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
                   <button
                     className="button button-primary"
-                    type="button"
-                    disabled={busyAction === 'price-accept'}
-                    onClick={acceptPrice}
-                    style={{ flex: 1 }}
+                    type="submit"
+                    disabled={busyAction === 'deal-price' || !dealPriceForm.dealPrice || Number(dealPriceForm.dealPrice) <= 0}
+                    style={{ flex: 1, padding: '0.75rem', fontSize: '1rem', fontWeight: 600, borderRadius: '8px' }}
                   >
-                    {busyAction === 'price-accept' ? 'Accepting...' : 'Accept price'}
+                    {busyAction === 'deal-price' ? 'Updating...' : 'Update deal price'}
                   </button>
                   <button
-                    className="button button-secondary"
+                    className="button button-danger"
                     type="button"
-                    disabled={busyAction === 'price-reject'}
-                    onClick={rejectPrice}
-                    style={{ flex: 1, borderColor: '#ef4444', color: '#ef4444', background: '#fef2f2' }}
+                    disabled={busyAction === 'status'}
+                    onClick={async () => {
+                      if (window.confirm('Are you sure you want to cancel this request due to failed negotiation?')) {
+                        await runAction('status', () => requestApi.updateStatus(id, { status: 'CANCELED', note: 'Negotiation failed' }), 'Request canceled successfully.');
+                        setActiveModal(null);
+                      }
+                    }}
+                    style={{ flex: 1, padding: '0.75rem', fontSize: '1rem', fontWeight: 600, borderRadius: '8px', background: '#fef2f2', color: '#ef4444', border: '1px solid #fecaca' }}
                   >
-                    {busyAction === 'price-reject' ? 'Rejecting...' : 'Reject / Request new deal'}
+                    Cancel Request
                   </button>
                 </div>
-              </div>
+              </form>
             ) : null}
+
+            {/* Review form moved out of Finances Modal */}
           </div>
 
+          {/* Right Column: Deal History */}
           {detail?.quotes?.length > 1 && (
-            <div className="card card-muted" style={{ margin: 0 }}>
-              <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Clock size={18} /> Deal History</h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div style={{ flex: '1 1 300px', background: '#fff', borderRadius: '12px', padding: '1.5rem', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)', border: '1px solid #e2e8f0', maxHeight: '700px', overflowY: 'auto' }}>
+              <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: '0 0 1.5rem 0', color: '#1e293b' }}><Clock size={18} /> Deal History</h3>
+              <div style={{ position: 'relative', paddingLeft: '1rem', borderLeft: '2px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                 {detail.quotes.slice(1).map((quote, index) => (
-                  <div key={quote.id || index} style={{ padding: '1rem', background: '#fff', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                      <strong style={{ fontSize: '1.1rem', color: '#0f172a' }}>{formatCurrency(getQuoteAmount(quote))}</strong>
-                      <span className="muted-line" style={{ fontSize: '0.875rem' }}>{formatDateTime(quote.createdAt)}</span>
+                  <div key={quote.id || index} style={{ position: 'relative' }}>
+                    <div style={{ position: 'absolute', left: '-1.35rem', top: '0.25rem', width: '0.75rem', height: '0.75rem', borderRadius: '50%', background: '#cbd5e1', border: '2px solid #fff' }}></div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.25rem' }}>
+                      <strong style={{ fontSize: '1.1rem', color: quote.status === 'ACCEPTED' ? '#10b981' : '#0f172a', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        {formatCurrency(getQuoteAmount(quote))}
+                        {quote.status === 'ACCEPTED' && <CheckCircle size={16} color="#10b981" title="Agreed Price" />}
+                      </strong>
+                      <span style={{ fontSize: '0.8rem', color: '#64748b' }}>{formatDateTime(quote.createdAt)}</span>
                     </div>
-                    <div style={{ marginBottom: '0.5rem', display: 'flex' }}>
-                      <span style={{ fontSize: '0.85rem', fontWeight: 600, padding: '2px 8px', background: '#f1f5f9', color: '#475569', borderRadius: '4px' }}>
-                        {getPriceStatusLabel(quote, false, detail?.status)}
-                      </span>
-                    </div>
-                    {quote.note && (
-                      <div className="muted-line" style={{ fontSize: '0.9rem', marginBottom: '0.25rem' }}>
-                        <strong>Staff Note:</strong> {quote.note}
-                      </div>
-                    )}
-                    {quote.customerNote && (
-                      <div className="muted-line" style={{ fontSize: '0.9rem', color: '#991b1b' }}>
-                        <strong>Customer Reason:</strong> {quote.customerNote}
-                      </div>
-                    )}
+                    {quote.note && <div style={{ fontSize: '0.85rem', color: '#475569', marginTop: '0.25rem' }}><strong>Staff:</strong> {quote.note}</div>}
+                    {quote.customerNote && <div style={{ fontSize: '0.85rem', color: '#991b1b', marginTop: '0.25rem' }}><strong>Customer:</strong> {quote.customerNote}</div>}
                   </div>
                 ))}
               </div>
             </div>
           )}
 
-          {canManageDealPrice ? (
-            <form className="card card-muted" style={{ margin: 0 }} onSubmit={updateDealPrice}>
-              <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Tag size={18} /> Update Deal Price</h3>
-              <div className="form-grid">
-                <div className="field">
-                  <label>Deal Price</label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="1000"
-                    value={dealPriceForm.dealPrice}
-                    onChange={(event) => setDealPriceForm((previous) => ({ ...previous, dealPrice: event.target.value }))}
-                    placeholder="300000"
-                  />
-                </div>
-                <div className="field">
-                  <label>Deal Note</label>
-                  <input
-                    value={dealPriceForm.note}
-                    onChange={(event) => setDealPriceForm((previous) => ({ ...previous, note: event.target.value }))}
-                    placeholder="Price includes towing fee and night surcharge"
-                  />
-                </div>
-              </div>
-              <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>
-                <button
-                  className="button button-primary"
-                  type="submit"
-                  disabled={busyAction === 'deal-price' || !dealPriceForm.dealPrice || Number(dealPriceForm.dealPrice) <= 0}
-                  style={{ flex: 1 }}
-                >
-                  {busyAction === 'deal-price' ? 'Updating...' : 'Update deal price'}
-                </button>
-                <button
-                  className="button button-danger"
-                  type="button"
-                  disabled={busyAction === 'status'}
-                  onClick={async () => {
-                    if (window.confirm('Are you sure you want to cancel this request due to failed negotiation?')) {
-                      await runAction('status', () => requestApi.updateStatus(id, { status: 'CANCELED', note: 'Negotiation failed' }), 'Request canceled successfully.');
-                      setActiveModal(null);
-                    }
-                  }}
-                  style={{ flex: 1, background: '#fef2f2', color: '#ef4444', border: '1px solid #fecaca' }}
-                >
-                  Cancel Request
-                </button>
-              </div>
-            </form>
-          ) : null}
-
-          {/* Review Section */}
-          {detail.review ? (
-            <div className="card card-muted" style={{ margin: 0 }}>
-              <h3>Review</h3>
-              <p><strong>Rating:</strong> {detail.review.ratingScore}/5</p>
-              <p><strong>Comment:</strong> {detail.review.comment || 'No comment provided'}</p>
-              <p className="muted-line">Submitted {formatDateTime(detail.review.createdAt)}</p>
-            </div>
-          ) : null}
-
-          {canLeaveReview ? (
-            <form className="card card-muted" style={{ margin: 0 }} onSubmit={createReview}>
-              <h3>Leave Review</h3>
-              <div className="form-grid">
-                <div className="field">
-                  <label>Rating</label>
-                  <select
-                    value={reviewForm.ratingScore}
-                    onChange={(event) => setReviewForm((previous) => ({ ...previous, ratingScore: event.target.value }))}
-                  >
-                    <option value="5">5</option>
-                    <option value="4">4</option>
-                    <option value="3">3</option>
-                    <option value="2">2</option>
-                    <option value="1">1</option>
-                  </select>
-                </div>
-                <div className="field">
-                  <label>Comment</label>
-                  <input
-                    value={reviewForm.comment}
-                    onChange={(event) => setReviewForm((previous) => ({ ...previous, comment: event.target.value }))}
-                    placeholder="Share your rescue experience"
-                  />
-                </div>
-              </div>
-              <button className="button button-primary" type="submit" disabled={busyAction === 'review'}>
-                {busyAction === 'review' ? 'Submitting...' : 'Submit review'}
-              </button>
-            </form>
-          ) : null}
-          
         </div>
       </Modal>
 
@@ -1320,6 +1380,123 @@ export default function RequestDetailPage() {
         customerName={detail.customer?.fullName}
         userRole={user?.roleName}
       />
+
+      {/* Review Modal */}
+      <Modal isOpen={activeModal === 'review'} onClose={() => setActiveModal(null)} title="Feedback" size="medium">
+        <form onSubmit={createReview} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '0.5rem 1rem 1rem 1rem' }}>
+          
+          {/* Avatar */}
+          <div style={{ width: '80px', height: '80px', borderRadius: '50%', backgroundColor: '#e2e8f0', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2.5rem', fontWeight: 'bold', marginBottom: '1rem', boxShadow: '0 4px 10px rgba(0, 0, 0, 0.1)', overflow: 'hidden' }}>
+            {detail.currentAssignment?.staffAvatarUrl ? (
+              <img src={detail.currentAssignment.staffAvatarUrl} alt="Staff" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ) : (
+              (detail.currentAssignment?.staff?.fullName || detail.currentAssignment?.staffName || 'S').charAt(0).toUpperCase()
+            )}
+          </div>
+          
+          {/* Staff & Vehicle */}
+          <h3 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#0f172a', margin: '0 0 0.25rem 0' }}>
+            {detail.currentAssignment?.staff?.fullName || detail.currentAssignment?.staffName || 'Staff'}
+          </h3>
+          <p style={{ fontSize: '0.9rem', color: '#64748b', margin: '0 0 2rem 0' }}>
+            {detail.currentAssignment?.vehicle?.manufacturer ? `${detail.currentAssignment.vehicle.manufacturer} • ` : ''} 
+            {detail.currentAssignment?.vehicle?.plateNumber || 'Rescue Vehicle'}
+          </p>
+
+          {/* Question */}
+          <p style={{ fontSize: '1.1rem', fontWeight: 700, color: '#1e293b', marginBottom: '1rem' }}>
+            How was your rescue experience?
+          </p>
+
+          {/* Stars */}
+          <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '0.5rem' }}>
+            {[1, 2, 3, 4, 5].map((star) => (
+              <button
+                key={star}
+                type="button"
+                onClick={() => setReviewForm((prev) => ({ ...prev, ratingScore: star }))}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '0.25rem',
+                  transition: 'transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                  outline: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.2)'}
+                onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+              >
+                <Star
+                  size={44}
+                  fill={star <= reviewForm.ratingScore ? '#f59e0b' : 'none'}
+                  color={star <= reviewForm.ratingScore ? '#f59e0b' : '#cbd5e1'}
+                  strokeWidth={1.5}
+                />
+              </button>
+            ))}
+          </div>
+
+          {/* Rating Label */}
+          <p style={{ fontSize: '1.05rem', fontWeight: 700, color: '#f59e0b', margin: '0 0 2rem 0', minHeight: '1.5rem' }}>
+            {reviewForm.ratingScore ? (
+               { 1: 'Terrible', 2: 'Poor', 3: 'Average', 4: 'Good', 5: 'Excellent!' }[reviewForm.ratingScore]
+            ) : ''}
+          </p>
+
+          {/* Comment Box */}
+          <div style={{ width: '100%', marginBottom: '1.5rem' }}>
+            <textarea
+              value={reviewForm.comment}
+              onChange={(event) => setReviewForm((previous) => ({ ...previous, comment: event.target.value }))}
+              placeholder="Leave a message for the staff (optional)..."
+              style={{ 
+                width: '100%', 
+                minHeight: '100px', 
+                padding: '1rem', 
+                borderRadius: '12px', 
+                border: '1px solid #e2e8f0', 
+                backgroundColor: '#f8fafc',
+                fontSize: '1rem', 
+                resize: 'none',
+                outline: 'none',
+                transition: 'border-color 0.2s ease, box-shadow 0.2s ease'
+              }}
+              onFocus={(e) => {
+                e.target.style.borderColor = '#2563eb';
+                e.target.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.1)';
+              }}
+              onBlur={(e) => {
+                e.target.style.borderColor = '#e2e8f0';
+                e.target.style.boxShadow = 'none';
+              }}
+            />
+          </div>
+
+          {/* Submit Button */}
+          <button
+            type="submit"
+            className="button button-primary"
+            disabled={busyAction === 'review'}
+            style={{ 
+              width: '100%', 
+              padding: '1rem', 
+              borderRadius: '12px', 
+              fontWeight: 700, 
+              fontSize: '1.1rem',
+              border: 'none',
+              cursor: busyAction === 'review' ? 'not-allowed' : 'pointer',
+              opacity: busyAction === 'review' ? 0.7 : 1,
+              boxShadow: '0 4px 6px rgba(37, 99, 235, 0.2)'
+            }}
+          >
+            {busyAction === 'review' ? 'Submitting...' : 'Submit Feedback'}
+          </button>
+        </form>
+      </Modal>
+
     </>
   );
 }

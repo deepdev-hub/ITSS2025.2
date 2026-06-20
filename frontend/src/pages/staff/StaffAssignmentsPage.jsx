@@ -22,7 +22,7 @@ import { formatDateTime, getAllowedStatusOptions } from '../../utils/requestUi';
 function AssignmentCard({ assignment, onQuickAction, busyAction, activeAssignmentId, setActiveAssignmentId }) {
   const { requestDetail } = assignment;
 
-  const plateNumber = assignment.vehiclePlateNumber || requestDetail?.vehicle?.plateNumber || 'N/A';
+  const requestCode = requestDetail?.requestCode || `REQ-${assignment.requestId}`;
   const customerName = requestDetail?.customer?.fullName || 'N/A';
   const incidentName = requestDetail?.incidentType?.name || 'N/A';
   const location = requestDetail?.location?.fullAddress || 'No location data provided.';
@@ -36,11 +36,11 @@ function AssignmentCard({ assignment, onQuickAction, busyAction, activeAssignmen
       <div className="pac-header" onClick={() => setActiveAssignmentId(isExpanded ? null : assignment.id)}>
         <div className="pac-header-left">
           <div className="pac-icon">
-            <Truck size={24} />
+            <ClipboardList size={24} />
           </div>
           <div className="pac-info-grid">
             <div className="pac-info-item">
-              <h3>{plateNumber}</h3>
+              <h3>{requestCode}</h3>
               <span className="pac-date"><Clock size={14} /> {formatDateTime(assignment.assignedAt)}</span>
             </div>
             <div className="pac-info-item">

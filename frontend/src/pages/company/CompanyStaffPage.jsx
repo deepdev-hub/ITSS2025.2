@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { MapPin, Mail, Phone, Edit2, Trash2, CheckCircle2, UserPlus } from 'lucide-react';
 import { MapContainer, Marker, Popup, TileLayer, Tooltip, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -478,79 +479,100 @@ export default function CompanyStaffPage() {
                 </div>
               </div>
 
-              <div className="table-wrapper">
-                <table>
+              <div className="table-wrapper modern-table-wrapper">
+                <table className="modern-table">
                   <thead>
                     <tr>
-                      <th>Staff</th>
-                      <th>Contact</th>
-                      <th>Job Title</th>
-                      <th>Experience</th>
-                      <th>Location (Lat/Lng)</th>
-                      <th>Status</th>
-                      <th>Quick Status</th>
-                      <th />
+                      <th>Staff Profile</th>
+                      <th>Contact Info</th>
+                      <th>Job Details</th>
+                      <th>Live Location</th>
+                      <th>Status Management</th>
+                      <th className="text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredStaff.length === 0 ? (
                       <tr>
-                        <td colSpan="8">No staff matched the current filters.</td>
+                        <td colSpan="6" className="text-center py-5">
+                          <div className="empty-state">No staff matched the current filters.</div>
+                        </td>
                       </tr>
                     ) : (
                       filteredStaff.map((item) => (
-                        <tr key={item.id}>
-                          <td>
-                            <strong>{item.fullName}</strong>
-                            <div className="muted-line">User #{item.userId || 'N/A'}</div>
-                          </td>
-                          <td>
-                            <div>{item.email || 'No email'}</div>
-                            <div className="muted-line">{item.phone || 'No phone'}</div>
-                          </td>
-                          <td>{item.jobTitle || 'N/A'}</td>
-                          <td>{item.yearsExperience !== null && item.yearsExperience !== undefined ? `${item.yearsExperience} years` : 'N/A'}</td>
-                          <td>
-                            {hasLocation(item) ? (
-                              <>
-                                <div>Lat: {Number(item.currentLatitude).toFixed(5)}</div>
-                                <div className="muted-line">Lng: {Number(item.currentLongitude).toFixed(5)}</div>
-                              </>
-                            ) : (
-                              <span className="muted-line">No location data</span>
-                            )}
-                          </td>
-                          <td><StatusBadge value={item.status} /></td>
-                          <td>
-                            <div className="actions-stack">
-                              <select
-                                value={statusDrafts[item.id] || item.status}
-                                onChange={(event) => setStatusDrafts((previous) => ({
-                                  ...previous,
-                                  [item.id]: event.target.value,
-                                }))}
-                              >
-                                {STAFF_STATUSES.map((status) => (
-                                  <option key={status} value={status}>{status}</option>
-                                ))}
-                              </select>
-                              <button
-                                className="button button-secondary"
-                                type="button"
-                                disabled={actionId === item.id || (statusDrafts[item.id] || item.status) === item.status}
-                                onClick={() => handleQuickStatusUpdate(item)}
-                              >
-                                {actionId === item.id ? 'Updating...' : 'Update status'}
-                              </button>
+                        <tr key={item.id} className="modern-tr">
+                          <td className="staff-cell">
+                            <div className="staff-profile">
+                              <div className="staff-avatar">
+                                {item.fullName.charAt(0).toUpperCase()}
+                              </div>
+                              <div className="staff-info">
+                                <strong>{item.fullName}</strong>
+                                <span className="muted-line">User #{item.userId || 'N/A'}</span>
+                              </div>
                             </div>
                           </td>
-                          <td>
-                            <div className="actions-stack">
-                              <button className="button button-secondary" type="button" onClick={() => handleEdit(item)}>
-                                Open edit
+                          <td className="contact-cell">
+                            <div className="staff-contact-info">
+                              <div className="staff-contact-line" title={item.email}><Mail size={14}/> <span>{item.email || 'No email'}</span></div>
+                              <div className="staff-contact-line"><Phone size={14}/> <span>{item.phone || 'No phone'}</span></div>
+                            </div>
+                          </td>
+                          <td className="job-cell">
+                            <div className="job-info">
+                              <span className="job-title-badge">{item.jobTitle || 'N/A'}</span>
+                              <span className="muted-line">{item.yearsExperience !== null && item.yearsExperience !== undefined ? `${item.yearsExperience} yrs exp` : ''}</span>
+                            </div>
+                          </td>
+                          <td className="location-cell">
+                            {hasLocation(item) ? (
+                              <div className="staff-loc-info">
+                                <div className="loc-icon"><MapPin size={16} /></div>
+                                <div className="staff-loc-coords">
+                                  <span>{Number(item.currentLatitude).toFixed(4)}</span>
+                                  <span className="muted-line">{Number(item.currentLongitude).toFixed(4)}</span>
+                                </div>
+                              </div>
+                            ) : (
+                              <span className="muted-line no-loc">No location</span>
+                            )}
+                          </td>
+                          <td className="status-cell">
+                            <div className="status-update-wrapper">
+                              <StatusBadge value={item.status} />
+                              <div className="quick-status-control">
+                                <select
+                                  className="status-select-minimal"
+                                  value={statusDrafts[item.id] || item.status}
+                                  onChange={(event) => setStatusDrafts((previous) => ({
+                                    ...previous,
+                                    [item.id]: event.target.value,
+                                  }))}
+                                >
+                                  {STAFF_STATUSES.map((status) => (
+                                    <option key={status} value={status}>{status}</option>
+                                  ))}
+                                </select>
+                                {(statusDrafts[item.id] && statusDrafts[item.id] !== item.status) && (
+                                  <button
+                                    className="button-icon-check"
+                                    title="Save Status"
+                                    disabled={actionId === item.id}
+                                    onClick={() => handleQuickStatusUpdate(item)}
+                                  >
+                                    <CheckCircle2 size={18} />
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="actions-cell text-right">
+                            <div className="actions-row">
+                              <button className="icon-btn edit-btn" title="Edit Staff" onClick={() => handleEdit(item)}>
+                                <Edit2 size={16} />
                               </button>
-                              <button className="button button-danger" type="button" disabled={actionId === item.id} onClick={() => removeStaff(item.id)}>
-                                {actionId === item.id ? 'Deleting...' : 'Delete'}
+                              <button className="icon-btn delete-btn" title="Delete Staff" disabled={actionId === item.id} onClick={() => removeStaff(item.id)}>
+                                <Trash2 size={16} />
                               </button>
                             </div>
                           </td>

@@ -1,5 +1,5 @@
-import { Link, NavLink, Outlet } from 'react-router-dom';
-import { Activity, LifeBuoy, Menu, PhoneCall, Power, X } from 'lucide-react';
+import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
+import { Activity, LifeBuoy, Menu, PhoneCall, Power, X, LogOut } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { StaffAvailabilityProvider, useStaffAvailability } from '../../context/StaffAvailabilityContext';
@@ -143,6 +143,7 @@ function StaffStatusControl() {
 
 function AppShellLayout() {
   const { user, logout } = useAuth();
+  const location = useLocation();
   const menuItems = getMenuItems(user?.roleName);
   const notificationsEnabled = ['CUSTOMER', 'RESCUE_STAFF'].includes(user?.roleName);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -150,6 +151,20 @@ function AppShellLayout() {
   useEffect(() => {
     setSidebarOpen(false);
   }, [user?.roleName]);
+
+  const bestMatch = useMemo(() => {
+    let match = null;
+    let maxLen = 0;
+    for (const item of menuItems) {
+      if (location.pathname === item.to || location.pathname.startsWith(item.to + '/')) {
+        if (item.to.length > maxLen) {
+          match = item.to;
+          maxLen = item.to.length;
+        }
+      }
+    }
+    return match;
+  }, [location.pathname, menuItems]);
 
   return (
     <div className="app-shell">
@@ -174,16 +189,17 @@ function AppShellLayout() {
         <nav className="sidebar-nav">
           {menuItems.map((item) => {
             const Icon = getMenuIcon(item.label);
+            const isActive = item.to === bestMatch;
             return (
-              <NavLink
+              <Link
                 key={item.to}
                 to={item.to}
-                className={({ isActive }) => (isActive ? 'sidebar-link active' : 'sidebar-link')}
+                className={isActive ? 'sidebar-link active' : 'sidebar-link'}
                 onClick={() => setSidebarOpen(false)}
               >
                 <Icon size={18} aria-hidden="true" />
                 {item.label}
-              </NavLink>
+              </Link>
             );
           })}
         </nav>
@@ -217,11 +233,12 @@ function AppShellLayout() {
               </div>
             </Link>
           </div>
-          <div className="topbar-actions">
+          <div className="topbar-actions" style={{ gap: '1rem', alignItems: 'center' }}>
             {user?.roleName === 'RESCUE_STAFF' ? <StaffStatusControl /> : null}
             <NotificationBell enabled={notificationsEnabled} />
-            <button className="button button-secondary" type="button" onClick={logout}>
-              Logout
+            <button className="premium-logout-btn" type="button" onClick={logout}>
+              <LogOut size={18} strokeWidth={2.5} />
+              <span>Logout</span>
             </button>
           </div>
         </header>
