@@ -133,9 +133,9 @@ public class RescueRequestServiceImpl implements RescueRequestService {
             throw new ForbiddenException("Only customers can create rescue requests");
         }
 
-        IncidentType incidentType = incidentTypeRepository.findById(request.incidentTypeId())
+        IncidentType incidentType = incidentTypeRepository.findByIdAndIsDeletedFalse(request.incidentTypeId())
                 .orElseThrow(() -> new ResourceNotFoundException("Incident type not found with id: " + request.incidentTypeId()));
-        ServiceType serviceType = request.serviceTypeId() == null ? null : serviceTypeRepository.findById(request.serviceTypeId())
+        ServiceType serviceType = request.serviceTypeId() == null ? null : serviceTypeRepository.findByIdAndIsDeletedFalse(request.serviceTypeId())
                 .orElseThrow(() -> new ResourceNotFoundException("Service type not found with id: " + request.serviceTypeId()));
         CustomerVehicle vehicle = request.vehicleId() == null ? null : customerVehicleRepository.findByIdAndCustomerId(request.vehicleId(), customer.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Vehicle not found with id: " + request.vehicleId()));

@@ -31,6 +31,7 @@ import com.itss.vbas.util.PasswordUtil;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 @Configuration
 public class DataInitializer {
@@ -49,12 +50,30 @@ public class DataInitializer {
             RescueStaffRepository rescueStaffRepository,
             RescueVehicleRepository rescueVehicleRepository,
             IncidentTypeRepository incidentTypeRepository,
-            ServiceTypeRepository serviceTypeRepository
+            ServiceTypeRepository serviceTypeRepository,
+            JdbcTemplate jdbcTemplate
     ) {
         return args -> {
+            jdbcTemplate.execute("update account set is_deleted = false where is_deleted is null");
+            jdbcTemplate.execute("update incident_types set is_deleted = false where is_deleted is null");
+            jdbcTemplate.execute("update service_types set is_deleted = false where is_deleted is null");
+
             Arrays.stream(RoleName.values())
                     .forEach(roleName -> roleRepository.findByRoleName(roleName)
                             .orElseGet(() -> roleRepository.save(Role.builder().roleName(roleName).build())));
+
+            List<String> supportedRoleNames = Arrays.stream(RoleName.values())
+                    .map(Enum::name)
+                    .toList();
+            String supportedRoleSql = supportedRoleNames.stream()
+                    .map(name -> "'" + name + "'")
+                    .reduce((left, right) -> left + "," + right)
+                    .orElse("''");
+            jdbcTemplate.execute("""
+                    delete from roles
+                    where role_name not in (%s)
+                      and id not in (select distinct role_id from account where role_id is not null)
+                    """.formatted(supportedRoleSql));
 
             Account admin = ensureAccount(accountRepository, roleRepository, "admin@vbas.local", "Admin@123", "System Admin", "0900000001", RoleName.ADMIN, "MALE");
             Account customer = ensureAccount(accountRepository, roleRepository, "customer@vbas.local", "Customer@123", "Demo Customer", "0900000002", RoleName.CUSTOMER, "FEMALE");

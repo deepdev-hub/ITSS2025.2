@@ -10,6 +10,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
+import lombok.Builder.Default;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -38,4 +39,8 @@ public class ServiceType {
 
     @Column(name = "base_price", nullable = true, precision = 15, scale = 2, columnDefinition = "NUMERIC(15,2) DEFAULT 0")
     private BigDecimal basePrice = BigDecimal.ZERO;
+
+    @Default
+    @Column(name = "is_deleted", nullable = false, columnDefinition = "boolean default false")
+    private boolean isDeleted = false;
 }

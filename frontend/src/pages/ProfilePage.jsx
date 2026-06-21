@@ -100,7 +100,8 @@ export default function ProfilePage() {
     return resolved ? addAvatarCacheKey(resolved, user?.avatarUpdatedAt) : null;
   }, [user]);
   const isCompanyAccount = user?.roleName === 'RESCUE_COMPANY';
-  const showPersonalFields = !isCompanyAccount;
+  const showIdentityFields = !isCompanyAccount;
+  const showAddressFields = !isCompanyAccount && user?.roleName !== 'ADMIN';
 
   useEffect(() => {
     async function bootstrap() {
@@ -118,13 +119,10 @@ export default function ProfilePage() {
     }
 
     bootstrap();
-  }, [refreshProfile, user]);
+  }, [refreshProfile]);
 
   useEffect(() => {
-    setProfileForm((previous) => ({
-      ...previous,
-      avatarUrl: getAvatarUrl(user),
-    }));
+    setProfileForm(mapUserToForm(user));
   }, [user]);
 
   useEffect(() => {
@@ -174,10 +172,10 @@ export default function ProfilePage() {
         fullName: profileForm.fullName,
         phone: profileForm.phone,
         avatarUrl: profileForm.avatarUrl,
-        dateOfBirth: showPersonalFields ? profileForm.dateOfBirth : null,
-        gender: showPersonalFields ? profileForm.gender : null,
-        cccd: showPersonalFields ? profileForm.cccd : null,
-        defaultAddress: showPersonalFields ? profileForm.defaultAddress : null,
+        dateOfBirth: showIdentityFields ? profileForm.dateOfBirth : null,
+        gender: showIdentityFields ? profileForm.gender : null,
+        cccd: showIdentityFields ? profileForm.cccd : null,
+        defaultAddress: showAddressFields ? profileForm.defaultAddress : null,
       });
       setNotice('Profile updated successfully.');
       setIsEditProfileOpen(false);
@@ -268,7 +266,7 @@ export default function ProfilePage() {
             <div style={{ marginTop: '0.75rem', display: 'flex', flexWrap: 'wrap', gap: '1.25rem', color: 'var(--muted)', fontSize: '0.95rem' }}>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}><Mail size={16} /> {user?.email || 'N/A'}</span>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}><Phone size={16} /> {profileForm.phone || 'Not updated'}</span>
-              {!isCompanyAccount && profileForm.defaultAddress.province ? (
+              {showAddressFields && profileForm.defaultAddress.province ? (
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}><MapPin size={16} /> {profileForm.defaultAddress.province}</span>
               ) : null}
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}><Calendar size={16} /> Joined {user?.createdAt ? new Date(user.createdAt).getFullYear() : '2024'}</span>
@@ -307,7 +305,7 @@ export default function ProfilePage() {
                     <span>Phone</span>
                     <strong>{profileForm.phone || 'N/A'}</strong>
                   </div>
-                  {showPersonalFields ? (
+                  {showIdentityFields ? (
                     <>
                       <div className="info-item">
                         <span>Date of Birth</span>
@@ -325,7 +323,7 @@ export default function ProfilePage() {
                   ) : null}
                 </div>
 
-                {showPersonalFields ? (
+                {showAddressFields ? (
                   <>
                     <h4 className="profile-section-title" style={{ marginTop: '1.5rem', marginBottom: '1rem' }}>Address</h4>
                     <div className="info-grid">
@@ -386,7 +384,7 @@ export default function ProfilePage() {
               <label>Phone</label>
               <input name="phone" value={profileForm.phone} onChange={handleProfileChange} />
             </div>
-            {showPersonalFields ? (
+            {showIdentityFields ? (
               <>
                 <div className="field">
                   <label>Date of Birth</label>
@@ -404,7 +402,7 @@ export default function ProfilePage() {
             ) : null}
           </div>
 
-          {showPersonalFields ? (
+          {showAddressFields ? (
             <div>
               <h4 className="profile-section-title" style={{ marginBottom: '1rem' }}>Address</h4>
               <div className="form-grid profile-form-grid">

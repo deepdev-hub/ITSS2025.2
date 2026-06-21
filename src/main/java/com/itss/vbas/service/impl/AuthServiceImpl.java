@@ -127,7 +127,7 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional(readOnly = true)
     public AuthDto.AuthResponse login(AuthDto.LoginRequest request) {
-        Account account = accountRepository.findByEmailIgnoreCase(request.email())
+        Account account = accountRepository.findByEmailIgnoreCaseAndIsDeletedFalse(request.email())
                 .orElseThrow(() -> new UnauthorizedException("Invalid email or password"));
 
         if (!PasswordUtil.matches(request.password(), account.getPasswordHash())) {
@@ -182,7 +182,7 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional(readOnly = true)
     public List<CommonDto.LookupResponse> getIncidentLookups() {
-        return incidentTypeRepository.findAllByOrderByIncidentNameAsc()
+        return incidentTypeRepository.findAllByIsDeletedFalseOrderByIncidentNameAsc()
                 .stream()
                 .map(appMapper::toLookupResponse)
                 .toList();
@@ -191,7 +191,7 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional(readOnly = true)
     public List<CommonDto.LookupResponse> getServiceLookups() {
-        return serviceTypeRepository.findAllByOrderByServiceNameAsc()
+        return serviceTypeRepository.findAllByIsDeletedFalseOrderByServiceNameAsc()
                 .stream()
                 .map(appMapper::toLookupResponse)
                 .toList();
@@ -199,7 +199,7 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public AuthDto.PasswordResetResponse forgotPassword(AuthDto.PasswordResetRequest request) {
-        Account account = accountRepository.findByEmailIgnoreCase(request.email().trim().toLowerCase())
+        Account account = accountRepository.findByEmailIgnoreCaseAndIsDeletedFalse(request.email().trim().toLowerCase())
                 .orElseThrow(() -> new BadRequestException("Email does not exist"));
 
         LocalDateTime now = LocalDateTime.now();
@@ -227,7 +227,7 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional(noRollbackFor = BadRequestException.class)
     public AuthDto.PasswordResetVerificationResponse verifyResetOtp(AuthDto.VerifyPasswordResetOtpRequest request) {
-        Account account = accountRepository.findByEmailIgnoreCase(request.email().trim().toLowerCase())
+        Account account = accountRepository.findByEmailIgnoreCaseAndIsDeletedFalse(request.email().trim().toLowerCase())
                 .orElseThrow(() -> new BadRequestException("Email does not exist"));
 
         PasswordResetToken resetToken = passwordResetTokenRepository.findFirstByUserIdAndUsedAtIsNullOrderByIdDesc(account.getId())
@@ -270,6 +270,9 @@ public class AuthServiceImpl implements AuthService {
         }
 
         Account account = resetToken.getUser();
+        if (account == null || account.isDeleted()) {
+            throw new BadRequestException("Invalid reset token");
+        }
         account.setPasswordHash(PasswordUtil.hash(request.newPassword()));
         accountRepository.save(account);
 

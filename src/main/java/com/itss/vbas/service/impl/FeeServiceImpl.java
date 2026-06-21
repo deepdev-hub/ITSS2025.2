@@ -41,7 +41,7 @@ public class FeeServiceImpl implements FeeService {
 
     @Override
     public FeeDto.PredictFeeResponse predictFee(Long serviceTypeId, BigDecimal latitude, BigDecimal longitude) {
-        ServiceType serviceType = serviceTypeRepository.findById(serviceTypeId)
+        ServiceType serviceType = serviceTypeRepository.findByIdAndIsDeletedFalse(serviceTypeId)
                 .orElseThrow(() -> new ResourceNotFoundException("Service type not found with id: " + serviceTypeId));
 
         BigDecimal coefficient = parseCoefficient();

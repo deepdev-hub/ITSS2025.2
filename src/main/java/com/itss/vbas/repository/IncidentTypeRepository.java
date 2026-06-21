@@ -7,4 +7,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface IncidentTypeRepository extends JpaRepository<IncidentType, Long> {
     List<IncidentType> findAllByOrderByIncidentNameAsc();
+
+    List<IncidentType> findAllByIsDeletedFalseOrderByIncidentNameAsc();
+
+    java.util.Optional<IncidentType> findByIdAndIsDeletedFalse(Long id);
 }

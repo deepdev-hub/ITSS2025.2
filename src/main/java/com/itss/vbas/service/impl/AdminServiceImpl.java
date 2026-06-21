@@ -1,6 +1,7 @@
 package com.itss.vbas.service.impl;
 
 import java.math.BigDecimal;
+import java.util.Arrays;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -123,7 +124,7 @@ public class AdminServiceImpl implements AdminService {
     @Override
     @Transactional(readOnly = true)
     public List<AdminDto.AccountResponse> getAccounts() {
-        return accountRepository.findAll()
+        return accountRepository.findAllByIsDeletedFalse()
                 .stream()
                 .sorted(Comparator.comparing(Account::getCreatedAt, Comparator.nullsLast(Comparator.reverseOrder())))
                 .map(appMapper::toAdminAccountResponse)
@@ -201,6 +202,7 @@ public class AdminServiceImpl implements AdminService {
     public void deleteAccount(Long id) {
         Account account = findAccount(id);
         account.setStatus(AccountStatus.INACTIVE);
+        account.setDeleted(true);
         accountRepository.save(account);
     }
 
@@ -224,8 +226,9 @@ public class AdminServiceImpl implements AdminService {
     @Override
     @Transactional(readOnly = true)
     public List<CommonDto.RoleResponse> getRoles() {
-        return roleRepository.findAll()
-                .stream()
+        return Arrays.stream(RoleName.values())
+                .map(roleName -> roleRepository.findByRoleName(roleName)
+                        .orElseGet(() -> roleRepository.save(Role.builder().roleName(roleName).build())))
                 .map(role -> new CommonDto.RoleResponse(role.getId(), role.getRoleName().name()))
                 .toList();
     }
@@ -259,7 +262,7 @@ public class AdminServiceImpl implements AdminService {
     public void deleteRole(Long id) {
         Role role = roleRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Role not found with id: " + id));
-        if (accountRepository.countByRoleRoleName(role.getRoleName()) > 0) {
+        if (accountRepository.countByRoleRoleNameAndIsDeletedFalse(role.getRoleName()) > 0) {
             throw new BadRequestException("Cannot delete a role that is already assigned to accounts");
         }
         roleRepository.delete(role);
@@ -268,7 +271,7 @@ public class AdminServiceImpl implements AdminService {
     @Override
     @Transactional(readOnly = true)
     public List<AdminDto.IncidentTypeResponse> getIncidentTypes() {
-        return incidentTypeRepository.findAllByOrderByIncidentNameAsc()
+        return incidentTypeRepository.findAllByIsDeletedFalseOrderByIncidentNameAsc()
                 .stream()
                 .map(appMapper::toIncidentTypeResponse)
                 .toList();
@@ -286,7 +289,7 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     public AdminDto.IncidentTypeResponse updateIncidentType(Long id, AdminDto.IncidentTypeRequest request) {
-        IncidentType incidentType = incidentTypeRepository.findById(id)
+        IncidentType incidentType = incidentTypeRepository.findByIdAndIsDeletedFalse(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Incident type not found with id: " + id));
         incidentType.setIncidentCode(request.incidentCode());
         incidentType.setIncidentName(request.incidentName());
@@ -296,15 +299,16 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     public void deleteIncidentType(Long id) {
-        IncidentType incidentType = incidentTypeRepository.findById(id)
+        IncidentType incidentType = incidentTypeRepository.findByIdAndIsDeletedFalse(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Incident type not found with id: " + id));
-        incidentTypeRepository.delete(incidentType);
+        incidentType.setDeleted(true);
+        incidentTypeRepository.save(incidentType);
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<AdminDto.ServiceTypeResponse> getServiceTypes() {
-        return serviceTypeRepository.findAllByOrderByServiceNameAsc()
+        return serviceTypeRepository.findAllByIsDeletedFalseOrderByServiceNameAsc()
                 .stream()
                 .map(appMapper::toServiceTypeResponse)
                 .toList();
@@ -323,7 +327,7 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     public AdminDto.ServiceTypeResponse updateServiceType(Long id, AdminDto.ServiceTypeRequest request) {
-        ServiceType serviceType = serviceTypeRepository.findById(id)
+        ServiceType serviceType = serviceTypeRepository.findByIdAndIsDeletedFalse(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Service type not found with id: " + id));
         serviceType.setServiceCode(request.serviceCode());
         serviceType.setServiceName(request.serviceName());
@@ -334,9 +338,10 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     public void deleteServiceType(Long id) {
-        ServiceType serviceType = serviceTypeRepository.findById(id)
+        ServiceType serviceType = serviceTypeRepository.findByIdAndIsDeletedFalse(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Service type not found with id: " + id));
-        serviceTypeRepository.delete(serviceType);
+        serviceType.setDeleted(true);
+        serviceTypeRepository.save(serviceType);
     }
 
     @Override
@@ -677,7 +682,7 @@ public class AdminServiceImpl implements AdminService {
     }
 
     private Account findAccount(Long id) {
-        return accountRepository.findById(id)
+        return accountRepository.findByIdAndIsDeletedFalse(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Account not found with id: " + id));
     }
 

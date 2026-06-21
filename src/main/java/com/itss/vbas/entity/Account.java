@@ -21,6 +21,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
+import lombok.Builder.Default;
 
 @Entity
 @Table(name = "account")
@@ -74,4 +75,8 @@ public class Account {
 
     @Column(length = 20, unique = true)
     private String cccd;
+
+    @Default
+    @Column(name = "is_deleted", nullable = false, columnDefinition = "boolean default false")
+    private boolean isDeleted = false;
 }
