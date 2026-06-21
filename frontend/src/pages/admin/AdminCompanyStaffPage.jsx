@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { Plus } from 'lucide-react';
 import { adminApi } from '../../api/adminApi';
 import { getApiError } from '../../api/client';
@@ -20,6 +20,8 @@ const initialForm = {
   status: 'ACTIVE',
 };
 
+const ALL_COMPANIES_VALUE = 'ALL';
+
 export default function AdminCompanyStaffPage() {
   const [companies, setCompanies] = useState([]);
   const [selectedCompanyId, setSelectedCompanyId] = useState('');
@@ -31,6 +33,13 @@ export default function AdminCompanyStaffPage() {
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingCompanyId, setEditingCompanyId] = useState('');
+
+  const companyNameById = useMemo(
+    () => new Map(companies.map((company) => [String(company.id), company.companyName])),
+    [companies],
+  );
+  const isAllCompaniesSelected = selectedCompanyId === ALL_COMPANIES_VALUE;
 
   const loadCompanies = async () => {
     setLoading(true);
@@ -38,7 +47,7 @@ export default function AdminCompanyStaffPage() {
       const companyList = await adminApi.getCompanies();
       setCompanies(companyList);
       if (companyList.length > 0) {
-        setSelectedCompanyId(String(companyList[0].id));
+        setSelectedCompanyId(ALL_COMPANIES_VALUE);
       }
     } catch (err) {
       setError(getApiError(err));
@@ -53,12 +62,23 @@ export default function AdminCompanyStaffPage() {
       return;
     }
     try {
+      if (companyId === ALL_COMPANIES_VALUE) {
+        const allStaff = await Promise.all(
+          companies.map((company) => adminApi.getCompanyStaff(company.id)),
+        );
+        setStaff(
+          allStaff
+            .flat()
+            .sort((left, right) => (left.fullName || '').localeCompare(right.fullName || '')),
+        );
+        return;
+      }
       const staffList = await adminApi.getCompanyStaff(companyId);
       setStaff(staffList);
     } catch (err) {
       setError(getApiError(err));
     }
-  }, []);
+  }, [companies]);
 
   useEffect(() => {
     loadCompanies();
@@ -84,12 +104,14 @@ export default function AdminCompanyStaffPage() {
 
   const openCreateModal = () => {
     setEditingId(null);
+    setEditingCompanyId(selectedCompanyId);
     setForm(initialForm);
     setIsModalOpen(true);
   };
 
   const openEditModal = (item) => {
     setEditingId(item.id);
+    setEditingCompanyId(String(item.companyId || selectedCompanyId));
     setForm({
       userId: item.userId || '',
       email: item.email || '',
@@ -112,6 +134,7 @@ export default function AdminCompanyStaffPage() {
 
   const resetForm = () => {
     setEditingId(null);
+    setEditingCompanyId('');
     setForm(initialForm);
   };
 
@@ -125,7 +148,8 @@ export default function AdminCompanyStaffPage() {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    if (!selectedCompanyId) {
+    const targetCompanyId = editingId ? editingCompanyId : selectedCompanyId;
+    if (!targetCompanyId || targetCompanyId === ALL_COMPANIES_VALUE) {
       setError('Please select a company first');
       return;
     }
@@ -134,10 +158,10 @@ export default function AdminCompanyStaffPage() {
     setNotice('');
     try {
       if (editingId) {
-        await adminApi.updateCompanyStaff(selectedCompanyId, editingId, buildPayload());
+        await adminApi.updateCompanyStaff(targetCompanyId, editingId, buildPayload());
         setNotice('Staff updated successfully');
       } else {
-        await adminApi.createCompanyStaff(selectedCompanyId, buildPayload());
+        await adminApi.createCompanyStaff(targetCompanyId, buildPayload());
         setNotice('Staff created successfully');
       }
       closeModal();
@@ -156,7 +180,7 @@ export default function AdminCompanyStaffPage() {
     setError('');
     setNotice('');
     try {
-      await adminApi.deleteCompanyStaff(selectedCompanyId, item.id);
+      await adminApi.deleteCompanyStaff(item.companyId || selectedCompanyId, item.id);
       setNotice('Staff deleted successfully');
       await loadCompanyData(selectedCompanyId);
     } catch (err) {
@@ -165,6 +189,12 @@ export default function AdminCompanyStaffPage() {
   };
 
   const columns = [
+    {
+      key: 'companyId',
+      label: 'Company',
+      width: '20%',
+      render: (value) => companyNameById.get(String(value)) || 'N/A',
+    },
     { key: 'fullName', label: 'Full Name', width: '25%' },
     { key: 'email', label: 'Email', width: '25%' },
     { key: 'jobTitle', label: 'Job Title', width: '20%', render: (v) => v || 'N/A' },
@@ -188,7 +218,7 @@ export default function AdminCompanyStaffPage() {
         title="Company Staff"
         subtitle="Manage rescue staff profiles for each rescue company"
         actions={
-          selectedCompanyId ? (
+          selectedCompanyId && !isAllCompaniesSelected ? (
             <button className="button button-primary" onClick={openCreateModal}>
               <Plus size={18} /> Create Staff
             </button>
@@ -203,6 +233,7 @@ export default function AdminCompanyStaffPage() {
           <label style={{ fontWeight: '600', marginBottom: '8px', display: 'block' }}>Select Rescue Company</label>
           <select value={selectedCompanyId} onChange={handleCompanyChange} className="select-field">
             <option value="">Select company...</option>
+            <option value={ALL_COMPANIES_VALUE}>All companies</option>
             {companies.map((company) => (
               <option key={company.id} value={company.id}>
                 {company.companyName} ({company.status})
@@ -219,7 +250,7 @@ export default function AdminCompanyStaffPage() {
             data={staff}
             onEdit={openEditModal}
             onDelete={handleDelete}
-            emptyMessage="No staff found for this company"
+            emptyMessage={isAllCompaniesSelected ? 'No staff found across all companies' : 'No staff found for this company'}
           />
         ) : (
           <div className="notice" style={{ textAlign: 'center' }}>Please select a rescue company to view and manage staff.</div>

@@ -66,7 +66,7 @@ public class AdminController {
     @DeleteMapping("/accounts/{id}")
     public ResponseEntity<CommonDto.ApiResponse<Void>> deleteAccount(@PathVariable Long id) {
         adminService.deleteAccount(id);
-        return ResponseEntity.ok(CommonDto.ApiResponse.success("Account deactivated successfully"));
+        return ResponseEntity.ok(CommonDto.ApiResponse.success("Account deleted successfully"));
     }
 
     @PutMapping("/accounts/{id}/block")

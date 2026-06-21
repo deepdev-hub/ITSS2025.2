@@ -192,7 +192,7 @@ public class DashboardServiceImpl implements DashboardService {
 
     private DashboardDto.AdminDashboardResponse toAdminDashboardResponse(DailyStatistic statistics) {
         long totalAccounts = accountRepository.count();
-        long totalCustomers = accountRepository.countByRoleRoleName(RoleName.CUSTOMER);
+        long totalCustomers = accountRepository.countByRoleRoleNameAndIsDeletedFalse(RoleName.CUSTOMER);
         long totalCompanies = rescueCompanyRepository.count();
         long totalRequests = rescueRequestRepository.count();
         long totalPayments = paymentRepository.count();
@@ -242,7 +242,7 @@ public class DashboardServiceImpl implements DashboardService {
                 .averageRating(averageRatingValue == null
                         ? null
                         : BigDecimal.valueOf(averageRatingValue).setScale(2, RoundingMode.HALF_UP))
-                .customerCount(accountRepository.countByRoleRoleName(RoleName.CUSTOMER))
+                .customerCount(accountRepository.countByRoleRoleNameAndIsDeletedFalse(RoleName.CUSTOMER))
                 .staffCount(rescueStaffRepository.count())
                 .companyCount(rescueCompanyRepository.count())
                 .approvedCompanyCount(rescueCompanyRepository.countByStatus(CompanyStatus.APPROVED))

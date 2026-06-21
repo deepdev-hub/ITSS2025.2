@@ -9,6 +9,12 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface AccountRepository extends JpaRepository<Account, Long> {
     Optional<Account> findByEmailIgnoreCase(String email);
 
+    Optional<Account> findByEmailIgnoreCaseAndIsDeletedFalse(String email);
+
+    Optional<Account> findByIdAndIsDeletedFalse(Long id);
+
+    java.util.List<Account> findAllByIsDeletedFalse();
+
     boolean existsByEmailIgnoreCase(String email);
 
     boolean existsByCccd(String cccd);
@@ -16,4 +22,6 @@ public interface AccountRepository extends JpaRepository<Account, Long> {
     boolean existsByCccdAndIdNot(String cccd, Long id);
 
     long countByRoleRoleName(RoleName roleName);
+
+    long countByRoleRoleNameAndIsDeletedFalse(RoleName roleName);
 }

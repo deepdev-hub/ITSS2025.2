@@ -224,10 +224,10 @@ export default function AdminAccountsPage() {
   };
 
   const handleDelete = async (account) => {
-    if (!window.confirm(`Deactivate account ${account.email}?`)) return;
+    if (!window.confirm(`Delete account ${account.email}?`)) return;
     try {
       await adminApi.deleteAccount(account.id);
-      setNotice('Account deactivated successfully.');
+      setNotice('Account deleted successfully.');
       await loadData();
     } catch (err) {
       setError(getApiError(err));

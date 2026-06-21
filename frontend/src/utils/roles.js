@@ -47,7 +47,7 @@ export function getMenuItems(roleName) {
         { to: '/company/requests', label: 'Assigned Requests' },
         { to: '/company/staff', label: 'Staff' },
         { to: '/company/vehicles', label: 'Vehicles' },
-        { to: '/profile', label: 'My Profile' },
+        { to: '/company/profile', label: 'My Profile' },
       ];
     case ROLES.RESCUE_STAFF:
       return [
@@ -64,5 +64,17 @@ export function getMenuItems(roleName) {
         { to: '/customer/vehicles', label: 'My Vehicles' },
         { to: '/profile', label: 'My Profile' },
       ];
+  }
+}
+
+export function getProfileRoute(roleName) {
+  switch (roleName) {
+    case ROLES.RESCUE_COMPANY:
+      return '/company/profile';
+    case ROLES.RESCUE_STAFF:
+    case ROLES.ADMIN:
+    case ROLES.CUSTOMER:
+    default:
+      return '/profile';
   }
 }

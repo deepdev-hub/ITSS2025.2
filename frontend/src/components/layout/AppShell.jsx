@@ -5,7 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import { StaffAvailabilityProvider, useStaffAvailability } from '../../context/StaffAvailabilityContext';
 import { companyApi } from '../../api/companyApi';
 import { getApiError } from '../../api/client';
-import { getMenuItems } from '../../utils/roles';
+import { getMenuItems, getProfileRoute } from '../../utils/roles';
 import { getMenuIcon } from '../../utils/menuIcons';
 import { addAvatarCacheKey, getAvatarUrl, resolveAvatarUrl } from '../../utils/avatar';
 import NotificationBell from './NotificationBell';
@@ -141,6 +141,7 @@ function AppShellLayout() {
   const { user, logout } = useAuth();
   const location = useLocation();
   const menuItems = getMenuItems(user?.roleName);
+  const profileRoute = getProfileRoute(user?.roleName);
   const notificationsEnabled = ['CUSTOMER', 'RESCUE_STAFF'].includes(user?.roleName);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -217,7 +218,7 @@ function AppShellLayout() {
             >
               {sidebarOpen ? <X size={18} /> : <Menu size={18} />}
             </button>
-            <Link to="/profile" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', textDecoration: 'none', color: 'inherit' }}>
+            <Link to={profileRoute} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', textDecoration: 'none', color: 'inherit' }}>
               <UserAvatar user={user} size={46} />
               <div className="topbar-user-info">
                 <strong>{user?.fullName}</strong>

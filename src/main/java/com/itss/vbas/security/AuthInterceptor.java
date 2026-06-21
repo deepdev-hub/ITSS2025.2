@@ -62,7 +62,7 @@ public class AuthInterceptor implements HandlerInterceptor {
         String token = header.substring(7);
         try {
             CurrentUser currentUser = jwtUtil.parseToken(token);
-            Account account = accountRepository.findById(currentUser.id())
+            Account account = accountRepository.findByIdAndIsDeletedFalse(currentUser.id())
                     .orElseThrow(() -> new UnauthorizedException("Account not found"));
             if (account.getStatus() != AccountStatus.ACTIVE) {
                 throw new UnauthorizedException("Account is not active");

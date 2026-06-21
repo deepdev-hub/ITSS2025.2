@@ -25,7 +25,7 @@ public class AuthContext {
 
     public Account getCurrentAccount() {
         CurrentUser currentUser = getCurrentUser();
-        return accountRepository.findById(currentUser.id())
+        return accountRepository.findByIdAndIsDeletedFalse(currentUser.id())
                 .orElseThrow(() -> new UnauthorizedException("Account not found"));
     }
 

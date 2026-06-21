@@ -32,6 +32,15 @@ import StaffAssignmentsPage from '../pages/staff/StaffAssignmentsPage';
 import StaffLocationPage from '../pages/staff/StaffLocationPage';
 import StaffProfilePage from '../pages/staff/StaffProfilePage';
 import ProfilePage from '../pages/ProfilePage';
+import { useAuth } from '../context/AuthContext';
+
+function ProfileRouteResolver() {
+  const { user } = useAuth();
+  if (user?.roleName === ROLES.RESCUE_COMPANY) {
+    return <Navigate to="/company/profile" replace />;
+  }
+  return <ProfilePage />;
+}
 
 export default function AppRouter() {
   return (
@@ -45,9 +54,9 @@ export default function AppRouter() {
       <Route path="/403" element={<ForbiddenPage />} />
 
       <Route element={<ProtectedRoute />}>
-        <Route element={<AppShell />}>
+          <Route element={<AppShell />}>
           <Route path="/app" element={<Navigate to="/" replace />} />
-          <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/profile" element={<ProfileRouteResolver />} />
           <Route path="/settings" element={<Navigate to="/profile?tab=security" replace />} />
           <Route path="/requests/:id" element={<RequestDetailPage />} />
           <Route path="/staff/:id/profile" element={<StaffProfilePage />} />
