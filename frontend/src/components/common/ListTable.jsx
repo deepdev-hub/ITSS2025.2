@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Trash2, Edit2, Eye } from 'lucide-react';
 import Pagination from './Pagination';
 import './ListTable.css';
@@ -15,10 +15,6 @@ export default function ListTable({
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 15;
 
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [data]);
-
   if (loading) {
     return <div className="list-table-loading">Loading...</div>;
   }
@@ -28,7 +24,8 @@ export default function ListTable({
   }
 
   const totalPages = Math.ceil(data.length / pageSize);
-  const startIndex = (currentPage - 1) * pageSize;
+  const safeCurrentPage = Math.min(currentPage, Math.max(totalPages, 1));
+  const startIndex = (safeCurrentPage - 1) * pageSize;
   const paginatedData = data.slice(startIndex, startIndex + pageSize);
 
   return (
@@ -91,7 +88,7 @@ export default function ListTable({
         </tbody>
       </table>
       <Pagination 
-        currentPage={currentPage} 
+        currentPage={safeCurrentPage} 
         totalPages={totalPages} 
         onPageChange={setCurrentPage} 
       />

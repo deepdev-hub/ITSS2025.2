@@ -140,30 +140,62 @@ public class RequestSupportServiceImpl implements RequestSupportService {
                 .note(note)
                 .build());
 
-        // Update active assignment if request is completed or canceled
         if (newStatus == RescueRequestStatus.COMPLETED || newStatus == RescueRequestStatus.CANCELED) {
-            requestAssignmentRepository.findFirstByRequestIdOrderByAssignedAtDesc(request.getId())
-                    .ifPresent(assignment -> {
-                        if (assignment.getStatus() != AssignmentStatus.COMPLETED && assignment.getStatus() != AssignmentStatus.REJECTED) {
-                            assignment.setStatus(newStatus == RescueRequestStatus.COMPLETED ? AssignmentStatus.COMPLETED : AssignmentStatus.REJECTED);
-                            if (newStatus == RescueRequestStatus.CANCELED) {
-                                assignment.setRejectedAt(java.time.LocalDateTime.now());
-                            }
-                            requestAssignmentRepository.saveAndFlush(assignment);
-                        }
-                        if (assignment.getStaff() != null) {
-                            boolean stillBusy = requestAssignmentRepository.existsByStaffIdAndStatusIn(
-                                    assignment.getStaff().getId(),
-                                    java.util.List.of(AssignmentStatus.PENDING, AssignmentStatus.ACCEPTED)
-                            );
-                            if (!stillBusy && assignment.getStaff().getStatus() == com.itss.vbas.enums.StaffStatus.BUSY) {
-                                assignment.getStaff().setStatus(com.itss.vbas.enums.StaffStatus.ACTIVE);
-                                rescueStaffRepository.save(assignment.getStaff());
-                            }
-                        }
-                    });
+            syncAssignmentsWithClosedRequest(request, newStatus);
         }
 
         return savedRequest;
+    }
+
+    private void syncAssignmentsWithClosedRequest(RescueRequest request, RescueRequestStatus newStatus) {
+        java.time.LocalDateTime closedAt = java.time.LocalDateTime.now();
+        java.util.List<RequestAssignment> assignments = requestAssignmentRepository.findByRequestIdOrderByAssignedAtDesc(request.getId());
+        if (assignments.isEmpty()) {
+            return;
+        }
+
+        RequestAssignment activeAssignment = assignments.stream()
+                .filter(assignment -> assignment.getStatus() == AssignmentStatus.ACCEPTED)
+                .findFirst()
+                .orElse(null);
+
+        if (newStatus == RescueRequestStatus.COMPLETED) {
+            if (activeAssignment != null && activeAssignment.getStatus() != AssignmentStatus.COMPLETED) {
+                activeAssignment.setStatus(AssignmentStatus.COMPLETED);
+                requestAssignmentRepository.save(activeAssignment);
+            }
+            assignments.stream()
+                    .filter(assignment -> assignment.getStatus() == AssignmentStatus.PENDING)
+                    .forEach(assignment -> {
+                        assignment.setStatus(AssignmentStatus.REJECTED);
+                        assignment.setRejectedAt(closedAt);
+                        requestAssignmentRepository.save(assignment);
+                    });
+            releaseBusyStaff(activeAssignment);
+            return;
+        }
+
+        assignments.stream()
+                .filter(assignment -> assignment.getStatus() == AssignmentStatus.PENDING || assignment.getStatus() == AssignmentStatus.ACCEPTED)
+                .forEach(assignment -> {
+                    assignment.setStatus(AssignmentStatus.REJECTED);
+                    assignment.setRejectedAt(closedAt);
+                    requestAssignmentRepository.save(assignment);
+                    releaseBusyStaff(assignment);
+                });
+    }
+
+    private void releaseBusyStaff(RequestAssignment assignment) {
+        if (assignment == null || assignment.getStaff() == null) {
+            return;
+        }
+        boolean stillBusy = requestAssignmentRepository.existsByStaffIdAndStatusIn(
+                assignment.getStaff().getId(),
+                java.util.List.of(AssignmentStatus.PENDING, AssignmentStatus.ACCEPTED)
+        );
+        if (!stillBusy && assignment.getStaff().getStatus() == com.itss.vbas.enums.StaffStatus.BUSY) {
+            assignment.getStaff().setStatus(com.itss.vbas.enums.StaffStatus.ACTIVE);
+            rescueStaffRepository.save(assignment.getStaff());
+        }
     }
 }

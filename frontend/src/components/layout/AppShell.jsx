@@ -1,4 +1,4 @@
-import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
+import { Link, Outlet, useLocation } from 'react-router-dom';
 import { Activity, LifeBuoy, Menu, PhoneCall, Power, X, LogOut } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
@@ -26,19 +26,15 @@ function getInitials(fullName) {
 }
 
 function UserAvatar({ user, size = 46 }) {
-  const [imageError, setImageError] = useState(false);
+  const [failedAvatarSrc, setFailedAvatarSrc] = useState('');
   const rawAvatar = getAvatarUrl(user);
-
-  useEffect(() => {
-    setImageError(false);
-  }, [rawAvatar]);
 
   const initials = useMemo(() => getInitials(user?.fullName), [user?.fullName]);
   const avatarSrc = useMemo(() => {
     const resolvedUrl = resolveAvatarUrl(rawAvatar);
     return addAvatarCacheKey(resolvedUrl, user?.avatarUpdatedAt);
   }, [rawAvatar, user?.avatarUpdatedAt]);
-  const shouldShowImage = avatarSrc && !imageError;
+  const shouldShowImage = avatarSrc && failedAvatarSrc !== avatarSrc;
 
   if (shouldShowImage) {
     return (
@@ -47,7 +43,7 @@ function UserAvatar({ user, size = 46 }) {
         alt={user?.fullName || 'Avatar'}
         className="topbar-avatar"
         style={{ width: size, height: size, objectFit: 'cover' }}
-        onError={() => setImageError(true)}
+        onError={() => setFailedAvatarSrc(avatarSrc)}
       />
     );
   }
@@ -147,10 +143,6 @@ function AppShellLayout() {
   const menuItems = getMenuItems(user?.roleName);
   const notificationsEnabled = ['CUSTOMER', 'RESCUE_STAFF'].includes(user?.roleName);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-
-  useEffect(() => {
-    setSidebarOpen(false);
-  }, [user?.roleName]);
 
   const bestMatch = useMemo(() => {
     let match = null;
@@ -256,9 +248,9 @@ export default function AppShell() {
   if (user?.roleName === 'RESCUE_STAFF') {
     return (
       <StaffAvailabilityProvider>
-        <AppShellLayout />
+        <AppShellLayout key={user?.roleName || 'guest'} />
       </StaffAvailabilityProvider>
     );
   }
-  return <AppShellLayout />;
+  return <AppShellLayout key={user?.roleName || 'guest'} />;
 }

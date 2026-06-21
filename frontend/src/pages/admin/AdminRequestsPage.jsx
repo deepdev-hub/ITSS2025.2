@@ -44,7 +44,6 @@ export default function AdminRequestsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 15;
   const [loading, setLoading] = useState(true);
-  const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
 
   const loadData = useCallback(async () => {
@@ -186,7 +185,6 @@ export default function AdminRequestsPage() {
 
       <section style={{ padding: '20px', background: '#f8f9fa' }}>
         <PageHeader title="Dispatcher Command Center" subtitle="Real-time monitoring of requests the system is assigning automatically." />
-        {notice && <div className="notice success">{notice}</div>}
         {error && <div className="notice error">{error}</div>}
         
         <div className="card">

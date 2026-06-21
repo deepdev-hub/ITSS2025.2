@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PieChart, Pie, Cell, Tooltip as RechartsTooltip, ResponsiveContainer, Legend } from 'recharts';
 import {
@@ -69,27 +69,28 @@ export default function CompanyDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    async function loadData() {
-      setLoading(true);
-      setError('');
-      try {
-        const [dashboardData, reviewList, requestList] = await Promise.all([
-          companyApi.getDashboard(),
-          companyApi.getReviews(),
-          companyApi.getRequests(),
-        ]);
-        setDashboard(dashboardData);
-        setReviews(reviewList);
-        setRequests(requestList);
-      } catch (err) {
-        setError(getApiError(err));
-      } finally {
-        setLoading(false);
-      }
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const [dashboardData, reviewList, requestList] = await Promise.all([
+        companyApi.getDashboard(),
+        companyApi.getReviews(),
+        companyApi.getRequests(),
+      ]);
+      setDashboard(dashboardData);
+      setReviews(reviewList);
+      setRequests(requestList);
+    } catch (err) {
+      setError(getApiError(err));
+    } finally {
+      setLoading(false);
     }
-    loadData();
   }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const highlightedRequests = useMemo(() => requests.slice(0, 8), [requests]);
   const highlightedReviews = useMemo(() => reviews.slice(0, 5), [reviews]);

@@ -108,12 +108,12 @@ function getSearchingStatusText(tracking) {
   const pendingStaffCount = Array.isArray(tracking?.pendingStaff) ? tracking.pendingStaff.length : 0;
   if (tracking?.requestStatus === 'MATCHED') {
     return pendingStaffCount > 0
-      ? `Dang cho ${pendingStaffCount} staff xac nhan yeu cau trong 60 giay`
-      : 'Dang cho staff xac nhan yeu cau trong 60 giay';
+      ? `Waiting for ${pendingStaffCount} staff members to confirm within 60 seconds`
+      : 'Waiting for staff confirmation within 60 seconds';
   }
   return pendingStaffCount > 0
-    ? `Dang thong bao dong thoi cho ${pendingStaffCount} staff gan nhat`
-    : 'Dang thong bao cho cac staff phu hop gan nhat';
+    ? `Notifying ${pendingStaffCount} nearby staff members at the same time`
+    : 'Notifying the nearest eligible staff members';
 }
 
 function FitTrackingBounds({ points, boundsKey }) {
@@ -145,7 +145,7 @@ function FitTrackingBounds({ points, boundsKey }) {
   return null;
 }
 
-export default function RequestTrackingMap({ requestId, requestStatus, staffProfilePath }) {
+export default function RequestTrackingMap({ requestId, requestStatus }) {
   const { user } = useAuth();
   const [tracking, setTracking] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -224,7 +224,6 @@ export default function RequestTrackingMap({ requestId, requestStatus, staffProf
   }, [destinationPosition, staffPosition]);
 
   const boundsKey = mapPoints.map((point) => point.join(',')).join('|');
-  const effectiveRequestStatus = tracking?.requestStatus || requestStatus;
   const movementLabel = getMovementLabel(tracking, staffPosition, destinationPosition);
   const etaLabel = getEtaLabel(tracking);
   const vehicleLabel = tracking?.vehicle
@@ -235,7 +234,6 @@ export default function RequestTrackingMap({ requestId, requestStatus, staffProf
     ? `${Number(tracking.staff.rating).toFixed(1)}/5`
     : 'No rating yet';
 
-  const resolvedStaffProfilePath = staffProfilePath || (tracking?.staff?.id ? `/staff/${tracking.staff.id}/profile` : null);
   const pendingStaff = Array.isArray(tracking?.pendingStaff) ? tracking.pendingStaff : [];
 
   if (loading && !tracking) {
@@ -305,7 +303,7 @@ export default function RequestTrackingMap({ requestId, requestStatus, staffProf
 
           <div className="tracking-map-status tracking-map-status-searching">
             <span className="tracking-live-dot tracking-live-dot-searching" />
-            {refreshing ? 'Dang cap nhat...' : getSearchingStatusText(tracking)}
+            {refreshing ? 'Updating...' : getSearchingStatusText(tracking)}
           </div>
 
           {error ? (
@@ -318,30 +316,30 @@ export default function RequestTrackingMap({ requestId, requestStatus, staffProf
         <div className="card tracking-state-card tracking-searching-card">
           <div className="tracking-search-icon">RS</div>
           <div>
-            <h2>He thong dang tim kiem doi cuu ho</h2>
+            <h2>The system is searching for a rescue team</h2>
             {pendingStaff.length > 0 ? (
               <>
-                <p>Request dang duoc thong bao dong thoi va cho xac nhan tu {pendingStaff.length} staff cu the ben duoi.</p>
+                <p>The request is being sent simultaneously and is waiting for confirmation from these {pendingStaff.length} specific staff members.</p>
                 <div className="tracking-pending-staff-list">
                   {pendingStaff.map((item) => (
                     <div key={item.assignmentId || item.staffId} className="tracking-pending-staff-item">
                       <strong>{item.name}</strong>
                       <span>
-                        {[item.jobTitle, item.vehicleCode, item.vehiclePlateNumber].filter(Boolean).join(' • ') || 'Rescue staff'}
+                        {[item.jobTitle, item.vehicleCode, item.vehiclePlateNumber].filter(Boolean).join(' - ') || 'Rescue staff'}
                       </span>
                     </div>
                   ))}
                 </div>
-                <p className="muted-line">He thong dang cho 5 staff nay xac nhan; ai chap nhan truoc se duoc giao request.</p>
+                <p className="muted-line">The system is waiting for these 5 staff members to confirm. The first one to accept will receive the request.</p>
               </>
             ) : (
               <>
-                <p>Request dang duoc gui den nhung staff gan nhat va he thong dang cho xac nhan.</p>
-                <p className="muted-line">Ban do hien vi tri cua khach hang va vong song mo ta qua trinh thong bao den staff.</p>
+                <p>The request is being sent to the nearest staff members and the system is waiting for confirmation.</p>
+                <p className="muted-line">The map shows the customer location and the pulse rings that represent the notification search process.</p>
               </>
             )}
             {tracking?.requestStatus === 'MATCHED' ? (
-              <p className="tracking-inline-warning">Da co staff nhan thong bao. He thong dang cho xac nhan trong 60 giay.</p>
+              <p className="tracking-inline-warning">A staff member has received the notification. The system is waiting for confirmation within 60 seconds.</p>
             ) : null}
           </div>
         </div>
@@ -472,3 +470,4 @@ export default function RequestTrackingMap({ requestId, requestStatus, staffProf
     </section>
   );
 }
+

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { PieChart, Pie, Cell, Tooltip as RechartsTooltip, ResponsiveContainer, Legend } from 'recharts';
 import { Link } from 'react-router-dom';
 import {
@@ -130,7 +130,7 @@ export default function AdminDashboardPage() {
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
@@ -147,11 +147,11 @@ export default function AdminDashboardPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [performanceFilters]);
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [loadData]);
 
   const recentRequests = useMemo(() => requests.slice(0, 8), [requests]);
   const performanceCompanies = useMemo(() => companyPerformance?.companies ?? [], [companyPerformance]);

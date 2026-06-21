@@ -135,13 +135,6 @@ export default function CompanyStaffPage() {
   const [error, setError] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const summary = useMemo(() => ({
-    total: staff.length,
-    active: staff.filter((item) => item.status === 'ACTIVE').length,
-    offline: staff.filter((item) => item.status === 'OFFLINE').length,
-    busy: staff.filter((item) => item.status === 'BUSY').length,
-  }), [staff]);
-
   const filteredStaff = useMemo(() => {
     const keyword = filters.search.trim().toLowerCase();
 

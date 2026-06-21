@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
-function getRemainingSeconds(expiresAt) {
+function getRemainingSeconds(expiresAt, now = Date.now()) {
   if (!expiresAt) {
     return null;
   }
@@ -10,7 +10,7 @@ function getRemainingSeconds(expiresAt) {
     return null;
   }
 
-  return Math.max(0, Math.ceil((expiresAtMs - Date.now()) / 1000));
+  return Math.max(0, Math.ceil((expiresAtMs - now) / 1000));
 }
 
 function formatRemaining(seconds) {
@@ -24,27 +24,21 @@ function formatRemaining(seconds) {
 }
 
 export default function Countdown({ expiresAt, status, label = 'Time left' }) {
-  const [remainingSeconds, setRemainingSeconds] = useState(() => getRemainingSeconds(expiresAt));
+  const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
-    setRemainingSeconds(getRemainingSeconds(expiresAt));
-
     if (!expiresAt) {
       return undefined;
     }
 
     const intervalId = window.setInterval(() => {
-      setRemainingSeconds((previous) => {
-        const next = getRemainingSeconds(expiresAt);
-        if (next === null || next <= 0) {
-          window.clearInterval(intervalId);
-        }
-        return next ?? previous;
-      });
+      setNow(Date.now());
     }, 1000);
 
     return () => window.clearInterval(intervalId);
   }, [expiresAt]);
+
+  const remainingSeconds = useMemo(() => getRemainingSeconds(expiresAt, now), [expiresAt, now]);
 
   if (!expiresAt || remainingSeconds === null || (status && status !== 'PENDING')) {
     return null;

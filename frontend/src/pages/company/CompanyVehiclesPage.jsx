@@ -63,13 +63,6 @@ export default function CompanyVehiclesPage() {
   const [error, setError] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const summary = useMemo(() => ({
-    total: vehicles.length,
-    available: vehicles.filter((item) => item.status === 'AVAILABLE').length,
-    inService: vehicles.filter((item) => item.status === 'IN_SERVICE').length,
-    maintenance: vehicles.filter((item) => item.status === 'MAINTENANCE').length,
-  }), [vehicles]);
-
   const filteredVehicles = useMemo(() => {
     const keyword = filters.search.trim().toLowerCase();
     return vehicles.filter((vehicle) => {

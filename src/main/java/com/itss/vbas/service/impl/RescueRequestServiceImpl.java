@@ -329,13 +329,6 @@ public class RescueRequestServiceImpl implements RescueRequestService {
             throw new BadRequestException("Paid request can no longer be canceled");
         }
         requestSupportService.changeRequestStatus(rescueRequest, RescueRequestStatus.CANCELED, customer, note);
-        RequestAssignment latestAssignment = requestSupportService.getLatestAssignment(rescueRequest);
-        if (latestAssignment != null && latestAssignment.getStatus() != AssignmentStatus.COMPLETED) {
-            latestAssignment.setStatus(AssignmentStatus.REJECTED);
-            latestAssignment.setRejectedAt(LocalDateTime.now());
-            requestAssignmentRepository.save(latestAssignment);
-            updateStaffAvailabilityIfIdle(latestAssignment.getStaff());
-        }
     }
 
     @Override

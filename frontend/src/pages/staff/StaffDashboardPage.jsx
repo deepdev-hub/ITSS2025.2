@@ -2,45 +2,53 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ClipboardList,
-  MapPin,
-  Radio,
-  User,
-  MessageCircle,
-  Settings,
   ArrowRight,
   Clock,
   CheckCircle,
   AlertCircle,
 } from 'lucide-react';
 import { companyApi } from '../../api/companyApi';
-import { getApiError } from '../../api/client';
 import Loader from '../../components/common/Loader';
-import PageHeader from '../../components/common/PageHeader';
 import StatCard from '../../components/common/StatCard';
 import StatusBadge from '../../components/common/StatusBadge';
 import { formatDateTime } from '../../utils/requestUi';
 import { useAuth } from '../../context/AuthContext';
+
+function getAssignmentDisplayStatus(assignment) {
+  return assignment?.requestDetail?.status || assignment?.status;
+}
 
 export default function StaffDashboardPage() {
   const { user } = useAuth();
   const [dashboard, setDashboard] = useState(null);
   const [assignments, setAssignments] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
 
   useEffect(() => {
     async function loadDashboard() {
       setLoading(true);
-      setError('');
       try {
         const [dashboardData, assignmentList] = await Promise.all([
           companyApi.getStaffDashboard(),
           companyApi.getMyAssignments(),
         ]);
+        const detailedAssignments = await Promise.all(
+          assignmentList.map(async (assignment) => {
+            if (assignment.status === 'REJECTED') {
+              return assignment;
+            }
+            try {
+              const requestDetail = await companyApi.getRequestDetail(assignment.requestId);
+              return { ...assignment, requestDetail };
+            } catch {
+              return assignment;
+            }
+          }),
+        );
         setDashboard(dashboardData);
-        setAssignments(assignmentList);
-      } catch (err) {
-        setError(getApiError(err));
+        setAssignments(detailedAssignments);
+      } catch {
+        // Keep the dashboard shell rendered even if the data is temporarily unavailable.
       } finally {
         setLoading(false);
       }
@@ -103,7 +111,7 @@ export default function StaffDashboardPage() {
                       </div>
                     </div>
                     <div className="assignment-right">
-                      <StatusBadge value={assignment.status} />
+                      <StatusBadge value={getAssignmentDisplayStatus(assignment)} />
                       {assignment.status !== 'REJECTED' && (
                         <Link className="view-details-btn" to={`/requests/${assignment.requestId}`}>
                           View Details

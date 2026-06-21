@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Database,
   FileText,
@@ -43,7 +43,7 @@ export default function AdminLookupCatalogPage({
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
 
-  const loadItems = async () => {
+  const loadItems = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
@@ -53,11 +53,11 @@ export default function AdminLookupCatalogPage({
     } finally {
       setLoading(false);
     }
-  };
+  }, [api]);
 
   useEffect(() => {
     loadItems();
-  }, []);
+  }, [loadItems]);
 
   const filteredItems = useMemo(() => {
     const keyword = search.trim().toLowerCase();

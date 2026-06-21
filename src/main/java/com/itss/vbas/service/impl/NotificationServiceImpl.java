@@ -88,8 +88,8 @@ public class NotificationServiceImpl implements NotificationService {
         createNotification(
                 assignment.getStaff().getUser(),
                 NotificationType.ASSIGNMENT_PENDING,
-                "Yeu cau moi can xac nhan",
-                "Ban vua duoc giao yeu cau " + request.getRequestCode() + ". Hay chap nhan trong vong 60 giay.",
+                "New request awaiting confirmation",
+                "You have been assigned request " + request.getRequestCode() + ". Please accept it within 60 seconds.",
                 request
         );
     }

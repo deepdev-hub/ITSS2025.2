@@ -106,7 +106,6 @@ export default function AdminAccountsPage() {
   const [editingId, setEditingId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [actionId, setActionId] = useState(null);
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -216,15 +215,12 @@ export default function AdminAccountsPage() {
 
   const handleDelete = async (account) => {
     if (!window.confirm(`Deactivate account ${account.email}?`)) return;
-    setActionId(account.id);
     try {
       await adminApi.deleteAccount(account.id);
       setNotice('Account deactivated successfully.');
       await loadData();
     } catch (err) {
       setError(getApiError(err));
-    } finally {
-      setActionId(null);
     }
   };
 

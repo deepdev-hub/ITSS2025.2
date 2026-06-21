@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { customerApi } from '../../api/customerApi';
 import { getApiError } from '../../api/client';
 import Loader from '../../components/common/Loader';
@@ -23,7 +23,6 @@ export default function CustomerVehiclesPage() {
   const [editingId, setEditingId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [actionId, setActionId] = useState(null);
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -114,15 +113,12 @@ export default function CustomerVehiclesPage() {
 
   const handleDelete = async (vehicle) => {
     if (!window.confirm(`Delete vehicle ${vehicle.plateNumber}?`)) return;
-    setActionId(vehicle.id);
     try {
       await customerApi.deleteVehicle(vehicle.id);
       setNotice('Vehicle deleted successfully.');
       await loadVehicles();
     } catch (err) {
       setError(getApiError(err));
-    } finally {
-      setActionId(null);
     }
   };
 
