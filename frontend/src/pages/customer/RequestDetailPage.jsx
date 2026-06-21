@@ -113,19 +113,6 @@ function normalizeMessages(items = []) {
   return Array.from(byId.values());
 }
 
-function getProgressTitle(roleName) {
-  switch (roleName) {
-    case 'ADMIN':
-      return 'Admin Progress Control';
-    case 'RESCUE_COMPANY':
-      return 'Company Progress Control';
-    case 'RESCUE_STAFF':
-      return 'Staff Progress Control';
-    default:
-      return 'Progress Control';
-  }
-}
-
 function SectionHeader({ title, subtitle, aside }) {
   return (
     <div className="section-header">
@@ -247,8 +234,6 @@ export default function RequestDetailPage() {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [busyAction, setBusyAction] = useState('');
-  const [messageInput, setMessageInput] = useState('');
-  const [statusForm, setStatusForm] = useState({ status: 'IN_PROGRESS', note: '' });
   const [paymentForm, setPaymentForm] = useState(defaultPaymentForm);
   const [dealPriceForm, setDealPriceForm] = useState(defaultDealPriceForm);
   const [rejectForm, setRejectForm] = useState(defaultDecisionForm);
@@ -257,9 +242,6 @@ export default function RequestDetailPage() {
   const [activeModal, setActiveModal] = useState(null);
   const [staffLocation, setStaffLocation] = useState(null);
   const refreshInFlightRef = useRef(false);
-  const messageListRef = useRef(null);
-  const shouldStickToBottomRef = useRef(true);
-  const lastMessageIdRef = useRef(null);
 
   const initialFetchRef = useRef(false);
   const [lastSeenMsgCount, setLastSeenMsgCount] = useState(0);
@@ -281,12 +263,6 @@ export default function RequestDetailPage() {
 
   const isCustomer = user?.roleName === 'CUSTOMER';
   const isStaff = user?.roleName === 'RESCUE_STAFF';
-  const isOpsRole = ['ADMIN', 'RESCUE_COMPANY', 'RESCUE_STAFF'].includes(user?.roleName);
-
-  const statusOptions = useMemo(
-    () => getAllowedStatusOptions(user?.roleName, detail?.status),
-    [detail?.status, user?.roleName],
-  );
 
   const acceptedQuote = useMemo(
     () => detail?.quotes?.find((item) => item.status === 'ACCEPTED') ?? null,
@@ -313,19 +289,15 @@ export default function RequestDetailPage() {
     [detail],
   );
   const currentAssignmentAccepted = ['ACCEPTED', 'COMPLETED'].includes(detail?.currentAssignment?.status);
-  const assignedStaffPath = currentAssignmentAccepted && detail?.currentAssignment?.staffId
-    ? `/staff/${detail.currentAssignment.staffId}/profile`
-    : null;
+  const currentAssignmentPending = isStaff && detail?.currentAssignment?.status === 'PENDING' && detail?.currentAssignment?.id;
 
   const effectiveStatus = useMemo(() => {
-    if (detail?.status === 'CANCELED') return 'CANCELED';
-    if (hasPaidPayment) return 'COMPLETED';
     return detail?.status;
-  }, [detail?.status, hasPaidPayment]);
+  }, [detail?.status]);
 
   const requestCanceled = effectiveStatus === 'CANCELED';
   const requestClosed = ['CANCELED', 'COMPLETED'].includes(effectiveStatus);
-  const requestFinalized = requestClosed || hasPaidPayment;
+  const requestFinalized = requestClosed;
   const staffCheckedIn = isStaff && effectiveStatus === 'IN_PROGRESS';
   const canStaffCheckIn = isStaff
     && detail?.currentAssignment?.status === 'ACCEPTED'
@@ -346,6 +318,12 @@ export default function RequestDetailPage() {
     && Boolean(acceptedQuote)
     && !requestCanceled
     && !hasPaidPayment;
+  const staffStatusActions = useMemo(
+    () => getAllowedStatusOptions(user?.roleName, effectiveStatus)
+      .filter((status) => ['COMPLETED', 'CANCELED'].includes(status)),
+    [effectiveStatus, user?.roleName],
+  );
+  const canStaffManagePendingAssignment = Boolean(currentAssignmentPending) && !requestClosed;
 
   const canLeaveReview = isCustomer && effectiveStatus === 'COMPLETED' && !detail?.review;
   const stableRequest = useMemo(
@@ -403,17 +381,6 @@ export default function RequestDetailPage() {
       }
     }
   }, [id]);
-
-  const scrollToLatestMessage = useCallback((behavior = 'smooth') => {
-    const container = messageListRef.current;
-    if (!container) {
-      return;
-    }
-    container.scrollTo({
-      top: container.scrollHeight,
-      behavior,
-    });
-  }, []);
 
   useEffect(() => {
     refreshData({ force: true });
@@ -478,14 +445,8 @@ export default function RequestDetailPage() {
       return;
     }
 
-    const nextStatusOptions = getAllowedStatusOptions(user?.roleName, effectiveStatus);
     const acceptedAmount = getQuoteAmount(detail.quotes?.find((item) => item.status === 'ACCEPTED'));
     const resolvedAmount = pendingPayment?.amount ?? acceptedAmount ?? '';
-
-    setStatusForm((previous) => ({
-      status: nextStatusOptions.includes(previous.status) ? previous.status : (nextStatusOptions[0] || previous.status),
-      note: previous.note,
-    }));
 
     setPaymentForm((previous) => ({
       ...previous,
@@ -502,30 +463,7 @@ export default function RequestDetailPage() {
       dealPrice: previous.dealPrice !== '' ? previous.dealPrice : (getQuoteAmount(editableQuote) ?? ''),
       note: previous.note !== '' ? previous.note : (editableQuote?.note ?? ''),
     }));
-  }, [detail, pendingPayment, user?.roleName]);
-
-  useEffect(() => {
-    const latestMessageId = messages[messages.length - 1]?.id ?? null;
-    const firstSync = lastMessageIdRef.current === null;
-    const hasNewMessage = latestMessageId !== null && latestMessageId !== lastMessageIdRef.current;
-
-    if (firstSync || busyAction === 'message' || (hasNewMessage && shouldStickToBottomRef.current)) {
-      requestAnimationFrame(() => {
-        scrollToLatestMessage(firstSync ? 'auto' : 'smooth');
-      });
-    }
-
-    lastMessageIdRef.current = latestMessageId;
-  }, [busyAction, messages, scrollToLatestMessage]);
-
-  const handleMessageScroll = () => {
-    const container = messageListRef.current;
-    if (!container) {
-      return;
-    }
-    const distanceToBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
-    shouldStickToBottomRef.current = distanceToBottom < 96;
-  };
+  }, [detail, pendingPayment]);
 
   const runAction = async (actionKey, action, successMessage) => {
     setBusyAction(actionKey);
@@ -544,22 +482,6 @@ export default function RequestDetailPage() {
     }
   };
 
-  const sendMessage = async (event) => {
-    event.preventDefault();
-    if (!messageInput.trim()) {
-      return;
-    }
-    shouldStickToBottomRef.current = true;
-    await runAction(
-      'message',
-      async () => {
-        await requestApi.sendMessage(id, { content: messageInput.trim() });
-        setMessageInput('');
-      },
-      'Message sent successfully.',
-    );
-  };
-
   const cancelRequest = async () => runAction(
     'cancel',
     async () => {
@@ -570,15 +492,6 @@ export default function RequestDetailPage() {
     },
     'Request canceled successfully.',
   );
-
-  const updateStatus = async (event) => {
-    event.preventDefault();
-    await runAction(
-      'status',
-      () => requestApi.updateStatus(id, statusForm),
-      'Request status updated successfully.',
-    );
-  };
 
   const confirmStaffCheckIn = async () => runAction(
     'check-in',
@@ -692,7 +605,6 @@ export default function RequestDetailPage() {
         <RequestTrackingMap
           requestId={id}
           requestStatus={effectiveStatus}
-          staffProfilePath={assignedStaffPath}
         />
       ) : null}
 
@@ -734,6 +646,16 @@ export default function RequestDetailPage() {
               {isCustomer && canCustomerCancel(effectiveStatus) && (
                 <button className="button button-danger" type="button" onClick={() => setActiveModal('progress')} style={{ padding: '0.75rem 1.5rem', fontSize: '1.05rem', background: '#fef2f2', color: '#ef4444', border: '1px solid #fecaca', borderRadius: '999px' }}>
                   <FileText size={18} style={{ marginRight: '8px' }} /> Cancel
+                </button>
+              )}
+              {isStaff && !canStaffManagePendingAssignment && staffStatusActions.length > 0 && (
+                <button className="button" type="button" onClick={() => setActiveModal('progress')} style={{ padding: '0.75rem 1.5rem', fontSize: '1.05rem', background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe', borderRadius: '999px', fontWeight: 600 }}>
+                  <FileText size={18} style={{ marginRight: '8px' }} /> Update Status
+                </button>
+              )}
+              {isStaff && canStaffManagePendingAssignment && (
+                <button className="button" type="button" onClick={() => setActiveModal('progress')} style={{ padding: '0.75rem 1.5rem', fontSize: '1.05rem', background: '#ecfdf5', color: '#047857', border: '1px solid #a7f3d0', borderRadius: '999px', fontWeight: 600 }}>
+                  <FileText size={18} style={{ marginRight: '8px' }} /> Respond Assignment
                 </button>
               )}
             </div>
@@ -1122,20 +1044,20 @@ export default function RequestDetailPage() {
           <div>
             <div className="card card-muted" style={{ marginBottom: '1rem', marginTop: 0 }}>
               <h3>Company</h3>
-              <p>{currentAssignmentAccepted ? (detail.assignedCompany?.companyName || 'Not assigned yet') : 'Dang thong bao cho staff gan nhat'}</p>
+              <p>{currentAssignmentAccepted ? (detail.assignedCompany?.companyName || 'Not assigned yet') : 'Notifying nearby staff'}</p>
               <p className="muted-line">
                 {currentAssignmentAccepted
                   ? (detail.assignedCompany?.phone || detail.assignedCompany?.email || 'Waiting for dispatch')
-                  : 'He thong dang gui yeu cau den cac staff phu hop va cho xac nhan.'}
+                  : 'The system is notifying eligible nearby staff and waiting for confirmation.'}
               </p>
             </div>
             <div className="card card-muted" style={{ margin: 0 }}>
               <h3>Rescue Vehicle</h3>
-              <p>{currentAssignmentAccepted ? (detail.currentAssignment?.vehicleCode || 'Not assigned yet') : 'Dang cho staff nhan yeu cau'}</p>
+              <p>{currentAssignmentAccepted ? (detail.currentAssignment?.vehicleCode || 'Not assigned yet') : 'Waiting for staff acceptance'}</p>
               <p className="muted-line">
                 {currentAssignmentAccepted
                   ? (detail.currentAssignment?.vehiclePlateNumber || 'No plate information')
-                  : 'Thong tin xe se hien sau khi mot staff chap nhan yeu cau.'}
+                  : 'Vehicle information will appear after a staff member accepts the request.'}
               </p>
             </div>
           </div>
@@ -1359,6 +1281,96 @@ export default function RequestDetailPage() {
                   }}
                 >
                   {busyAction === 'cancel' ? 'Canceling...' : 'Cancel Request'}
+                </button>
+              </div>
+            </div>
+          ) : null}
+
+          {isStaff && !canStaffManagePendingAssignment && staffStatusActions.length > 0 ? (
+            <div className="card card-muted" style={{ margin: 0 }}>
+              <h3>Update Request Status</h3>
+              <p className="muted-line">Mark this request as completed after service is done, or cancel it if it cannot continue.</p>
+              <div className="actions-row">
+                {staffStatusActions.includes('COMPLETED') ? (
+                  <button
+                    className="button button-primary"
+                    type="button"
+                    disabled={busyAction === 'status'}
+                    onClick={async () => {
+                      const success = await runAction(
+                        'status',
+                        () => requestApi.updateStatus(id, { status: 'COMPLETED', note: 'Completed by staff from request detail' }),
+                        'Request marked as completed.',
+                      );
+                      if (success) {
+                        setActiveModal(null);
+                      }
+                    }}
+                  >
+                    {busyAction === 'status' ? 'Updating...' : 'Mark Completed'}
+                  </button>
+                ) : null}
+                {staffStatusActions.includes('CANCELED') ? (
+                  <button
+                    className="button button-danger"
+                    type="button"
+                    disabled={busyAction === 'status'}
+                    onClick={async () => {
+                      const success = await runAction(
+                        'status',
+                        () => requestApi.updateStatus(id, { status: 'CANCELED', note: 'Canceled by staff from request detail' }),
+                        'Request canceled successfully.',
+                      );
+                      if (success) {
+                        setActiveModal(null);
+                      }
+                    }}
+                  >
+                    {busyAction === 'status' ? 'Updating...' : 'Cancel Request'}
+                  </button>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
+
+          {canStaffManagePendingAssignment ? (
+            <div className="card card-muted" style={{ margin: 0 }}>
+              <h3>Respond to Assignment</h3>
+              <p className="muted-line">This request is still waiting for your confirmation. Accept it before you can continue with rescue progress updates.</p>
+              <div className="actions-row">
+                <button
+                  className="button button-primary"
+                  type="button"
+                  disabled={busyAction === 'assignment-response'}
+                  onClick={async () => {
+                    const success = await runAction(
+                      'assignment-response',
+                      () => companyApi.acceptAssignment(detail.currentAssignment.id),
+                      'Request accepted successfully. Please proceed to the location.',
+                    );
+                    if (success) {
+                      setActiveModal(null);
+                    }
+                  }}
+                >
+                  {busyAction === 'assignment-response' ? 'Processing...' : 'Accept'}
+                </button>
+                <button
+                  className="button button-danger"
+                  type="button"
+                  disabled={busyAction === 'assignment-response'}
+                  onClick={async () => {
+                    const success = await runAction(
+                      'assignment-response',
+                      () => companyApi.rejectAssignment(detail.currentAssignment.id),
+                      'You have rejected the request.',
+                    );
+                    if (success) {
+                      setActiveModal(null);
+                    }
+                  }}
+                >
+                  {busyAction === 'assignment-response' ? 'Processing...' : 'Reject'}
                 </button>
               </div>
             </div>

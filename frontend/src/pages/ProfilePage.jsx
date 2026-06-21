@@ -98,7 +98,7 @@ export default function ProfilePage() {
   const avatarPreview = useMemo(() => {
     const resolved = resolveAvatarUrl(getAvatarUrl(user));
     return resolved ? addAvatarCacheKey(resolved, user?.avatarUpdatedAt) : null;
-  }, [user?.avatarUrl, user?.avatarUpdatedAt]);
+  }, [user]);
   const isCompanyAccount = user?.roleName === 'RESCUE_COMPANY';
   const showPersonalFields = !isCompanyAccount;
 
@@ -118,14 +118,14 @@ export default function ProfilePage() {
     }
 
     bootstrap();
-  }, []);
+  }, [refreshProfile, user]);
 
   useEffect(() => {
     setProfileForm((previous) => ({
       ...previous,
       avatarUrl: getAvatarUrl(user),
     }));
-  }, [user?.avatarUrl, user?.avatarUpdatedAt]);
+  }, [user]);
 
   useEffect(() => {
     setActiveTab(requestedTab);

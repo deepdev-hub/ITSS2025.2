@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Plus } from 'lucide-react';
 import { adminApi } from '../../api/adminApi';
 import { getApiError } from '../../api/client';
@@ -31,11 +31,6 @@ export default function AdminCompanyStaffPage() {
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
-
-  const selectedCompany = useMemo(
-    () => companies.find((company) => String(company.id) === String(selectedCompanyId)),
-    [companies, selectedCompanyId],
-  );
 
   const loadCompanies = async () => {
     setLoading(true);

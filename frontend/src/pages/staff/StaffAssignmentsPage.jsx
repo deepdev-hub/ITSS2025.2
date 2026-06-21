@@ -17,7 +17,11 @@ import Loader from '../../components/common/Loader';
 import PageHeader from '../../components/common/PageHeader';
 import StatusBadge from '../../components/common/StatusBadge';
 import Pagination from '../../components/common/Pagination';
-import { formatDateTime, getAllowedStatusOptions } from '../../utils/requestUi';
+import { formatDateTime } from '../../utils/requestUi';
+
+function getAssignmentDisplayStatus(assignment) {
+  return assignment?.requestDetail?.status || assignment?.status;
+}
 
 function AssignmentCard({ assignment, onQuickAction, busyAction, activeAssignmentId, setActiveAssignmentId }) {
   const { requestDetail } = assignment;
@@ -29,6 +33,7 @@ function AssignmentCard({ assignment, onQuickAction, busyAction, activeAssignmen
   const isExpanded = assignment.id === activeAssignmentId;
   const isPending = assignment.status === 'PENDING';
   const isBusyQuick = busyAction === 'quick-' + assignment.id;
+  const displayStatus = getAssignmentDisplayStatus(assignment);
 
 
   return (
@@ -54,7 +59,7 @@ function AssignmentCard({ assignment, onQuickAction, busyAction, activeAssignmen
           </div>
         </div>
         <div className="pac-header-right" onClick={(e) => e.stopPropagation()}>
-          <StatusBadge value={assignment.status} />
+          <StatusBadge value={displayStatus} />
           {assignment.status !== 'REJECTED' && (
             <Link className="button pac-btn-outline" to={`/requests/${assignment.requestId}`}>
               Open Detail <ArrowRight size={14} />
@@ -173,14 +178,11 @@ export default function StaffAssignmentsPage() {
     loadAssignments();
   }, []);
 
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [assignments]);
-
   if (loading) return <Loader label="Loading your assignments..." />;
 
   const totalPages = Math.ceil(assignments.length / pageSize);
-  const startIndex = (currentPage - 1) * pageSize;
+  const safeCurrentPage = Math.min(currentPage, Math.max(totalPages, 1));
+  const startIndex = (safeCurrentPage - 1) * pageSize;
   const paginatedAssignments = assignments.slice(startIndex, startIndex + pageSize);
 
   return (
@@ -211,7 +213,7 @@ export default function StaffAssignmentsPage() {
             ))}
             {assignments.length > 0 && (
               <Pagination 
-                currentPage={currentPage} 
+                currentPage={safeCurrentPage} 
                 totalPages={totalPages} 
                 onPageChange={setCurrentPage} 
               />
